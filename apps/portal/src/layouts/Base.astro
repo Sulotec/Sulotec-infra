@@ -1,22 +1,30 @@
 ---
 import '../styles/global.css';
 import { sitio } from '../data/sitio';
+
+interface Props {
+  titulo?: string;
+  descripcion?: string;
+  ruta?: string;
+}
+const { titulo = sitio.titulo, descripcion = sitio.descripcion, ruta = '/' } = Astro.props;
 ---
 <!doctype html>
 <html lang="es-PE">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{sitio.titulo}</title>
-    <meta name="description" content={sitio.descripcion} />
+    <title>{titulo}</title>
+    <meta name="description" content={descripcion} />
     <meta name="theme-color" content="#1b4589" />
-    <meta property="og:title" content={sitio.titulo} />
-    <meta property="og:description" content={sitio.descripcion} />
-    <meta property="og:url" content={sitio.url} />
+    <meta property="og:title" content={titulo} />
+    <meta property="og:description" content={descripcion} />
+    <meta property="og:url" content={new URL(ruta, sitio.url).href} />
     <meta property="og:type" content="website" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <!-- Siempre empezar arriba al entrar (archivo externo: lo permite la politica de seguridad CSP) -->
     <script is:inline src="/inicio.js"></script>
+    <slot name="head" />
   </head>
   <body>
     <a class="saltar" href="#contenido">Saltar al contenido</a>

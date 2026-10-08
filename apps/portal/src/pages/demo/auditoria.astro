@@ -1,0 +1,161 @@
+---
+import DemoLayout from '../../layouts/DemoLayout.astro';
+import Icon from '../../components/Icon.astro';
+import { visitas, resultadosVisita } from '../../data/demos';
+---
+<DemoLayout
+  producto="Auditoría de Visitas"
+  titulo="Visitas por auditar"
+  bajada="Elige una visita y comprueba dónde, cuándo y cómo se hizo."
+  ruta="/demo/auditoria"
+  menu={[
+    { texto: 'Expedientes', icono: 'file' },
+    { texto: 'Auditores', icono: 'users' },
+    { texto: 'Reportes', icono: 'chart' },
+    { texto: 'Configuración', icono: 'gear' },
+  ]}
+>
+  <div class="rejilla">
+    <section class="panel lista" aria-labelledby="t-lista">
+      <h2 id="t-lista">Hoy</h2>
+      <ul>
+        {visitas.map((v, i) => (
+          <li>
+            <button type="button" class="visita" data-grupo="visitas" data-mostrar={`v-${v.id}`} aria-pressed={i === 0 ? 'true' : 'false'}>
+              <span class:list={['marca', v.resultado]} aria-hidden="true"></span>
+              <span class="datos"><strong>{v.cliente}</strong><small>{v.id}, {v.direccion}</small></span>
+              <span class:list={['resultado', v.resultado]}>{resultadosVisita[v.resultado]}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    {visitas.map((v, i) => {
+      const dentro = v.resultado === 'verificada';
+      return (
+        <section class="panel detalle" id={`v-${v.id}`} data-grupo-panel="visitas" hidden={i !== 0} aria-label={`Detalle de ${v.id}`}>
+          <div class="cabeza">
+            <div>
+              <h2>{v.cliente}</h2>
+              <p class="sub">{v.id} · {v.direccion} · Auditor: {v.auditor}{v.hora !== '—' && `, ${v.hora}`}</p>
+            </div>
+            <span class:list={['resultado', 'grande', v.resultado]}>{resultadosVisita[v.resultado]}</span>
+          </div>
+
+          <div class="dos">
+            <figure class="mapa">
+              <svg viewBox="0 0 320 220" role="img" aria-label={v.resultado === 'pendiente' ? 'Geocerca del domicilio, aún sin visita' : `El punto de la visita está a ${v.distancia} metros del domicilio`}>
+                <rect width="320" height="220" rx="12" fill="#f7f9fc" />
+                <path d="M0 70H320M0 150H320M90 0V220M220 0V220" stroke="#e3e9f2" stroke-width="8" />
+                <circle cx="160" cy="110" r="70" fill="rgba(27,69,137,.08)" stroke="#1b4589" stroke-width="2" stroke-dasharray="6 6" />
+                <path d="M160 116s-12-10-12-19a12 12 0 0 1 24 0c0 9-12 19-12 19z" fill="#1b4589" />
+                {v.resultado !== 'pendiente' && (
+                  <>
+                    <line x1="160" y1="100" x2={v.punto[0]} y2={v.punto[1]} stroke={dentro ? '#12a150' : '#ed1c24'} stroke-width="2" stroke-dasharray="4 4" />
+                    <circle cx={v.punto[0]} cy={v.punto[1]} r="9" fill={dentro ? '#12a150' : '#ed1c24'} stroke="#fff" stroke-width="3" />
+                  </>
+                )}
+              </svg>
+              <figcaption>
+                {v.resultado === 'pendiente'
+                  ? 'Geocerca de 300 m alrededor del domicilio. La visita aún no se realiza.'
+                  : `Punto de la visita a ${v.distancia} m del domicilio (${dentro ? 'dentro' : 'fuera'} de la geocerca de 300 m).`}
+              </figcaption>
+            </figure>
+
+            <div class="evidencias">
+              <h3>Evidencias</h3>
+              {v.resultado === 'pendiente' ? (
+                <p class="vacio">Cuando el auditor registre la visita, aquí aparecerán la foto y la firma del cliente.</p>
+              ) : (
+                <div class="fotos">
+                  <figure>
+                    <svg viewBox="0 0 160 110" role="img" aria-label="Foto de ejemplo del domicilio">
+                      <rect width="160" height="110" rx="10" fill="#dce8f7" />
+                      <path d="M30 95V55l50-30 50 30v40z" fill="#fff" />
+                      <path d="M70 95V70h20v25z" fill="#8da2c4" />
+                      <rect x="42" y="62" width="16" height="14" fill="#c6d0e2" /><rect x="102" y="62" width="16" height="14" fill="#c6d0e2" />
+                      <rect x="6" y="6" width="74" height="16" rx="5" fill="rgba(18,48,95,.75)" /><text x="12" y="18" font-size="9" fill="#fff">{v.hora}  GPS OK</text>
+                    </svg>
+                    <figcaption>Foto con fecha, hora y GPS</figcaption>
+                  </figure>
+                  <figure>
+                    <svg viewBox="0 0 160 110" role="img" aria-label="Firma de ejemplo del cliente">
+                      <rect width="160" height="110" rx="10" fill="#fff" stroke="#dde4ef" />
+                      <path class="firma" d="M22 72c12-30 22-34 26-18s-4 26 6 10 14-30 22-14-2 22 10 8 16-18 24-6 10 6 20-4" fill="none" stroke="#1b4589" stroke-width="3" stroke-linecap="round" />
+                      <path d="M20 86H140" stroke="#c6d0e2" />
+                    </svg>
+                    <figcaption>Firma del cliente</figcaption>
+                  </figure>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <h3>Controles antifraude</h3>
+          <ul class="controles">
+            {v.controles.map((c) => (
+              <li class:list={[c.ok === true ? 'ok' : c.ok === false ? 'falla' : 'espera']}>
+                <span class="icono">{c.ok === true ? <Icon name="check" size={16} /> : c.ok === false ? <Icon name="x" size={16} /> : <Icon name="refresh" size={16} />}</span>
+                {c.texto}
+              </li>
+            ))}
+          </ul>
+
+          <div class="botones">
+            <button type="button" class="boton boton-azul" data-bloqueado>{v.resultado === 'fuera' ? 'Observar visita' : 'Aprobar visita'}</button>
+            <button type="button" class="boton secundario" data-bloqueado>Descargar informe</button>
+          </div>
+        </section>
+      );
+    })}
+  </div>
+</DemoLayout>
+
+<style>
+  .rejilla { display: grid; grid-template-columns: minmax(280px, 380px) 1fr; gap: 18px; align-items: start; }
+  .panel { background: #fff; border: 1px solid var(--borde); border-radius: 16px; padding: 18px; }
+  h2 { font-size: 1.08rem; color: var(--texto); }
+  h3 { font-size: 1rem; margin: 18px 0 10px; }
+  .lista h2 { margin-bottom: 12px; }
+  ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+
+  .visita { width: 100%; display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; align-items: center; text-align: left; padding: 12px; border-radius: 12px; border: 1.5px solid var(--borde); background: #fff; font: inherit; cursor: pointer; }
+  .visita:hover { border-color: var(--azul-25); }
+  .visita[aria-pressed="true"] { border-color: var(--azul); background: #f5f8fd; }
+  .marca { width: 10px; height: 10px; border-radius: 50%; grid-row: span 2; }
+  .marca.verificada { background: var(--verde); } .marca.fuera { background: var(--rojo); } .marca.pendiente { background: var(--azul-50); }
+  .datos { display: grid; min-width: 0; }
+  .datos small { color: var(--gris); font-size: .8rem; }
+  .visita .resultado { grid-column: 2; justify-self: start; }
+  .resultado { font-size: .75rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+  .resultado.verificada { background: #e5f5ec; color: #0d7a3d; }
+  .resultado.fuera { background: #fdecec; color: #b3141b; }
+  .resultado.pendiente { background: #eef0f3; color: var(--gris); }
+  .resultado.grande { font-size: .85rem; padding: 6px 14px; }
+
+  .detalle .cabeza { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; flex-wrap: wrap; }
+  .sub { margin: 4px 0 0; color: var(--gris); font-size: .9rem; }
+  .dos { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 8px; }
+  figure { margin: 0; }
+  .mapa svg { width: 100%; height: auto; display: block; }
+  figcaption { margin-top: 6px; font-size: .82rem; color: var(--gris); }
+  .evidencias h3 { margin-top: 0; }
+  .fotos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .fotos svg { width: 100%; height: auto; display: block; }
+  .firma { stroke-dasharray: 300; animation: firmar 1.6s var(--curva) .2s both; }
+  @keyframes firmar { from { stroke-dashoffset: 300; } to { stroke-dashoffset: 0; } }
+  .vacio { color: var(--gris); background: var(--fondo); border-radius: 12px; padding: 18px; margin: 0; }
+
+  .controles li { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; background: var(--fondo); font-size: .93rem; }
+  .icono { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; color: #fff; flex: none; }
+  .ok .icono { background: var(--verde); } .falla .icono { background: var(--rojo); } .espera .icono { background: var(--azul-50); }
+  .falla { color: #b3141b; font-weight: 700; }
+
+  .botones { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+  .botones .boton { border: 0; cursor: pointer; font: inherit; font-weight: 700; }
+  .secundario { background: var(--azul-10); color: var(--azul); }
+
+  @media (max-width: 1000px) { .rejilla, .dos { grid-template-columns: 1fr; } }
+</style>

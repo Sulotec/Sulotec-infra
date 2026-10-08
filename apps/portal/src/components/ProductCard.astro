@@ -8,7 +8,7 @@ interface Props {
 }
 
 const { solucion, indice = 0 } = Astro.props;
-const { nombre, descripcion, estado, plataformas, icono } = solucion;
+const { nombre, descripcion, estado, plataformas, icono, demo } = solucion;
 ---
 <article class="tarjeta revelar" style={`--i:${indice % 3}`}>
   <span class="brillo" aria-hidden="true"></span>
@@ -21,10 +21,13 @@ const { nombre, descripcion, estado, plataformas, icono } = solucion;
   <ul class="plataformas">
     {plataformas.map((p) => <li>{p}</li>)}
   </ul>
-  <a class="enlace" href={enlaceDe(solucion)}>
-    {tieneAcceso(solucion) ? 'Ingresar' : 'Solicitar información'}
-    <Icon name="arrow" size={18} />
-  </a>
+  <div class="pie">
+    {demo && <a class="demo" href={demo}>Probar la demo</a>}
+    <a class="enlace" href={enlaceDe(solucion)}>
+      {tieneAcceso(solucion) ? 'Ingresar' : 'Solicitar información'}
+      <Icon name="arrow" size={18} />
+    </a>
+  </div>
 </article>
 
 <style>
@@ -58,7 +61,10 @@ const { nombre, descripcion, estado, plataformas, icono } = solucion;
   p { position: relative; margin: 0; color: var(--gris); }
   .plataformas { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0; padding: 0; }
   .plataformas li { font-size: .8rem; font-weight: 700; color: var(--azul); background: var(--azul-10); padding: 4px 11px; border-radius: 999px; }
-  .enlace { position: relative; margin-top: auto; padding-top: 8px; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; color: var(--azul); text-decoration: none; }
+  .pie { position: relative; margin-top: auto; padding-top: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; }
+  .demo { display: inline-flex; align-items: center; padding: 10px 18px; border-radius: 999px; background: var(--azul); color: #fff; font-weight: 700; text-decoration: none; transition: background .2s ease; }
+  .demo:hover { background: var(--azul-oscuro); }
+  .enlace { position: relative; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; color: var(--azul); text-decoration: none; }
   .enlace :global(svg) { color: var(--rojo); transition: transform .25s var(--curva); }
   .tarjeta:hover .enlace :global(svg) { transform: translateX(6px); }
 </style>

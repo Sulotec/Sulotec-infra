@@ -18,6 +18,7 @@ export interface Solucion {
   subdominio: string; // reservado en Cloudflare para este producto
   publicado: boolean;
   url?: string;       // opcional: direccion actual del producto mientras se muda a su subdominio
+  demo?: string;      // pagina de demo publica con datos de ejemplo (ej. '/demo/miradar360')
 }
 
 export const soluciones: Solucion[] = [
@@ -30,6 +31,7 @@ export const soluciones: Solucion[] = [
     icono: 'radar',
     publico: true,
     subdominio: 'miradar360.sulotec.com',
+    demo: '/demo/miradar360',
     publicado: false,
   },
   {
@@ -41,6 +43,7 @@ export const soluciones: Solucion[] = [
     icono: 'mapCheck',
     publico: true,
     subdominio: 'auditoria.sulotec.com',
+    demo: '/demo/auditoria',
     publicado: false,
   },
   {
@@ -52,6 +55,7 @@ export const soluciones: Solucion[] = [
     icono: 'shield',
     publico: true,
     subdominio: 'plaft.sulotec.com',
+    demo: '/demo/plaft',
     publicado: false,
   },
   {

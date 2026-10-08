@@ -1,0 +1,136 @@
+---
+import DemoLayout from '../../layouts/DemoLayout.astro';
+import Icon from '../../components/Icon.astro';
+import { evaluacion } from '../../data/demos';
+
+// Indicador semicircular: la aguja parte vertical y gira segun el riesgo (0 = izquierda, 100 = derecha)
+const angulo = (evaluacion.riesgo / 100 - 0.5) * 180;
+const punto = (t: number) => {
+  const th = Math.PI * (1 - t);
+  return `${(120 + 100 * Math.cos(th)).toFixed(1)} ${(110 - 100 * Math.sin(th)).toFixed(1)}`;
+};
+const tramos = [
+  { desde: 0, hasta: 0.4, color: '#12a150' },
+  { desde: 0.4, hasta: 0.7, color: '#d98b00' },
+  { desde: 0.7, hasta: 1, color: '#ed1c24' },
+];
+const iconos = { ok: 'check', alerta: 'alert', revisar: 'refresh' } as const;
+---
+<DemoLayout
+  producto="Prevención de Lavado de Activos"
+  titulo="Evaluación de cliente"
+  bajada="Revisa en segundos si un cliente presenta señales de riesgo antes de operar con él."
+  ruta="/demo/plaft"
+  menu={[
+    { texto: 'Clientes', icono: 'users' },
+    { texto: 'Alertas', icono: 'bell' },
+    { texto: 'Reportes', icono: 'chart' },
+    { texto: 'Configuración', icono: 'gear' },
+  ]}
+>
+  <section class="panel busqueda" aria-label="Cliente a evaluar">
+    <label for="cliente">Cliente</label>
+    <div class="fila">
+      <input id="cliente" type="text" value={`${evaluacion.cliente}, RUC ${evaluacion.ruc}`} readonly />
+      <button type="button" class="boton boton-azul" data-evaluar>Evaluar cliente</button>
+      <button type="button" class="boton secundario" data-bloqueado>Buscar otro cliente</button>
+    </div>
+  </section>
+
+  <div class="evaluacion" data-evaluacion data-estado="inicio" style={`--angulo:${angulo}deg`}>
+    <p class="estado-inicio panel">Presiona <strong>Evaluar cliente</strong> para revisar listas restrictivas, PEP, operaciones y actividad económica.</p>
+
+    <div class="estado-cargando panel" role="status">
+      <span class="giro" aria-hidden="true"></span>
+      <p>Revisando listas restrictivas, PEP y operaciones del cliente…</p>
+    </div>
+
+    <div class="estado-listo">
+      <div class="rejilla">
+        <section class="panel riesgo" aria-labelledby="t-riesgo">
+          <h2 id="t-riesgo">Nivel de riesgo</h2>
+          <svg viewBox="0 0 240 130" role="img" aria-label={`Riesgo ${evaluacion.nivel.toLowerCase()}: ${evaluacion.riesgo} de 100`}>
+            {tramos.map((t) => <path d={`M${punto(t.desde)} A100 100 0 0 1 ${punto(t.hasta)}`} fill="none" stroke={t.color} stroke-width="16" />)}
+            <line class="aguja" x1="120" y1="110" x2="120" y2="32" stroke="#231f20" stroke-width="4" stroke-linecap="round" />
+            <circle cx="120" cy="110" r="9" fill="#231f20" />
+          </svg>
+          <p class="nivel"><strong>{evaluacion.nivel}</strong><span>{evaluacion.riesgo} de 100</span></p>
+          <p class="recomendacion">Recomendación: aplica una debida diligencia reforzada y documenta el origen de los fondos de las operaciones en efectivo.</p>
+        </section>
+
+        <section class="panel verificaciones" aria-labelledby="t-verif">
+          <h2 id="t-verif">Lo que revisamos</h2>
+          <ul>
+            {evaluacion.verificaciones.map((v) => (
+              <li class={v.estado}>
+                <span class="icono"><Icon name={iconos[v.estado as keyof typeof iconos]} size={16} /></span>
+                <span><strong>{v.texto}</strong><small>{v.resultado}</small></span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
+
+      <section class="panel historial" aria-labelledby="t-hist">
+        <div class="cabeza">
+          <h2 id="t-hist">Evaluaciones anteriores</h2>
+          <div class="botones">
+            <button type="button" class="boton boton-azul" data-bloqueado>Generar informe</button>
+            <button type="button" class="boton secundario" data-bloqueado>Registrar en el expediente</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th scope="col">Fecha</th><th scope="col">Resultado</th><th scope="col">Responsable</th></tr></thead>
+          <tbody>
+            {evaluacion.historial.map((h) => <tr><td>{h.fecha}</td><td>{h.resultado}</td><td>{h.responsable}</td></tr>)}
+          </tbody>
+        </table>
+      </section>
+    </div>
+  </div>
+</DemoLayout>
+
+<style>
+  .panel { background: #fff; border: 1px solid var(--borde); border-radius: 16px; padding: 18px; }
+  h2 { font-size: 1.08rem; color: var(--texto); margin-bottom: 12px; }
+  .busqueda { margin-bottom: 18px; }
+  label { display: block; font-weight: 700; margin-bottom: 8px; }
+  .fila { display: flex; flex-wrap: wrap; gap: 10px; }
+  input { flex: 1 1 320px; padding: 12px 16px; border-radius: 12px; border: 1.5px solid var(--borde); font: inherit; color: var(--texto); background: var(--fondo); }
+  .boton { border: 0; cursor: pointer; font: inherit; font-weight: 700; }
+  .secundario { background: var(--azul-10); color: var(--azul); }
+
+  /* Estados de la evaluacion: inicio -> evaluando -> listo */
+  .estado-inicio, .estado-cargando, .estado-listo { display: none; }
+  [data-estado="inicio"] .estado-inicio { display: block; color: var(--gris); }
+  [data-estado="evaluando"] .estado-cargando { display: flex; align-items: center; gap: 14px; }
+  [data-estado="listo"] .estado-listo { display: block; animation: subir .5s var(--curva) both; }
+  .estado-cargando p { margin: 0; color: var(--azul); font-weight: 700; }
+  .giro { width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--azul-10); border-top-color: var(--azul); animation: girar .8s linear infinite; }
+
+  .rejilla { display: grid; grid-template-columns: minmax(260px, 360px) 1fr; gap: 18px; margin-bottom: 18px; }
+  .riesgo svg { width: 100%; max-width: 280px; display: block; margin: 0 auto; }
+  .aguja { transform-origin: 120px 110px; transform: rotate(-90deg); }
+  [data-estado="listo"] .aguja { transform: rotate(var(--angulo)); transition: transform 1.2s var(--curva) .2s; }
+  .nivel { display: flex; align-items: baseline; justify-content: center; gap: 10px; margin: 6px 0 12px; }
+  .nivel strong { font-size: 1.7rem; color: #a86a00; }
+  .nivel span { color: var(--gris); font-variant-numeric: tabular-nums; }
+  .recomendacion { margin: 0; padding: 12px 14px; border-radius: 12px; background: #fff6e5; color: #6b4500; font-size: .93rem; }
+
+  .verificaciones ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .verificaciones li { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border-radius: 12px; background: var(--fondo); }
+  .verificaciones li span:last-child { display: grid; }
+  .verificaciones small { color: var(--gris); }
+  .icono { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: #fff; flex: none; }
+  .ok .icono { background: var(--verde); } .alerta .icono { background: var(--rojo); } .revisar .icono { background: #d98b00; }
+  .alerta small { color: #b3141b; font-weight: 700; }
+
+  .historial .cabeza { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 8px; }
+  .historial h2 { margin: 0; }
+  .botones { display: flex; flex-wrap: wrap; gap: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: .93rem; }
+  th { text-align: left; color: var(--gris); font-weight: 700; padding: 10px 8px; border-bottom: 1px solid var(--borde); }
+  td { padding: 10px 8px; border-bottom: 1px solid var(--azul-10); font-variant-numeric: tabular-nums; }
+
+  @media (max-width: 1000px) { .rejilla { grid-template-columns: 1fr; } }
+</style>

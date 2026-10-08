@@ -25,7 +25,8 @@ const asunto = encodeURIComponent('Quiero conocer las soluciones de Sulotec');
   .caja { position: relative; overflow: hidden; display: flex; align-items: center; justify-content: space-between; gap: 28px; flex-wrap: wrap; color: #fff; border-radius: 28px; padding: 60px 56px; box-shadow: var(--sombra-alta);
     background: linear-gradient(120deg, var(--azul-claro), var(--azul), var(--azul-oscuro), var(--azul)); background-size: 300% 300%; animation: deriva 16s ease-in-out infinite; }
   .adorno { position: absolute; right: 0; top: 0; width: 46%; height: 100%; pointer-events: none; }
-  .filete { stroke-dasharray: 600; animation: dibujar 3s var(--curva) both; }
+  .filete { stroke-dasharray: 600; animation: trazar 2.4s var(--curva) both; }
+  @keyframes trazar { from { stroke-dashoffset: 600; } to { stroke-dashoffset: 0; } }
   .texto, .boton { position: relative; }
   h2 { font-size: clamp(1.6rem, 2.8vw, 2.25rem); margin-bottom: 10px; }
   p { margin: 0; color: #d7e0ef; max-width: 540px; font-size: 1.05rem; }

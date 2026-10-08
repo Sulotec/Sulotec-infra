@@ -1,4 +1,5 @@
 import type { IconName } from '../components/Icon.astro';
+import type { RedSocial } from '../components/IconoRed.astro';
 
 // Datos generales del sitio. Cambia aqui textos, correo, menu y secciones; los componentes solo los muestran.
 export const sitio = {
@@ -6,6 +7,19 @@ export const sitio = {
   url: 'https://sulotec.com',
   correo: 'contacto@sulotec.com',
   ciudad: 'Lima, Perú',
+  // Pagina de la cuenta de cada persona (cambiar contrasena, datos): Keycloak en cuenta.sulotec.com
+  cuentaUrl: 'https://cuenta.sulotec.com/realms/sulotec/account',
+  // Redes sociales: pega el link completo en "url" y el icono aparece solo en el pie de pagina.
+  // Las que queden vacias no se muestran.
+  redes: [
+    { red: 'linkedin', nombre: 'LinkedIn', url: '' },
+    { red: 'facebook', nombre: 'Facebook', url: '' },
+    { red: 'instagram', nombre: 'Instagram', url: '' },
+    { red: 'youtube', nombre: 'YouTube', url: '' },
+    { red: 'tiktok', nombre: 'TikTok', url: '' },
+    { red: 'x', nombre: 'X', url: '' },
+    { red: 'whatsapp', nombre: 'WhatsApp', url: '' },
+  ] as { red: RedSocial; nombre: string; url: string }[],
   titulo: 'Sulotec | Soluciones digitales para tu operación',
   descripcion:
     'Plataformas seguras en la nube para monitorear equipos en campo, auditar visitas y prevenir el lavado de activos.',

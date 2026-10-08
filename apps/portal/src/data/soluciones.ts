@@ -65,9 +65,9 @@ export const soluciones: Solucion[] = [
     estado: 'interno',
     plataformas: ['Web'],
     icono: 'search',
-    publico: false, // privado: solo administradores generales (Cloudflare Access)
+    publico: false, // privado: solo administradores generales (Cloudflare Access + regla de sedes)
     subdominio: 'buscadorinterno.sulotec.com',
-    publicado: false,
+    publicado: true, // frontend nuevo en Next.js (apps/buscador)
   },
 ];
 

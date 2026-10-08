@@ -1,8 +1,11 @@
 ---
 import Logo from './Logo.astro';
+import IconoRed from './IconoRed.astro';
 import { sitio } from '../data/sitio';
 import { solucionesPublicas, enlaceDe, tieneAcceso } from '../data/soluciones';
 const anio = new Date().getFullYear();
+// Solo se muestran las redes que ya tienen link en data/sitio.ts
+const redes = sitio.redes.filter((r) => r.url.trim());
 ---
 <footer>
   <div class="contenedor columnas">
@@ -22,18 +25,39 @@ const anio = new Date().getFullYear();
         <li><a href={`mailto:${sitio.correo}`}>{sitio.correo}</a></li>
       </ul>
     </div>
+    <div>
+      <h3>Síguenos</h3>
+      {redes.length ? (
+        <ul class="redes">
+          {redes.map((r) => (
+            <li><a href={r.url} target="_blank" rel="noopener noreferrer" aria-label={`Sulotec en ${r.nombre}`} title={r.nombre}><IconoRed red={r.red} /></a></li>
+          ))}
+        </ul>
+      ) : (
+        <p class="pronto">Muy pronto en redes sociales.</p>
+      )}
+    </div>
   </div>
   <p class="contenedor legal">© {anio} {sitio.nombre}. Todos los derechos reservados.</p>
 </footer>
 
 <style>
   footer { background: var(--fondo-2); border-top: 1px solid var(--borde); padding: 52px 0 28px; color: var(--gris); font-size: .93rem; }
-  .columnas { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 32px; padding-bottom: 28px; }
+  .columnas { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 32px; padding-bottom: 28px; }
   .columnas p { max-width: 340px; margin: 12px 0 0; }
+  .columnas .pronto { margin: 0; }
   h3 { font-size: .95rem; color: var(--texto); margin-bottom: 12px; }
   ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
   a { text-decoration: none; }
   ul a:hover { color: var(--azul); }
+  .redes { display: flex; flex-wrap: wrap; gap: 10px; }
+  .redes a {
+    display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%;
+    background: #fff; color: var(--azul); border: 1px solid var(--borde);
+    transition: background .2s ease, color .2s ease, translate .25s var(--curva);
+  }
+  .redes a:hover { background: var(--azul); color: #fff; translate: 0 -3px; }
   .legal { border-top: 1px solid var(--azul-10); padding-top: 20px; margin-top: 0; text-align: center; font-size: .85rem; }
-  @media (max-width: 720px) { .columnas { grid-template-columns: 1fr; } }
+  @media (max-width: 900px) { .columnas { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 560px) { .columnas { grid-template-columns: 1fr; } }
 </style>

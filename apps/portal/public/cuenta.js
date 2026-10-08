@@ -111,6 +111,10 @@
   document.addEventListener('DOMContentLoaded', () => {
     const s = sesion();
     document.querySelectorAll('[data-cuenta-nombre]').forEach((el) => { el.textContent = s ? s.nombre : ''; });
+    document.querySelectorAll('[data-cuenta-correo]').forEach((el) => { el.textContent = s ? s.correo || '' : ''; });
+    document.querySelectorAll('[data-cuenta-iniciales]').forEach((el) => {
+      el.textContent = s ? String(s.nombre || s.correo || '?').trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase() : '';
+    });
     // Los correos de consulta ya llevan el nombre y correo de quien tiene sesion
     if (s) document.querySelectorAll('a[data-correo-sesion]').forEach((a) => {
       a.href += `&body=${encodeURIComponent(`Hola, soy ${s.nombre} (${s.correo}). Me gustaría agendar una consulta para solicitar un producto de Sulotec.`)}`;

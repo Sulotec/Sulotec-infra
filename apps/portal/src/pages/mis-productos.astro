@@ -2,7 +2,7 @@
 // Pagina a la que se llega al iniciar sesion. public/cuenta.js manda a iniciar sesion si no hay sesion
 // y marca <html class="es-admin"> si la persona esta en el grupo "Administradores Generales" de Keycloak:
 // - Administradores Generales: ven todos los productos (incluido el Buscador Interno, que ademas
-//   esta protegido por Cloudflare Access).
+//   esta protegido por Cloudflare Access y por la regla de sedes).
 // - Los demas: ven las demos y la invitacion a agendar una consulta.
 import Base from '../layouts/Base.astro';
 import Header from '../components/Header.astro';
@@ -13,61 +13,101 @@ import { sitio } from '../data/sitio';
 
 const abrirDe = (s: (typeof soluciones)[number]) => s.url ?? (s.publicado ? `https://${s.subdominio}` : null);
 const demos = solucionesPublicas.filter((s) => s.demo);
+const buscador = soluciones.find((s) => !s.publico);
 const asunto = encodeURIComponent('Quiero agendar una consulta con Sulotec');
 ---
 <Base titulo="Mis productos | Sulotec" descripcion="Tus productos y demos de Sulotec." ruta="/mis-productos">
   <meta slot="head" name="robots" content="noindex" />
   <Header />
   <main id="contenido">
-    <section class="cabecera">
-      <div class="contenedor">
-        <h1>Hola, <span data-cuenta-nombre></span></h1>
-        <p class="solo-admin">Estos son todos los productos de Sulotec. Los privados te pedirán confirmar tu identidad otra vez antes de abrirse.</p>
-        <p class="solo-no-admin">Recorre las demos completas con datos de ejemplo. Cuando quieras usar un producto en tu empresa, agenda una consulta.</p>
+    <section class="bienvenida">
+      <div class="anillos" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div class="contenedor rejilla-bienvenida">
+        <div class="saludo aparecer">
+          <span class="rol solo-admin"><Icon name="shield" size={16} />Administrador General</span>
+          <span class="rol solo-no-admin"><Icon name="users" size={16} />Cuenta Sulotec</span>
+          <h1>Hola, <span data-cuenta-nombre></span></h1>
+          <p class="solo-admin">Tienes acceso a todo el ecosistema Sulotec. Los productos privados te pedirán confirmar tu identidad antes de abrirse.</p>
+          <p class="solo-no-admin">Recorre las demos completas con datos de ejemplo. Cuando quieras usar un producto en tu empresa, agenda una consulta.</p>
+          <div class="acciones">
+            {buscador && abrirDe(buscador) && (
+              <a class="boton boton-blanco solo-admin" href={abrirDe(buscador)!} target="_blank" rel="noopener"><Icon name="search" size={18} />Abrir Buscador Interno</a>
+            )}
+            <a class="boton boton-blanco solo-no-admin" href={demos[0]?.demo}>Explorar las demos<Icon name="arrow" size={18} /></a>
+            <a class="boton linea" href="#productos">Ver todos los productos</a>
+          </div>
+        </div>
+
+        <aside class="cuenta aparecer" style="--d:120ms" aria-label="Tu cuenta">
+          <div class="perfil">
+            <span class="avatar" data-cuenta-iniciales aria-hidden="true"></span>
+            <div>
+              <p class="nombre" data-cuenta-nombre></p>
+              <p class="correo" data-cuenta-correo></p>
+            </div>
+          </div>
+          <ul class="datos">
+            <li><Icon name="lock" size={16} />Tu sesión se cierra sola tras 30 minutos sin uso.</li>
+            <li><Icon name="check" size={16} /><span class="solo-admin">Rol: Administrador General</span><span class="solo-no-admin">Acceso a las demos completas</span></li>
+          </ul>
+          <div class="acciones-cuenta">
+            <a class="boton boton-azul" href={sitio.cuentaUrl} target="_blank" rel="noopener"><Icon name="gear" size={18} />Mi cuenta y contraseña</a>
+            <button type="button" class="salir" data-cuenta="salir">Cerrar sesión</button>
+          </div>
+        </aside>
+      </div>
+      <svg class="curva" viewBox="0 0 1440 80" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M0 80V52C320 6 720 92 1440 22V80Z" fill="var(--fondo)" /><path d="M0 52C320 6 720 92 1440 22" fill="none" stroke="var(--rojo)" stroke-width="4" />
+      </svg>
+    </section>
+
+    <section class="contenedor bloque solo-admin" id="productos" aria-labelledby="titulo-productos">
+      <div class="titulo-bloque">
+        <h2 id="titulo-productos">Tus productos</h2>
+        <p>{soluciones.length} productos del ecosistema</p>
+      </div>
+      <div class="productos">
+        {soluciones.map((s, i) => {
+          const abrir = abrirDe(s);
+          return (
+            <article class="producto revelar" style={`--i:${i % 2}`}>
+              <div class="arriba">
+                <span class="icono"><Icon name={s.icono} size={26} /></span>
+                <div class="chips">
+                  <span class:list={['chip', s.estado]}>{estados[s.estado]}</span>
+                  {!s.publico && <span class="chip privado"><Icon name="lock" size={13} />Privado</span>}
+                </div>
+              </div>
+              <h3>{s.nombre}</h3>
+              <p>{s.descripcion}</p>
+              <ul class="plataformas">{s.plataformas.map((p) => <li>{p}</li>)}</ul>
+              <div class="pie">
+                {abrir && <a class="boton boton-azul" href={abrir} target="_blank" rel="noopener">Abrir<Icon name="arrow" size={18} /></a>}
+                {s.demo && <a class:list={['boton', abrir ? 'secundario' : 'boton-azul']} href={s.demo}>Ver demo</a>}
+                {!abrir && <span class="nota">Acceso directo muy pronto en {s.subdominio}</span>}
+              </div>
+            </article>
+          );
+        })}
       </div>
     </section>
 
-    <section class="contenedor lista solo-admin" aria-label="Todos los productos">
-      {soluciones.map((s) => {
-        const abrir = abrirDe(s);
-        return (
-          <article class="producto">
-            <span class="icono"><Icon name={s.icono} size={26} /></span>
-            <div class="texto">
-              <div class="nombre">
-                <h2>{s.nombre}</h2>
-                <span class:list={['estado', s.estado]}>{estados[s.estado]}</span>
-                {!s.publico && <span class="estado privado"><Icon name="lock" size={13} />Solo administradores generales</span>}
-              </div>
-              <p>{s.descripcion}</p>
-            </div>
-            <div class="acciones">
-              {abrir
-                ? <a class="boton boton-azul" href={abrir} target="_blank" rel="noopener">Abrir</a>
-                : <span class="pendiente">Enlace en preparación</span>}
-              {s.demo && <a class="secundario" href={s.demo}>Ver demo</a>}
-            </div>
-          </article>
-        );
-      })}
-    </section>
-
-    <section class="contenedor solo-no-admin" aria-label="Demos">
-      <div class="lista">
-        {demos.map((s) => (
-          <article class="producto">
-            <span class="icono"><Icon name={s.icono} size={26} /></span>
-            <div class="texto">
-              <div class="nombre"><h2>{s.nombre}</h2></div>
-              <p>{s.descripcion}</p>
-            </div>
-            <div class="acciones">
-              <a class="boton boton-azul" href={s.demo}>Abrir demo</a>
-            </div>
+    <section class="contenedor bloque solo-no-admin" id="productos-demo" aria-labelledby="titulo-demos">
+      <div class="titulo-bloque">
+        <h2 id="titulo-demos">Demos disponibles</h2>
+        <p>Con tu cuenta las recorres completas, sin límite de tiempo</p>
+      </div>
+      <div class="productos tres">
+        {demos.map((s, i) => (
+          <article class="producto revelar" style={`--i:${i}`}>
+            <div class="arriba"><span class="icono"><Icon name={s.icono} size={26} /></span><span class:list={['chip', s.estado]}>{estados[s.estado]}</span></div>
+            <h3>{s.nombre}</h3>
+            <p>{s.descripcion}</p>
+            <div class="pie"><a class="boton boton-azul" href={s.demo}>Abrir demo<Icon name="arrow" size={18} /></a></div>
           </article>
         ))}
       </div>
-      <div class="consulta">
+      <div class="consulta revelar">
         <div>
           <h2>¿Quieres alguno de estos productos en tu empresa?</h2>
           <p>Agenda una consulta personalizada: vemos tu operación y te mostramos cómo se adapta.</p>
@@ -75,42 +115,88 @@ const asunto = encodeURIComponent('Quiero agendar una consulta con Sulotec');
         <a class="boton boton-blanco" data-correo-sesion href={`mailto:${sitio.correo}?subject=${asunto}`}>Agendar una consulta</a>
       </div>
     </section>
+
+    <section class="contenedor ayuda" aria-label="Ayuda">
+      <div class="revelar" style="--i:0"><Icon name="bell" size={22} /><div><h3>¿Necesitas ayuda?</h3><p>Escríbenos a <a href={`mailto:${sitio.correo}`}>{sitio.correo}</a>.</p></div></div>
+      <div class="revelar" style="--i:1"><Icon name="lock" size={22} /><div><h3>¿Olvidaste tu contraseña?</h3><p>Recupérala desde <a href={sitio.cuentaUrl} target="_blank" rel="noopener">tu cuenta</a> o en la pantalla de inicio de sesión.</p></div></div>
+      <div class="revelar" style="--i:2"><Icon name="shield" size={22} /><div><h3>Tus datos protegidos</h3><p>Las demos usan solo datos de ejemplo. Nunca te pediremos datos personales para probarlas.</p></div></div>
+    </section>
   </main>
   <Footer />
 </Base>
 
 <style>
-  .cabecera { background: var(--azul); color: #fff; padding: 56px 0 64px; margin-bottom: -28px; }
-  h1 { font-size: clamp(2rem, 4vw, 2.8rem); letter-spacing: -.02em; }
-  .cabecera p { margin: 10px 0 0; max-width: 62ch; color: var(--azul-25); }
-  .lista { display: grid; gap: 16px; padding-bottom: 28px; }
-  .producto {
-    display: grid; grid-template-columns: auto 1fr auto; gap: 20px; align-items: center;
-    background: #fff; border: 1px solid var(--borde); border-radius: var(--radio); padding: 22px 26px; box-shadow: var(--sombra);
-  }
+  /* Bienvenida */
+  .bienvenida { position: relative; overflow: hidden; background: radial-gradient(circle at 85% 20%, #2a5cab 0, transparent 45%), linear-gradient(135deg, var(--azul) 0%, var(--azul-oscuro) 100%); color: #fff; padding: 56px 0 120px; }
+  .anillos { position: absolute; right: -140px; top: -160px; width: 560px; height: 560px; pointer-events: none; }
+  .anillos span { position: absolute; inset: 0; border-radius: 50%; border: 1px solid rgba(255, 255, 255, .12); }
+  .anillos span:nth-child(2) { inset: 80px; }
+  .anillos span:nth-child(3) { inset: 160px; border-color: rgba(237, 28, 36, .35); }
+  .rejilla-bienvenida { position: relative; display: grid; grid-template-columns: 1.35fr 1fr; gap: 40px; align-items: center; }
+  .rol { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; background: rgba(255, 255, 255, .12); border: 1px solid rgba(255, 255, 255, .2); font-size: .85rem; font-weight: 700; }
+  h1 { margin: 16px 0 10px; font-size: clamp(2.2rem, 5vw, 3.4rem); letter-spacing: -.02em; line-height: 1.05; }
+  .saludo p { margin: 0; max-width: 54ch; color: var(--azul-25); font-size: 1.05rem; }
+  .acciones { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
+  .linea { background: transparent; color: #fff; border: 1px solid rgba(255, 255, 255, .45); }
+  .linea:hover { background: rgba(255, 255, 255, .1); }
+  .boton :global(svg) { flex: none; }
+  .boton { display: inline-flex; align-items: center; gap: 8px; }
+
+  .cuenta { background: rgba(255, 255, 255, .97); color: var(--texto); border-radius: 20px; padding: 24px; box-shadow: 0 30px 60px rgba(8, 20, 45, .35); }
+  .perfil { display: flex; align-items: center; gap: 14px; }
+  .avatar { flex: none; width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; background: var(--azul); color: #fff; font-weight: 700; font-size: 1.15rem; box-shadow: 0 0 0 4px var(--azul-10); }
+  .nombre { margin: 0; font-weight: 700; font-size: 1.1rem; }
+  .correo { margin: 2px 0 0; color: var(--gris); font-size: .9rem; word-break: break-all; }
+  .datos { list-style: none; margin: 18px 0; padding: 16px 0 0; border-top: 1px solid var(--borde); display: grid; gap: 10px; color: var(--gris); font-size: .92rem; }
+  .datos li { display: flex; gap: 10px; align-items: flex-start; }
+  .datos :global(svg) { color: var(--azul); margin-top: 2px; flex: none; }
+  .acciones-cuenta { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+  .salir { background: none; border: 0; padding: 0; font: inherit; font-weight: 700; color: var(--gris); cursor: pointer; }
+  .salir:hover { color: var(--rojo); }
+  .curva { position: absolute; left: 0; bottom: -1px; width: 100%; height: 80px; }
+
+  /* Productos */
+  .bloque { padding: 40px 0 24px; }
+  .titulo-bloque { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 22px; }
+  .titulo-bloque h2 { font-size: 1.7rem; color: var(--azul); letter-spacing: -.01em; }
+  .titulo-bloque p { margin: 0; color: var(--gris); }
+  .productos { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; }
+  .productos.tres { grid-template-columns: repeat(3, 1fr); }
+  .producto { position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 12px; background: #fff; border: 1px solid var(--borde); border-radius: var(--radio); padding: 26px; box-shadow: var(--sombra); transition: box-shadow .35s var(--curva), translate .35s var(--curva); }
+  .producto::before { content: ""; position: absolute; left: 0; top: 0; height: 4px; width: 100%; background: linear-gradient(90deg, var(--rojo), var(--azul)); transform: scaleX(0); transform-origin: left; transition: transform .5s var(--curva); }
+  .producto:hover { box-shadow: var(--sombra-alta); translate: 0 -4px; }
+  .producto:hover::before { transform: scaleX(1); }
+  .arriba { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
   .icono { width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; background: var(--azul); color: #fff; }
-  .nombre { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
-  h2 { font-size: 1.2rem; color: var(--texto); }
-  .texto p { margin: 6px 0 0; color: var(--gris); max-width: 70ch; }
-  .estado { display: inline-flex; align-items: center; gap: 6px; font-size: .76rem; font-weight: 700; padding: 4px 11px; border-radius: 999px; white-space: nowrap; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; font-size: .76rem; font-weight: 700; padding: 5px 12px; border-radius: 999px; white-space: nowrap; }
   .produccion { background: #e5f5ec; color: #0d7a3d; }
   .implementacion { background: var(--azul-10); color: var(--azul); }
   .interno { background: #eef0f3; color: var(--gris); }
   .privado { background: #fdecec; color: #b3141a; }
-  .acciones { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: flex-end; }
-  .acciones .boton { padding: 10px 22px; }
-  .secundario { color: var(--azul); font-weight: 700; text-decoration: none; }
-  .secundario:hover { text-decoration: underline; }
-  .pendiente { font-size: .88rem; color: var(--gris); }
-  .consulta {
-    display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap;
-    margin: 12px 0 72px; padding: 30px 34px; border-radius: var(--radio); background: var(--azul-oscuro); color: #fff;
-  }
-  .consulta h2 { color: #fff; font-size: 1.35rem; }
+  .producto h3 { font-size: 1.3rem; color: var(--texto); }
+  .producto p { margin: 0; color: var(--gris); }
+  .plataformas { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0; padding: 0; }
+  .plataformas li { font-size: .78rem; font-weight: 700; color: var(--azul); background: var(--azul-10); padding: 4px 11px; border-radius: 999px; }
+  .pie { margin-top: auto; padding-top: 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+  .secundario { background: var(--azul-10); color: var(--azul); }
+  .secundario:hover { background: var(--azul-25); }
+  .nota { font-size: .85rem; color: var(--gris); }
+
+  .consulta { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 24px; margin-top: 26px; padding: 30px 34px; border-radius: var(--radio); background: linear-gradient(135deg, var(--azul-oscuro), var(--azul)); color: #fff; }
+  .consulta h2 { font-size: 1.35rem; color: #fff; }
   .consulta p { margin: 6px 0 0; color: var(--azul-25); }
-  .solo-admin.lista { padding-bottom: 72px; }
-  @media (max-width: 720px) {
-    .producto { grid-template-columns: auto 1fr; }
-    .acciones { grid-column: 1 / -1; justify-content: flex-start; }
+
+  /* Ayuda */
+  .ayuda { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; padding: 28px 0 72px; }
+  .ayuda > div { display: flex; gap: 14px; padding: 20px; border-radius: 16px; background: var(--fondo-2); }
+  .ayuda :global(svg) { color: var(--azul); flex: none; margin-top: 2px; }
+  .ayuda h3 { font-size: 1rem; color: var(--texto); margin-bottom: 4px; }
+  .ayuda p { margin: 0; color: var(--gris); font-size: .92rem; }
+  .ayuda a { color: var(--azul); font-weight: 700; }
+
+  @media (max-width: 960px) {
+    .rejilla-bienvenida, .productos, .productos.tres, .ayuda { grid-template-columns: 1fr; }
+    .bienvenida { padding: 40px 0 100px; }
   }
 </style>

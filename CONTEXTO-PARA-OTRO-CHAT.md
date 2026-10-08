@@ -69,6 +69,12 @@ Usuario → Cloudflare (DNS, SSL, WAF, Access) → Cloudflare Tunnel → VM Orac
   - Permisos del grupo.
   - SQL del script contra Postgres 16 (repetible).
 - **Desplegado el 2026-10-08:** `cuenta.sulotec.com` arriba, con la app de Access "cuenta" (`/admin`, política "Equipo de cuentas") y la ruta del túnel `cuenta.sulotec.com → http://cuenta:8080`. **"Iniciar sesión" encendido en sulotec.com**, con `CUENTA_ACTIVA` en `true` por defecto en `portal.yml`. **"Crear cuenta" apagado** hasta tener SMTP: `CUENTA_REGISTRO=true` en GitHub, y Keycloak abre el registro solo con `ajustar-realm.sh`.
+- **Decisión del usuario (2026-10-08): se entra con Google y Microsoft** (Gmail/Outlook), sin contraseñas Sulotec.
+  - Proveedores `google` y `microsoft` en Keycloak, con `trustEmail=true`, creados **apagados** por `ajustar-realm.sh`. El usuario los enciende en la consola (Identity providers) pegando el Client ID y el Secret (README, Parte 2).
+  - Las cuentas se crean solas al primer ingreso. **No crear cuentas a mano** con el mismo correo, porque obliga a vincularlas.
+  - Abel entra una vez y luego se le une al grupo Administradores Generales.
+  - Cuando estén encendidos: variable de GitHub `CUENTA_REGISTRO=true`. La ventana de la demo muestra entonces "Continuar con Google/Microsoft", que va directo con `kc_idp_hint`.
+  - El secreto de Microsoft vence (24 meses máximo): hay que renovarlo.
 - **Reglas pedidas por el usuario:**
   - Visitante sin sesión: 2 minutos de demo en total (en localStorage `sulotec.demo.inicio`); después, una ventana obligatoria pide iniciar sesión, con la opción "Solicitar acceso" por correo.
   - Con sesión: demo sin límite; al minuto se recomienda agendar una cita (una vez por visita).

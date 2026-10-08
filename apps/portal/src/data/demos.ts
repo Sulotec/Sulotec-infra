@@ -3,7 +3,8 @@
 
 // ---------- Cuentas Sulotec (Keycloak en cuenta.sulotec.com) ----------
 // activa: false -> no se muestra "Iniciar sesion" y la invitacion ofrece avisar por correo.
-// registro: false -> no se ofrece "Crear cuenta" (se enciende cuando cuenta.sulotec.com tenga correo de salida).
+// registro: true -> el publico puede obtener su cuenta entrando con Google o Microsoft (encender cuando
+//   esos proveedores esten configurados en cuenta.sulotec.com). false -> la invitacion ofrece solicitar acceso.
 // En GitHub: variables CUENTA_ACTIVA y CUENTA_REGISTRO (ver .github/workflows/portal.yml).
 // Para probar en local: PUBLIC_CUENTA_ACTIVA=true PUBLIC_CUENTA_EMISOR=http://localhost:8180/realms/sulotec npm run build
 export const cuenta = {

@@ -23,7 +23,21 @@ fi
 rid=$(kc get roles/administrador-general -r sulotec --fields id --format csv --noquotes)
 kc create "clients/$cid/scope-mappings/realm" -r sulotec -b "[{\"id\":\"$rid\",\"name\":\"administrador-general\"}]"
 
-# 3) El registro publico se abre solo si hay correo de salida (cada persona debe confirmar su correo)
+# 3) Entrar con Google y con Microsoft. Se crean APAGADOS y sin claves: se encienden en la consola
+#    (Identity providers) al pegar el Client ID y el Client Secret (ver README). No se tocan si ya existen.
+#    trustEmail: Google y Microsoft ya confirmaron el correo, no hace falta otro correo de verificacion.
+existentes=$(kc get identity-provider/instances -r sulotec --fields alias --format csv --noquotes)
+orden=1
+for idp in google:Google microsoft:Microsoft; do
+  alias=${idp%%:*}; nombre=${idp##*:}
+  if ! grep -qx "$alias" <<<"$existentes"; then
+    kc create identity-provider/instances -r sulotec -b "{\"alias\":\"$alias\",\"providerId\":\"$alias\",\"displayName\":\"$nombre\",\"enabled\":false,\"trustEmail\":true,\"storeToken\":false,\"linkOnly\":false,\"firstBrokerLoginFlowAlias\":\"first broker login\",\"config\":{\"clientId\":\"pegar-aqui\",\"clientSecret\":\"pegar-aqui\",\"syncMode\":\"IMPORT\",\"guiOrder\":\"$orden\"}}"
+    echo "Ajuste: proveedor $nombre creado (apagado hasta pegar sus claves en la consola)"
+  fi
+  orden=$((orden + 1))
+done
+
+# 4) El registro publico con formulario se abre solo si hay correo de salida (cada persona confirma su correo)
 if kc get realms/sulotec --fields 'smtpServer(host)' | grep -q '"host"'; then registro=true; else registro=false; fi
 kc update realms/sulotec -s registrationAllowed=$registro
 echo "Ajustes aplicados. Registro publico: $registro"

@@ -38,8 +38,9 @@
     return null;
   };
 
-  // modo: 'ingresar' o 'crear'; destino: pagina a la que se vuelve (por defecto, la actual)
-  async function ir(modo, destino) {
+  // modo: 'ingresar' o 'crear'; destino: pagina a la que se vuelve (por defecto, la actual);
+  // idp: 'google' o 'microsoft' para ir directo a ese proveedor (si no esta encendido, se ve el inicio normal)
+  async function ir(modo, destino, idp) {
     const verificador = aleatorio(48);
     const estado = aleatorio(16);
     const volver = destino || (location.pathname.startsWith('/cuenta/') ? MIS_PRODUCTOS : location.pathname);
@@ -55,6 +56,7 @@
       code_challenge: await sha256(verificador),
       code_challenge_method: 'S256',
     });
+    if (idp) p.set('kc_idp_hint', idp);
     const ruta = modo === 'crear' ? '/protocol/openid-connect/registrations' : '/protocol/openid-connect/auth';
     location.assign(`${EMISOR}${ruta}?${p}`);
   }
@@ -105,7 +107,7 @@
     if (!boton) return;
     e.preventDefault();
     if (boton.dataset.cuenta === 'salir') salir();
-    else ir(boton.dataset.cuenta, boton.dataset.volver);
+    else ir(boton.dataset.cuenta, boton.dataset.volver, boton.dataset.idp);
   });
 
   document.addEventListener('DOMContentLoaded', () => {

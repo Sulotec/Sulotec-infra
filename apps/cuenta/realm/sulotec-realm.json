@@ -131,39 +131,5 @@
         "administrador-general"
       ]
     }
-  ],
-  "identityProviders": [
-    {
-      "alias": "google",
-      "providerId": "google",
-      "displayName": "Google",
-      "enabled": false,
-      "trustEmail": true,
-      "storeToken": false,
-      "linkOnly": false,
-      "firstBrokerLoginFlowAlias": "first broker login",
-      "config": {
-        "clientId": "pegar-aqui",
-        "clientSecret": "pegar-aqui",
-        "syncMode": "IMPORT",
-        "guiOrder": "1"
-      }
-    },
-    {
-      "alias": "microsoft",
-      "providerId": "microsoft",
-      "displayName": "Microsoft",
-      "enabled": false,
-      "trustEmail": true,
-      "storeToken": false,
-      "linkOnly": false,
-      "firstBrokerLoginFlowAlias": "first broker login",
-      "config": {
-        "clientId": "pegar-aqui",
-        "clientSecret": "pegar-aqui",
-        "syncMode": "IMPORT",
-        "guiOrder": "2"
-      }
-    }
   ]
 }

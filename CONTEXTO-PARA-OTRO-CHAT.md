@@ -69,17 +69,11 @@ Usuario → Cloudflare (DNS, SSL, WAF, Access) → Cloudflare Tunnel → VM Orac
   - Permisos del grupo.
   - SQL del script contra Postgres 16 (repetible).
 - **Desplegado el 2026-10-08:** `cuenta.sulotec.com` arriba, con la app de Access "cuenta" (`/admin`, política "Equipo de cuentas") y la ruta del túnel `cuenta.sulotec.com → http://cuenta:8080`. **"Iniciar sesión" encendido en sulotec.com**, con `CUENTA_ACTIVA` en `true` por defecto en `portal.yml`. **"Crear cuenta" apagado** hasta tener SMTP: `CUENTA_REGISTRO=true` en GitHub, y Keycloak abre el registro solo con `ajustar-realm.sh`.
-- **Decisión final del usuario (2026-10-08): "Crear cuenta" con cualquier correo usando el correo de Oracle (OCI Email Delivery).** Primero eligió Google/Microsoft, pero no tiene una cuenta de Google Cloud y creía que pedía tarjeta.
-  - Pasos en `apps/cuenta/README.md`, Parte 2: dominio, DKIM y SPF en Cloudflare, remitente `no-reply@sulotec.com`, credenciales SMTP y `preparar.sh` → `s`.
-  - Al terminar: variable de GitHub `CUENTA_REGISTRO=true`.
-  - El bloque SMTP de `preparar.sh` arma el JSON escapando la clave; probado con comillas y barras en bash 5.1 y 5.3 y contra Keycloak.
-  - Cada persona del equipo crea su cuenta con su usuario (`jeliases`, `sjuarez`, `AbelCEO`); después se pone a Abel en Administradores Generales.
-- Google/Microsoft quedan como opción apagada (`CUENTA_SOCIAL`):
-  - Proveedores `google` y `microsoft` en Keycloak, con `trustEmail=true`, creados **apagados** por `ajustar-realm.sh`. El usuario los enciende en la consola (Identity providers) pegando el Client ID y el Secret (README, Parte 2).
-  - Las cuentas se crean solas al primer ingreso. **No crear cuentas a mano** con el mismo correo, porque obliga a vincularlas.
-  - Abel entra una vez y luego se le une al grupo Administradores Generales.
-  - Cuando estén encendidos: variable de GitHub `CUENTA_REGISTRO=true`. La ventana de la demo muestra entonces "Continuar con Google/Microsoft", que va directo con `kc_idp_hint`.
-  - El secreto de Microsoft vence (24 meses máximo): hay que renovarlo.
+- **Decisión final del usuario (2026-10-08): es un SaaS, NO hay registro libre. Las cuentas las crea el equipo de Sulotec** en la consola (Users → Create → Credential reset con Verify Email y Update Password). Las personas **sí pueden recuperar** su acceso con "¿Olvidaste tu contraseña?".
+  - El correo de Oracle (OCI Email Delivery) hace falta para las invitaciones y la recuperación (README, Parte 2).
+  - Se descartaron "Crear cuenta" y Google/Microsoft porque creaban cuentas solas. `ajustar-realm.sh` fuerza `registrationAllowed=false` y `resetPasswordAllowed=true`, y borra los proveedores de reserva sin configurar.
+  - En la demo, quien no tiene cuenta ve "Iniciar sesión" + "Solicitar acceso" (mailto a contacto@).
+  - **Pendiente urgente: Email Routing de `contacto@sulotec.com`.**
 - **Reglas pedidas por el usuario:**
   - Visitante sin sesión: 2 minutos de demo en total (en localStorage `sulotec.demo.inicio`); después, una ventana obligatoria pide iniciar sesión, con la opción "Solicitar acceso" por correo.
   - Con sesión: demo sin límite; al minuto se recomienda agendar una cita (una vez por visita).

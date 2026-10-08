@@ -38,9 +38,9 @@
     return null;
   };
 
-  // modo: 'ingresar' o 'crear'; destino: pagina a la que se vuelve (por defecto, la actual);
-  // idp: 'google' o 'microsoft' para ir directo a ese proveedor (si no esta encendido, se ve el inicio normal)
-  async function ir(modo, destino, idp) {
+  // Inicio de sesion en cuenta.sulotec.com. No hay registro libre: las cuentas las crea el equipo de Sulotec.
+  // destino: pagina a la que se vuelve (por defecto, la actual)
+  async function ir(destino) {
     const verificador = aleatorio(48);
     const estado = aleatorio(16);
     const volver = destino || (location.pathname.startsWith('/cuenta/') ? MIS_PRODUCTOS : location.pathname);
@@ -56,9 +56,7 @@
       code_challenge: await sha256(verificador),
       code_challenge_method: 'S256',
     });
-    if (idp) p.set('kc_idp_hint', idp);
-    const ruta = modo === 'crear' ? '/protocol/openid-connect/registrations' : '/protocol/openid-connect/auth';
-    location.assign(`${EMISOR}${ruta}?${p}`);
+    location.assign(`${EMISOR}/protocol/openid-connect/auth?${p}`);
   }
 
   async function completar() {
@@ -107,7 +105,7 @@
     if (!boton) return;
     e.preventDefault();
     if (boton.dataset.cuenta === 'salir') salir();
-    else ir(boton.dataset.cuenta, boton.dataset.volver, boton.dataset.idp);
+    else ir(boton.dataset.volver);
   });
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -118,11 +116,11 @@
       a.href += `&body=${encodeURIComponent(`Hola, soy ${s.nombre} (${s.correo}). Me gustaría agendar una consulta para solicitar un producto de Sulotec.`)}`;
     });
     if (location.pathname === '/cuenta/entrar') {
-      if (s) location.replace(MIS_PRODUCTOS); else ir('ingresar', MIS_PRODUCTOS);
+      if (s) location.replace(MIS_PRODUCTOS); else ir(MIS_PRODUCTOS);
       return;
     }
     if (location.pathname === MIS_PRODUCTOS && !s) {
-      ir('ingresar', MIS_PRODUCTOS);
+      ir(MIS_PRODUCTOS);
       return;
     }
     if (location.pathname === '/cuenta/callback') {

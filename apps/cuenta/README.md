@@ -1,6 +1,6 @@
 # cuenta.sulotec.com — cuentas Sulotec (Keycloak)
 
-Inicio de sesión y registro de personas para sulotec.com y sus demos, y administración de las cuentas del equipo.
+Inicio de sesión para sulotec.com y sus demos. Las cuentas las crea el equipo de Sulotec: no hay registro libre.
 
 | Qué | Dónde |
 |---|---|
@@ -12,7 +12,7 @@ Inicio de sesión y registro de personas para sulotec.com y sus demos, y adminis
 | Datos | PostgreSQL, base `keycloak` (entra en el respaldo diario) |
 
 Reglas del realm `sulotec` (en `realm/sulotec-realm.json`):
-- Cualquier correo puede crear cuenta (cuando el correo de salida esté encendido), pero debe confirmarlo antes de entrar.
+- No hay registro libre: las cuentas las crea el equipo de Sulotec en la consola. Cada persona confirma su correo y elige su propia contraseña, y puede recuperarla con "¿Olvidaste tu contraseña?".
 - Contraseñas de 10 o más caracteres, con mayúscula, minúscula y número, sin repetir las 3 últimas.
 - 5 intentos fallidos bloquean la cuenta de 1 a 15 minutos.
 - La sesión se cierra tras 30 minutos sin uso y dura 8 horas como máximo.
@@ -47,9 +47,13 @@ Reglas del realm `sulotec` (en `realm/sulotec-realm.json`):
 
 ---
 
-## Parte 2 — Correo de salida con Oracle (para "Crear cuenta")
+## Parte 2 — Correo de salida con Oracle (invitaciones y recuperar contraseña)
 
-Con el correo encendido, cualquiera puede pulsar **Crear cuenta** en sulotec.com con su Gmail, Outlook o el correo que sea. Recibe un correo de Sulotec para confirmarlo y elige su contraseña. También funciona "¿Olvidaste tu contraseña?". Usa **OCI Email Delivery**, de la misma cuenta de Oracle; no necesita cuenta ni tarjeta nueva.
+Con el correo encendido:
+- Cada cuenta nueva recibe un correo de invitación de Sulotec, y la persona elige su propia contraseña. Nadie más la conoce.
+- Funciona **"¿Olvidaste tu contraseña?"** en la página de inicio de sesión.
+
+Usa **OCI Email Delivery**, de la misma cuenta de Oracle; no necesita cuenta ni tarjeta nueva.
 
 En la consola de Oracle (https://cloud.oracle.com, región **Chile Central (Santiago)**):
 
@@ -66,59 +70,55 @@ En la consola de Oracle (https://cloud.oracle.com, región **Chile Central (Sant
 5. **Credenciales SMTP:**
    - Arriba a la derecha, abre el ícono de perfil → **Mi perfil** (o **Configuración de usuario**) → **Tokens y claves** → **Credenciales SMTP** → **Generar credenciales**.
    - Copia el **usuario** y la **contraseña** al gestor de contraseñas. La contraseña solo se muestra una vez. **No la pegues en chats.**
-6. **Servidor SMTP:** ve a **Email Delivery → Configuration**. El "Public Endpoint" debe ser `smtp.email.sa-santiago-1.oci.oraclecloud.com`.
-7. **Configurar en el servidor:** entra a https://ssh.sulotec.com y corre:
+6. **Configurar en el servidor:** entra a https://ssh.sulotec.com y corre:
    ```bash
    sudo bash /data/apps/cuenta/preparar.sh
    ```
-   Responde `s` y pega el servidor, el usuario y la contraseña SMTP; la contraseña no se ve al pegarla. El registro de Keycloak se abre solo.
-8. **Encender "Crear cuenta" en el portal:**
-   - En GitHub, ve a **Settings → Secrets and variables → Actions → Variables** y crea `CUENTA_REGISTRO` con el valor `true`.
-   - Luego ve a **Actions → Publicar portal → Run workflow**.
-9. **Probar:** en una ventana de incógnito, entra a sulotec.com y pulsa **Crear cuenta**. Pon tu correo y confirma el correo que te llega. Si no aparece, revisa la carpeta de spam.
+   Responde `s` y pega, cuando te los pida:
+   - el servidor: `smtp.email.sa-santiago-1.oci.oraclecloud.com`
+   - el usuario SMTP
+   - la contraseña SMTP (no se ve al pegarla)
+7. **Probar:** crea una cuenta para ti con la Parte 3 y revisa que llegue la invitación. Si no aparece, revisa la carpeta de spam.
 
 ---
 
-## Parte 3 — Cuentas del equipo y quién ve todo
+## Parte 3 — Levantar cuentas (lo hace el equipo de Sulotec)
 
-1. Cada persona crea su propia cuenta en sulotec.com con **Crear cuenta**. Elige su **Usuario** (por ejemplo `jeliases`, `sjuarez`, `AbelCEO`) y pone su correo. Keycloak guarda el usuario en minúsculas, pero al entrar se puede escribir como sea.
-2. Para que alguien **vea todos los productos**, incluido el Buscador Interno (hoy, solo el CEO):
-   1. En la consola de Keycloak (realm **sulotec**), ve a **Users** y busca a la persona.
-   2. Abre la pestaña **Groups**, pulsa **Join Group**, elige `Administradores Generales` y pulsa **Join**.
-   3. La persona cierra sesión en sulotec.com y vuelve a entrar. En **Mis productos** ahora ve todo.
-3. Quien no está en el grupo solo ve las demos.
+Sulotec es un SaaS: **nadie se crea su cuenta solo**. Quien no tiene cuenta pulsa **Solicitar acceso** en la demo, y esa solicitud llega por correo a `contacto@sulotec.com`. El equipo decide y crea la cuenta.
 
-**Crear la cuenta por otra persona**:
-1. En **Users → Create new user**, llena los datos y pulsa **Create**.
-2. En **Credentials → Credential reset**, elige `Verify Email` y `Update Password` y pulsa **Send email**.
-3. La persona recibe "Actualiza tu cuenta" y elige su propia contraseña; nadie más la conoce.
+**Dónde:**
+- **La primera vez**, entra con `admin-temporal` a https://cuenta.sulotec.com/admin/master/console/ y cambia arriba a la izquierda al realm **sulotec**.
+- **Después**, quien esté en *Administradores Generales* entra con su propia cuenta a https://cuenta.sulotec.com/admin/sulotec/console/.
 
-**Quitar el acceso**, cuando alguien deja la empresa:
-- En **Users**, entra a la persona y apaga **Enabled**, o sácala del grupo con **Leave**.
-- Si administraba cuentas, quita su correo de la política **Equipo de cuentas** en Cloudflare Access.
+**Crear una cuenta:**
+1. Ve a **Usuarios (Users) → Crear usuario (Create new user)**:
+   - **Nombre de usuario:** por ejemplo `jeliases`. Keycloak lo guarda en minúsculas: `AbelCEO` queda `abelceo`, pero al entrar se puede escribir como sea.
+   - **Correo electrónico**, **Nombre** y **Apellido**. El correo puede ser Gmail, Outlook o el de su empresa.
+   - **Correo electrónico verificado:** déjalo **apagado**; la persona lo confirma con la invitación.
+   - **Unirse a grupos:** `Administradores Generales`, **solo** si debe ver todos los productos (incluido el Buscador) y poder crear cuentas. Hoy: el CEO y quien administre cuentas. Clientes y demás: sin grupo, ven las demos.
+   - Pulsa **Crear**.
+2. Ve a la pestaña **Credenciales → Restablecimiento de credenciales (Credential reset)**:
+   - Elige `Verify Email` y `Update Password`.
+   - En **Expira en**, pon 3 días.
+   - Pulsa **Enviar correo electrónico**.
+3. La persona recibe "Actualiza tu cuenta":
+   1. Confirma su correo.
+   2. Elige su contraseña: 10 caracteres o más, con mayúscula, minúscula y número.
+   3. Ya puede entrar a sulotec.com con **Iniciar sesión** y llega a **Mis productos**.
 
----
+**Sin correo de Oracle todavía:**
+1. Al crear la cuenta, activa **Correo electrónico verificado**.
+2. En **Credenciales → Establecer contraseña**, pon una clave temporal con **Temporal** activado.
+3. Entrégala en persona o por llamada, nunca por chat. Al entrar, el sistema obliga a cambiarla.
 
-## Parte 4 — Entrar con Google y Microsoft (opcional)
+**Recuperar el acceso:**
+- La persona pulsa **¿Olvidaste tu contraseña?** en la página de inicio de sesión y recibe un enlace por correo.
+- También puedes enviárselo tú: **Credenciales → Restablecimiento de credenciales → `Update Password`**.
+- Tras 5 intentos fallidos, la cuenta se bloquea de 1 a 15 minutos y luego se desbloquea sola.
 
-Keycloak ya tiene los dos proveedores **apagados**. Se encienden pegando sus claves en **Identity providers → google / microsoft**, activando **Enabled** y pulsando **Save**. Luego, en GitHub, crea la variable `CUENTA_SOCIAL=true` y vuelve a correr *Publicar portal*.
-
-**Google:**
-1. En https://console.cloud.google.com/projectcreate crea el proyecto `Sulotec`. No hace falta activar la prueba gratuita ni poner tarjeta: cierra ese aviso.
-2. En https://console.cloud.google.com/auth/overview pulsa **Comenzar**:
-   - Público: **Externo**. **No subas logo**.
-   - Pulsa **Publicar app**.
-3. En **Clientes → Crear cliente**:
-   - Tipo: **Aplicación web**.
-   - Redirección: `https://cuenta.sulotec.com/realms/sulotec/broker/google/endpoint`
-
-**Microsoft** (requiere una cuenta de trabajo de Microsoft 365):
-1. En https://entra.microsoft.com, ve a **Registros de aplicaciones → Nuevo registro**:
-   - Tipos de cuenta: **cualquier directorio organizativo y cuentas personales de Microsoft**.
-   - Redirección **Web**: `https://cuenta.sulotec.com/realms/sulotec/broker/microsoft/endpoint`
-2. En **Certificados y secretos → Nuevo secreto** (24 meses), copia el **Valor** y anota cuándo vence.
-
-**No crees a mano** una cuenta para alguien que entrará con Google o Microsoft: si ya existe una cuenta con su correo, Keycloak le pedirá vincularla.
+**Quitar el acceso** (cliente que termina contrato o persona que deja la empresa):
+- En **Usuarios**, entra a la persona y apaga **Habilitado**.
+- Si administraba cuentas, quita también su correo de la política **Equipo de cuentas** en Cloudflare Access.
 
 Para apagar el inicio de sesión en todo el portal en una emergencia: en GitHub, crea la variable `CUENTA_ACTIVA` con el valor `false` y vuelve a correr *Publicar portal*.
 
@@ -126,7 +126,7 @@ Para apagar el inicio de sesión en todo el portal en una emergencia: en GitHub,
 
 ## Notas
 
-- `ajustar-realm.sh` aplica al realm que ya existe los ajustes que el JSON no puede aplicar. Hoy son tres: el rol en el token del portal, los proveedores Google y Microsoft (apagados y sin claves si no existen), y el registro con formulario solo si hay correo. Lo corren solos el workflow y `preparar.sh`; es seguro repetirlo.
+- `ajustar-realm.sh` aplica al realm que ya existe los ajustes que el JSON no puede aplicar. Hoy: el rol en el token del portal, registro libre siempre apagado con recuperación de contraseña encendida, y el borrado de los proveedores Google/Microsoft de reserva que nunca se configuraron. Lo corren solos el workflow y `preparar.sh`; es seguro repetirlo.
 - `realm/sulotec-realm.json` solo se importa la primera vez que arranca Keycloak. Los cambios posteriores se hacen en la consola maestra. Copia también el cambio al JSON para que el repositorio refleje la configuración real.
 - Los cambios del tema (`themes/sulotec`) se aplican solos: el workflow reinicia Keycloak.
 - Pendiente ISO 27001: crear un administrador maestro con nombre propio y OTP, y dejar `admin-temporal` solo para emergencias.

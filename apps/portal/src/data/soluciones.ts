@@ -62,7 +62,7 @@ export const soluciones: Solucion[] = [
     plataformas: ['Web'],
     icono: 'search',
     publico: false, // privado: solo administradores generales (Cloudflare Access)
-    subdominio: 'buscador.sulotec.com',
+    subdominio: 'buscadorinterno.sulotec.com',
     publicado: false,
   },
 ];

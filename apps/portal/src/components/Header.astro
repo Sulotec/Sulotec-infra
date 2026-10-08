@@ -12,7 +12,11 @@ import { cuenta } from '../data/demos';
         {cuenta.activa ? (
           <>
             <li class="solo-invitado"><button type="button" class="enlace-cuenta" data-cuenta="ingresar" data-volver="/mis-productos">Iniciar sesión</button></li>
-            <li class="solo-invitado"><a class="boton boton-azul pequeno" href="/#contacto">Contáctanos</a></li>
+            <li class="solo-invitado">
+              {cuenta.registro
+                ? <button type="button" class="boton boton-azul pequeno" data-cuenta="crear" data-volver="/mis-productos">Crear cuenta</button>
+                : <a class="boton boton-azul pequeno" href="/#contacto">Contáctanos</a>}
+            </li>
             <li class="solo-sesion saludo">Hola, <strong data-cuenta-nombre></strong></li>
             <li class="solo-sesion"><button type="button" class="enlace-cuenta" data-cuenta="salir"><span class="largo">Cerrar sesión</span><span class="corto">Salir</span></button></li>
             <li class="solo-sesion"><a class="boton boton-azul pequeno" href="/mis-productos">Mis productos</a></li>

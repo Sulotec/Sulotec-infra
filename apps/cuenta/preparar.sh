@@ -83,13 +83,14 @@ echo "Keycloak esta listo."
 if [ -n "$smtp" ]; then
   echo "Configurando el correo del realm 'sulotec'..."
   docker exec -e KC_SMTP_HOST -e KC_SMTP_USER -e KC_SMTP_PASSWORD -e KC_BOOTSTRAP_ADMIN_USERNAME -e KC_BOOTSTRAP_ADMIN_PASSWORD cuenta bash -c '
+    set -e
     k=/opt/keycloak/bin/kcadm.sh; c="--config /tmp/kcadm.config"
-    $k config credentials $c --server http://127.0.0.1:8080 --realm master --user "$KC_BOOTSTRAP_ADMIN_USERNAME" --password "$KC_BOOTSTRAP_ADMIN_PASSWORD" >/dev/null
-    $k update realms/sulotec $c -s smtpServer.host="$KC_SMTP_HOST" -s smtpServer.port=587 -s smtpServer.starttls=true \
-      -s smtpServer.auth=true -s smtpServer.user="$KC_SMTP_USER" -s smtpServer.password="$KC_SMTP_PASSWORD" \
-      -s smtpServer.from=no-reply@sulotec.com -s smtpServer.fromDisplayName=Sulotec
-    rm -f /tmp/kcadm.config'
-  echo "Correo configurado. Pruebalo en la consola: Configuracion del realm > Correo electronico > Probar conexion."
+    trap "rm -f /tmp/kcadm.config" EXIT
+    # Valor JSON seguro aunque la clave traiga comillas, barras u otros simbolos
+    json() { local bs="\\" q="\""; local s=${1//"$bs"/"$bs$bs"}; s=${s//"$q"/"$bs$q"}; printf "\"%s\"" "$s"; }
+    $k config credentials $c --server http://127.0.0.1:8080 --realm master --user "$KC_BOOTSTRAP_ADMIN_USERNAME" --password "$KC_BOOTSTRAP_ADMIN_PASSWORD" 2>/dev/null
+    $k update realms/sulotec $c -b "{\"smtpServer\":{\"host\":$(json "$KC_SMTP_HOST"),\"port\":\"587\",\"starttls\":\"true\",\"auth\":\"true\",\"user\":$(json "$KC_SMTP_USER"),\"password\":$(json "$KC_SMTP_PASSWORD"),\"from\":\"no-reply@sulotec.com\",\"fromDisplayName\":\"Sulotec\"}}"'
+  echo "Correo configurado."
 fi
 # Ajustes del realm (roles en el token del portal; registro publico solo si hay correo)
 docker exec -i cuenta bash -s < "$APP/ajustar-realm.sh"

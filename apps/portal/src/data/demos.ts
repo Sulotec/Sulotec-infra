@@ -3,13 +3,15 @@
 
 // ---------- Cuentas Sulotec (Keycloak en cuenta.sulotec.com) ----------
 // activa: false -> no se muestra "Iniciar sesion" y la invitacion ofrece avisar por correo.
-// registro: true -> el publico puede obtener su cuenta entrando con Google o Microsoft (encender cuando
-//   esos proveedores esten configurados en cuenta.sulotec.com). false -> la invitacion ofrece solicitar acceso.
-// En GitHub: variables CUENTA_ACTIVA y CUENTA_REGISTRO (ver .github/workflows/portal.yml).
+// registro: true -> "Crear cuenta" con cualquier correo (necesita el correo de salida de cuenta.sulotec.com).
+// social: true -> "Continuar con Google / Microsoft" (necesita esos proveedores encendidos en cuenta.sulotec.com).
+// Sin ninguno de los dos, la invitacion ofrece solicitar acceso por correo.
+// En GitHub: variables CUENTA_ACTIVA, CUENTA_REGISTRO y CUENTA_SOCIAL (ver .github/workflows/portal.yml).
 // Para probar en local: PUBLIC_CUENTA_ACTIVA=true PUBLIC_CUENTA_EMISOR=http://localhost:8180/realms/sulotec npm run build
 export const cuenta = {
   activa: import.meta.env.PUBLIC_CUENTA_ACTIVA === 'true',
   registro: import.meta.env.PUBLIC_CUENTA_REGISTRO === 'true',
+  social: import.meta.env.PUBLIC_CUENTA_SOCIAL === 'true',
   emisor: import.meta.env.PUBLIC_CUENTA_EMISOR || 'https://cuenta.sulotec.com/realms/sulotec',
   cliente: 'portal',
 };

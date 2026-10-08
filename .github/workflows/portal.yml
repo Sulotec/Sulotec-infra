@@ -25,11 +25,13 @@ jobs:
       # despues de cambiarlas se vuelve a correr este workflow:
       #   CUENTA_ACTIVA=false   apaga "Iniciar sesion" en todo el portal (emergencias). Por defecto: encendido.
       #   CUENTA_REGISTRO=true  muestra "Crear cuenta" (cuando cuenta.sulotec.com ya tenga correo de salida).
+      #   CUENTA_SOCIAL=true    muestra "Continuar con Google / Microsoft" (cuando esos proveedores esten encendidos).
       - name: Compilar el sitio (Node en Docker)
         run: |
           docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
             -e PUBLIC_CUENTA_ACTIVA="${{ vars.CUENTA_ACTIVA || 'true' }}" \
             -e PUBLIC_CUENTA_REGISTRO="${{ vars.CUENTA_REGISTRO || 'false' }}" \
+            -e PUBLIC_CUENTA_SOCIAL="${{ vars.CUENTA_SOCIAL || 'false' }}" \
             -v "$PWD/apps/portal:/app" -w /app node:24-alpine \
             sh -c "npm ci --no-audit --no-fund && npm run build"
 

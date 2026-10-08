@@ -3,12 +3,12 @@ import Icon from './Icon.astro';
 import { sitio } from '../data/sitio';
 const asunto = encodeURIComponent('Quiero conocer las soluciones de Sulotec');
 ---
-<section class="contacto" id="contacto" aria-labelledby="titulo-contacto">
+<section class="contacto puntos" id="contacto" aria-labelledby="titulo-contacto">
   <div class="contenedor">
     <div class="caja revelar">
       <svg class="adorno" viewBox="0 0 400 300" preserveAspectRatio="none" aria-hidden="true">
         <path d="M120 300C200 200 260 90 400 40V300Z" fill="rgba(255,255,255,.06)" />
-        <path d="M100 300C190 190 250 80 400 26" fill="none" stroke="#ed1c24" stroke-width="6" />
+        <path class="filete" d="M100 300C190 190 250 80 400 26" fill="none" stroke="#ed1c24" stroke-width="6" />
       </svg>
       <div class="texto">
         <h2 id="titulo-contacto">¿Aún no sabes por dónde empezar?</h2>
@@ -20,11 +20,14 @@ const asunto = encodeURIComponent('Quiero conocer las soluciones de Sulotec');
 </section>
 
 <style>
-  .contacto { padding: 96px 0; }
-  .caja { position: relative; overflow: hidden; display: flex; align-items: center; justify-content: space-between; gap: 28px; flex-wrap: wrap; background: linear-gradient(135deg, var(--azul-claro), var(--azul) 55%, var(--azul-oscuro)); color: #fff; border-radius: 26px; padding: 56px; box-shadow: var(--sombra-alta); }
+  .contacto { padding: 100px 0; background: var(--fondo); }
+  .contenedor { position: relative; }
+  .caja { position: relative; overflow: hidden; display: flex; align-items: center; justify-content: space-between; gap: 28px; flex-wrap: wrap; color: #fff; border-radius: 28px; padding: 60px 56px; box-shadow: var(--sombra-alta);
+    background: linear-gradient(120deg, var(--azul-claro), var(--azul), var(--azul-oscuro), var(--azul)); background-size: 300% 300%; animation: deriva 16s ease-in-out infinite; }
   .adorno { position: absolute; right: 0; top: 0; width: 46%; height: 100%; pointer-events: none; }
+  .filete { stroke-dasharray: 600; animation: dibujar 3s var(--curva) both; }
   .texto, .boton { position: relative; }
-  h2 { font-size: clamp(1.6rem, 2.8vw, 2.2rem); margin-bottom: 10px; }
+  h2 { font-size: clamp(1.6rem, 2.8vw, 2.25rem); margin-bottom: 10px; }
   p { margin: 0; color: #d7e0ef; max-width: 540px; font-size: 1.05rem; }
-  @media (max-width: 720px) { .caja { padding: 36px 26px; } .adorno { width: 80%; opacity: .6; } }
+  @media (max-width: 720px) { .caja { padding: 38px 26px; } .adorno { width: 80%; opacity: .6; } }
 </style>

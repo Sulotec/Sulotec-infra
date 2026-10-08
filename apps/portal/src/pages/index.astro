@@ -17,11 +17,11 @@ import { soluciones } from '../data/soluciones';
     <Hero />
     <Marquee />
 
-    <section class="soluciones" id="soluciones" aria-labelledby="titulo-soluciones">
+    <section class="soluciones puntos" id="soluciones" aria-labelledby="titulo-soluciones">
       <div class="contenedor">
         <SectionTitle id="titulo-soluciones" kicker="Nuestro ecosistema" titulo="Soluciones para tu empresa" bajada="Cada solución funciona por sí sola y comparte la misma base segura en la nube." />
         <div class="rejilla">
-          {soluciones.map((s) => <ProductCard solucion={s} />)}
+          {soluciones.map((s, i) => <ProductCard solucion={s} indice={i} />)}
         </div>
       </div>
     </section>
@@ -34,7 +34,8 @@ import { soluciones } from '../data/soluciones';
 </Base>
 
 <style>
-  .soluciones { padding: 88px 0 100px; }
-  .rejilla { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+  .soluciones { padding: 96px 0 108px; background: var(--fondo); }
+  .soluciones .contenedor { position: relative; }
+  .rejilla { display: grid; grid-template-columns: repeat(2, 1fr); gap: 26px; }
   @media (max-width: 760px) { .rejilla { grid-template-columns: 1fr; } }
 </style>

@@ -35,7 +35,9 @@ const { etiqueta, titulo, texto } = sitio.portada;
 </section>
 
 <style>
-  .portada { position: relative; overflow: hidden; color: #fff; background: linear-gradient(135deg, var(--azul-claro) 0%, var(--azul) 50%, var(--azul-oscuro) 100%); }
+  /* Degradado que se mueve lento + reticula tecnica muy sutil */
+  .portada { position: relative; overflow: hidden; color: #fff; background: linear-gradient(125deg, var(--azul-claro), var(--azul), var(--azul-oscuro), var(--azul)); background-size: 300% 300%; animation: deriva 20s ease-in-out infinite; }
+  .portada::before { content: ""; position: absolute; inset: 0; pointer-events: none; background-image: linear-gradient(rgba(255, 255, 255, .05) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, .05) 1px, transparent 1px); background-size: 56px 56px; -webkit-mask-image: radial-gradient(ellipse 70% 80% at 70% 40%, #000, transparent 75%); mask-image: radial-gradient(ellipse 70% 80% at 70% 40%, #000, transparent 75%); }
   .marca-agua { position: absolute; width: 640px; height: 640px; left: -170px; top: -70px; color: rgba(255, 255, 255, .06); }
   .luz { position: absolute; border-radius: 50%; filter: blur(70px); pointer-events: none; animation: flotar 12s ease-in-out infinite; }
   .luz-1 { width: 420px; height: 420px; right: 4%; top: -120px; background: rgba(84, 116, 167, .55); }

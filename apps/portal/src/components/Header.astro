@@ -15,12 +15,12 @@ import { sitio } from '../data/sitio';
 </header>
 
 <style>
-  header { position: sticky; top: 0; z-index: 50; background: rgba(255, 255, 255, .92); backdrop-filter: saturate(160%) blur(12px); -webkit-backdrop-filter: saturate(160%) blur(12px); border-bottom: 1px solid var(--azul-10); }
+  header { position: sticky; top: 0; z-index: 50; background: rgba(238, 242, 248, .84); backdrop-filter: saturate(170%) blur(14px); -webkit-backdrop-filter: saturate(170%) blur(14px); border-bottom: 1px solid rgba(27, 69, 137, .08); }
   .barra { height: 74px; display: flex; align-items: center; justify-content: space-between; }
   ul { display: flex; align-items: center; gap: 30px; list-style: none; margin: 0; padding: 0; }
   .opcion a { position: relative; text-decoration: none; font-weight: 700; color: var(--azul); padding: 6px 0; }
-  .opcion a::after { content: ""; position: absolute; left: 0; bottom: 0; height: 2px; width: 100%; background: var(--rojo); transform: scaleX(0); transform-origin: left; transition: transform .25s var(--curva); }
-  .opcion a:hover::after { transform: scaleX(1); }
+  .opcion a::after { content: ""; position: absolute; left: 0; bottom: 0; height: 2px; width: 100%; background: var(--rojo); transform: scaleX(0); transform-origin: right; transition: transform .3s var(--curva); }
+  .opcion a:hover::after { transform: scaleX(1); transform-origin: left; }
   .pequeno { padding: 10px 20px; }
   @media (max-width: 860px) { .opcion { display: none; } }
 </style>

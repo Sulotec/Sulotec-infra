@@ -4,11 +4,14 @@ import { estados, type Solucion } from '../data/soluciones';
 
 interface Props {
   solucion: Solucion;
+  indice?: number; // para escalonar la aparicion
 }
 
-const { nombre, descripcion, estado, plataformas, icono, enlace } = Astro.props.solucion;
+const { solucion, indice = 0 } = Astro.props;
+const { nombre, descripcion, estado, plataformas, icono, enlace } = solucion;
 ---
-<article class="tarjeta revelar">
+<article class="tarjeta revelar" style={`--i:${indice % 2}`}>
+  <span class="brillo" aria-hidden="true"></span>
   <div class="arriba">
     <span class="icono"><Icon name={icono} size={28} /></span>
     <span class:list={['estado', estado]}>{estados[estado]}</span>
@@ -25,26 +28,37 @@ const { nombre, descripcion, estado, plataformas, icono, enlace } = Astro.props.
 </article>
 
 <style>
-  .tarjeta { position: relative; overflow: hidden; background: #fff; border: 1px solid var(--azul-25); border-radius: var(--radio); padding: 30px; display: flex; flex-direction: column; gap: 14px; transition: box-shadow .3s var(--curva), transform .3s var(--curva), border-color .3s ease; }
-  /* Filete rojo que crece al pasar el mouse */
-  .tarjeta::before { content: ""; position: absolute; left: 0; top: 0; height: 4px; width: 100%; background: linear-gradient(90deg, var(--rojo), var(--azul)); transform: scaleX(0); transform-origin: left; transition: transform .45s var(--curva); }
-  .tarjeta:hover { box-shadow: var(--sombra-alta); transform: translateY(-6px); border-color: transparent; }
+  .tarjeta {
+    position: relative; overflow: hidden; background: #fff; border: 1px solid var(--borde); border-radius: var(--radio);
+    padding: 30px; display: flex; flex-direction: column; gap: 14px; box-shadow: var(--sombra);
+    transition: box-shadow .4s var(--curva), transform .4s var(--curva), border-color .3s ease;
+  }
+  /* Leve efecto 3D al pasar el mouse */
+  .tarjeta:hover { box-shadow: var(--sombra-alta); transform: perspective(900px) rotateX(2deg) rotateY(-2deg) translateY(-8px); border-color: transparent; }
+  /* Filete superior rojo -> azul que crece */
+  .tarjeta::before { content: ""; position: absolute; left: 0; top: 0; height: 4px; width: 100%; background: linear-gradient(90deg, var(--rojo), var(--azul)); transform: scaleX(0); transform-origin: left; transition: transform .5s var(--curva); }
   .tarjeta:hover::before { transform: scaleX(1); }
+  /* Luz suave que entra desde la esquina */
+  .brillo { position: absolute; width: 260px; height: 260px; right: -120px; top: -120px; border-radius: 50%; background: radial-gradient(circle, rgba(27, 69, 137, .10), transparent 70%); opacity: 0; transition: opacity .5s ease, transform .6s var(--curva); pointer-events: none; }
+  .tarjeta:hover .brillo { opacity: 1; transform: translate(-30px, 30px); }
+
   .arriba { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-  .icono { position: relative; width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; background: var(--azul); color: #fff; transition: transform .35s var(--curva); }
-  .icono::after { content: ""; position: absolute; inset: -6px; border-radius: 50%; border: 2px solid var(--azul-25); transition: inset .35s var(--curva), opacity .35s ease; opacity: 0; }
-  .tarjeta:hover .icono { transform: rotate(-8deg) scale(1.06); }
-  .tarjeta:hover .icono::after { inset: -9px; opacity: 1; }
+  .icono { position: relative; width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; background: var(--azul); color: #fff; transition: transform .4s var(--curva); }
+  /* Anillo que gira alrededor del icono */
+  .icono::after { content: ""; position: absolute; inset: -7px; border-radius: 50%; background: conic-gradient(var(--rojo) 0 18%, transparent 18% 100%); -webkit-mask: radial-gradient(circle, transparent 31px, #000 32px); mask: radial-gradient(circle, transparent 31px, #000 32px); opacity: 0; transition: opacity .3s ease; animation: girar 2.4s linear infinite; }
+  .tarjeta:hover .icono { transform: scale(1.06); }
+  .tarjeta:hover .icono::after { opacity: 1; }
+
   .estado { font-size: .78rem; font-weight: 700; padding: 5px 12px; border-radius: 999px; white-space: nowrap; }
-  .produccion { background: #e7f6ee; color: #0d7a3d; }
-  .produccion::before { content: "● "; }
+  .produccion { background: #e5f5ec; color: #0d7a3d; }
+  .produccion::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; background: var(--verde); vertical-align: 1px; }
   .implementacion { background: var(--azul-10); color: var(--azul); }
   .interno { background: #eef0f3; color: var(--gris); }
-  h3 { font-size: 1.4rem; color: var(--texto); margin-top: 6px; letter-spacing: -.01em; }
-  p { margin: 0; color: var(--gris); }
+  h3 { position: relative; font-size: 1.4rem; color: var(--texto); margin-top: 6px; letter-spacing: -.01em; }
+  p { position: relative; margin: 0; color: var(--gris); }
   .plataformas { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0; padding: 0; }
   .plataformas li { font-size: .8rem; font-weight: 700; color: var(--azul); background: var(--azul-10); padding: 4px 11px; border-radius: 999px; }
-  .enlace { margin-top: auto; padding-top: 8px; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; color: var(--azul); text-decoration: none; }
-  .enlace :global(svg) { color: var(--rojo); transition: transform .2s var(--curva); }
-  .tarjeta:hover .enlace :global(svg) { transform: translateX(5px); }
+  .enlace { position: relative; margin-top: auto; padding-top: 8px; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; color: var(--azul); text-decoration: none; }
+  .enlace :global(svg) { color: var(--rojo); transition: transform .25s var(--curva); }
+  .tarjeta:hover .enlace :global(svg) { transform: translateX(6px); }
 </style>

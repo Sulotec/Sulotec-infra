@@ -1,5 +1,6 @@
 /* Identidad visual (referencia: manual de marca Informa Peru).
-   Azul como color principal, rojo solo como acento (puntos, filetes, flechas), mucho blanco. */
+   Azul como color principal, rojo solo como acento (puntos, filetes, flechas).
+   Fondo gris azulado suave en vez de blanco puro; las tarjetas quedan blancas encima. */
 :root {
   --azul: #1b4589;
   --azul-oscuro: #12305f;
@@ -11,10 +12,13 @@
   --rojo: #ed1c24;
   --verde: #12a150;
   --texto: #231f20;
-  --gris: #5d6475;
+  --gris: #5a6274;
+  --fondo: #eef2f8;        /* fondo general: ni blanco puro ni saturado */
+  --fondo-2: #e4eaf3;      /* secciones alternas */
+  --borde: #dde4ef;
   --radio: 18px;
-  --sombra: 0 1px 2px rgba(27, 69, 137, .06), 0 12px 32px rgba(27, 69, 137, .12);
-  --sombra-alta: 0 2px 6px rgba(18, 48, 95, .10), 0 28px 60px rgba(18, 48, 95, .22);
+  --sombra: 0 1px 2px rgba(27, 69, 137, .05), 0 10px 30px rgba(27, 69, 137, .08);
+  --sombra-alta: 0 2px 6px rgba(18, 48, 95, .08), 0 30px 60px rgba(18, 48, 95, .18);
   --ancho: 1180px;
   --curva: cubic-bezier(.2, .7, .2, 1);
 }
@@ -25,7 +29,7 @@ body {
   margin: 0;
   font-family: "Leelawadee UI", "Leelawadee", Arial, sans-serif;
   color: var(--texto);
-  background: #fff;
+  background: var(--fondo);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
@@ -37,39 +41,62 @@ svg { display: block; }
 .contenedor { width: min(var(--ancho), 100% - 40px); margin-inline: auto; }
 :focus-visible { outline: 3px solid var(--rojo); outline-offset: 3px; border-radius: 6px; }
 
-/* ---------- Boton reutilizable ---------- */
+/* Patron de puntos sutil para fondos (se desvanece hacia abajo) */
+.puntos { position: relative; }
+.puntos::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image: radial-gradient(rgba(27, 69, 137, .13) 1.2px, transparent 1.2px);
+  background-size: 22px 22px;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 55%);
+  mask-image: linear-gradient(180deg, #000 0%, transparent 55%);
+}
+
+/* ---------- Boton reutilizable (con brillo que lo recorre al pasar el mouse) ---------- */
 .boton {
-  position: relative; display: inline-flex; align-items: center; gap: 10px;
+  position: relative; overflow: hidden; isolation: isolate;
+  display: inline-flex; align-items: center; gap: 10px;
   padding: 14px 26px; border-radius: 999px; font-weight: 700; text-decoration: none;
-  transition: transform .2s var(--curva), box-shadow .2s var(--curva), background .2s ease;
+  transition: transform .25s var(--curva), box-shadow .25s var(--curva), background .2s ease;
+}
+.boton::after {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, .45) 50%, transparent 70%);
+  transform: translateX(-120%); transition: transform .7s var(--curva);
 }
 .boton:hover { transform: translateY(-2px); }
-.boton svg { transition: transform .2s var(--curva); }
+.boton:hover::after { transform: translateX(120%); }
+.boton svg { transition: transform .25s var(--curva); }
 .boton:hover svg { transform: translateX(4px); }
 .boton-azul { background: var(--azul); color: #fff; box-shadow: 0 10px 24px rgba(27, 69, 137, .28); }
-.boton-azul:hover { background: var(--azul-oscuro); }
+.boton-azul:hover { background: var(--azul-oscuro); box-shadow: 0 14px 30px rgba(27, 69, 137, .34); }
 .boton-blanco { background: #fff; color: var(--azul); box-shadow: 0 10px 24px rgba(8, 20, 45, .22); }
+.boton-blanco::after { background: linear-gradient(110deg, transparent 30%, rgba(27, 69, 137, .12) 50%, transparent 70%); }
 .boton-blanco svg { color: var(--rojo); }
 
-/* ---------- Encabezado de seccion reutilizable ---------- */
+/* ---------- Etiqueta de seccion ---------- */
 .kicker { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; color: var(--rojo); font-size: .95rem; letter-spacing: .02em; }
 .kicker::before { content: ""; width: 26px; height: 3px; border-radius: 3px; background: var(--rojo); }
 
 /* ---------- Animaciones ---------- */
-/* "translate" (no "transform") para no pisar los efectos hover que usan transform */
-@keyframes subir { from { opacity: 0; translate: 0 26px; } to { opacity: 1; translate: none; } }
+/* "translate"/"scale" (no "transform") para no pisar los efectos hover que usan transform */
+@keyframes subir { from { opacity: 0; translate: 0 34px; scale: .97; } to { opacity: 1; translate: none; scale: none; } }
 @keyframes flotar { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
 @keyframes girar { to { transform: rotate(360deg); } }
 @keyframes pulso { 0% { box-shadow: 0 0 0 0 rgba(237, 28, 36, .55); } 70% { box-shadow: 0 0 0 12px rgba(237, 28, 36, 0); } 100% { box-shadow: 0 0 0 0 rgba(237, 28, 36, 0); } }
 @keyframes dibujar { from { stroke-dashoffset: 1600; } to { stroke-dashoffset: 0; } }
 @keyframes trazo { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes deriva { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
 
 /* Entrada al cargar la pagina: class="aparecer" style="--d:120ms" */
-.aparecer { animation: subir .8s var(--curva) both; animation-delay: var(--d, 0ms); }
+.aparecer { animation: subir .9s var(--curva) both; animation-delay: var(--d, 0ms); }
 
-/* Aparicion al hacer scroll (solo CSS; donde no hay soporte, el contenido se ve igual) */
+/* Aparicion al hacer scroll, escalonada con style="--i:0,1,2..." (solo CSS; sin soporte se ve igual) */
 @supports (animation-timeline: view()) {
-  .revelar { animation: subir linear both; animation-timeline: view(); animation-range: entry 5% cover 28%; }
+  .revelar {
+    animation: subir linear both;
+    animation-timeline: view();
+    animation-range: entry calc(4% + var(--i, 0) * 7%) cover calc(30% + var(--i, 0) * 7%);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

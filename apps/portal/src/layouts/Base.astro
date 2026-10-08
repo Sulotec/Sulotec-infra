@@ -15,6 +15,8 @@ import { sitio } from '../data/sitio';
     <meta property="og:url" content={sitio.url} />
     <meta property="og:type" content="website" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!-- Siempre empezar arriba al entrar (archivo externo: lo permite la politica de seguridad CSP) -->
+    <script is:inline src="/inicio.js"></script>
   </head>
   <body>
     <a class="saltar" href="#contenido">Saltar al contenido</a>

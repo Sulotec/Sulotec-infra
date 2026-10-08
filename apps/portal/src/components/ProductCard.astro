@@ -1,6 +1,6 @@
 ---
 import Icon from './Icon.astro';
-import { estados, type Solucion } from '../data/soluciones';
+import { estados, enlaceDe, type Solucion } from '../data/soluciones';
 
 interface Props {
   solucion: Solucion;
@@ -8,7 +8,7 @@ interface Props {
 }
 
 const { solucion, indice = 0 } = Astro.props;
-const { nombre, descripcion, estado, plataformas, icono, enlace } = solucion;
+const { nombre, descripcion, estado, plataformas, icono, publicado } = solucion;
 ---
 <article class="tarjeta revelar" style={`--i:${indice % 2}`}>
   <span class="brillo" aria-hidden="true"></span>
@@ -21,8 +21,8 @@ const { nombre, descripcion, estado, plataformas, icono, enlace } = solucion;
   <ul class="plataformas">
     {plataformas.map((p) => <li>{p}</li>)}
   </ul>
-  <a class="enlace" href={enlace ?? '#contacto'}>
-    {enlace ? 'Ingresar' : 'Solicitar información'}
+  <a class="enlace" href={enlaceDe(solucion)}>
+    {publicado ? 'Ingresar' : 'Solicitar información'}
     <Icon name="arrow" size={18} />
   </a>
 </article>

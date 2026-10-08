@@ -1,7 +1,9 @@
 import type { IconName } from '../components/Icon.astro';
 
-// Una entrada por producto. La tarjeta, el menu del pie y todo lo demas se generan desde aqui:
-// para agregar un producto nuevo, copia un bloque y cambia sus datos.
+// Una entrada por producto. La tarjeta, el pie de pagina y todo lo demas se generan desde aqui.
+// - Para agregar un producto nuevo: copia un bloque completo ({ ... },) y cambia sus datos.
+// - Cuando un producto ya este en linea en su subdominio, cambia `publicado: false` a `true`:
+//   el boton de la tarjeta pasa de "Solicitar informacion" a "Ingresar" y lleva a https://<subdominio>.
 export type Estado = 'produccion' | 'implementacion' | 'interno';
 
 export interface Solucion {
@@ -10,8 +12,8 @@ export interface Solucion {
   estado: Estado;
   plataformas: string[];
   icono: IconName;
-  // Cuando el producto este publicado, pon su subdominio (ej. 'https://miradar360.sulotec.com').
-  enlace?: string;
+  subdominio: string; // reservado en Cloudflare para este producto
+  publicado: boolean;
 }
 
 export const soluciones: Solucion[] = [
@@ -22,6 +24,8 @@ export const soluciones: Solucion[] = [
     estado: 'produccion',
     plataformas: ['Web', 'Android', 'iOS'],
     icono: 'radar',
+    subdominio: 'miradar360.sulotec.com',
+    publicado: false,
   },
   {
     nombre: 'Auditoría de Visitas',
@@ -30,6 +34,8 @@ export const soluciones: Solucion[] = [
     estado: 'produccion',
     plataformas: ['Web', 'App móvil'],
     icono: 'mapCheck',
+    subdominio: 'auditoria.sulotec.com',
+    publicado: false,
   },
   {
     nombre: 'Prevención de Lavado de Activos',
@@ -38,6 +44,8 @@ export const soluciones: Solucion[] = [
     estado: 'implementacion',
     plataformas: ['Web', 'App móvil'],
     icono: 'shield',
+    subdominio: 'plaft.sulotec.com',
+    publicado: false,
   },
   {
     nombre: 'Buscador Interno',
@@ -46,6 +54,8 @@ export const soluciones: Solucion[] = [
     estado: 'interno',
     plataformas: ['Web'],
     icono: 'search',
+    subdominio: 'buscador.sulotec.com',
+    publicado: false,
   },
 ];
 
@@ -54,3 +64,6 @@ export const estados: Record<Estado, string> = {
   implementacion: 'En implementación',
   interno: 'Uso interno',
 };
+
+// Enlace de cada producto: su subdominio si ya esta publicado; si no, la seccion de contacto.
+export const enlaceDe = (s: Solucion) => (s.publicado ? `https://${s.subdominio}` : '#contacto');

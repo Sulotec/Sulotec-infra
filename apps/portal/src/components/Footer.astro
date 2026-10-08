@@ -1,7 +1,7 @@
 ---
 import Logo from './Logo.astro';
 import { sitio } from '../data/sitio';
-import { soluciones } from '../data/soluciones';
+import { soluciones, enlaceDe } from '../data/soluciones';
 const anio = new Date().getFullYear();
 ---
 <footer>
@@ -13,7 +13,7 @@ const anio = new Date().getFullYear();
     <div>
       <h3>Soluciones</h3>
       <ul>
-        {soluciones.map((s) => <li><a href={s.enlace ?? '#soluciones'}>{s.nombre}</a></li>)}
+        {soluciones.map((s) => <li><a href={s.publicado ? enlaceDe(s) : '#soluciones'}>{s.nombre}</a></li>)}
       </ul>
     </div>
     <div>

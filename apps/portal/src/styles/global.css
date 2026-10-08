@@ -24,7 +24,9 @@
 }
 
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+/* Sin scroll-behavior global: al entrar/recargar no debe "deslizarse" hacia abajo.
+   El desplazamiento suave de los enlaces internos lo hace public/inicio.js. */
+section[id] { scroll-margin-top: 84px; } /* que la cabecera fija no tape el titulo de la seccion */
 body {
   margin: 0;
   font-family: "Leelawadee UI", "Leelawadee", Arial, sans-serif;

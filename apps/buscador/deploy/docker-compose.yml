@@ -1,0 +1,21 @@
+# buscadorinterno.sulotec.com: frontend del Buscador Interno (Next.js).
+# En el servidor vive en /data/apps/buscador. Cloudflare Tunnel: buscadorinterno.sulotec.com -> http://buscador:3000
+# Configuracion (sin secretos en el repositorio): /opt/sulotec/buscador.env, lo crea preparar.sh.
+name: buscador
+
+services:
+  buscador:
+    image: buscador-web:latest
+    container_name: buscador
+    restart: unless-stopped
+    env_file: /opt/sulotec/buscador.env
+    read_only: true
+    tmpfs: [/tmp, /app/.next/cache]
+    security_opt: ["no-new-privileges:true"]
+    networks: [edge]
+    mem_limit: 512m
+
+networks:
+  edge:
+    external: true
+    name: sulotec_edge

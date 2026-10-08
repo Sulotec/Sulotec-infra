@@ -1,0 +1,42 @@
+# Publica sulotec.com cada vez que se sube un cambio del portal a la rama main.
+# Corre en el runner propio instalado en el servidor Oracle (vm/scripts/instalar-runner.sh):
+# no se abren puertos y GitHub no guarda llaves del servidor.
+name: Publicar portal
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/portal/**'
+      - '.github/workflows/portal.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: portal
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: [self-hosted, sulotec]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compilar el sitio (Node en Docker)
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
+            -v "$PWD/apps/portal:/app" -w /app node:24-alpine \
+            sh -c "npm ci --no-audit --no-fund && npm run build"
+
+      - name: Publicar en /data/apps/portal
+        run: |
+          set -e
+          mkdir -p /data/apps/portal/sitio
+          rsync -a --delete apps/portal/dist/ /data/apps/portal/sitio/
+          cp apps/portal/deploy/docker-compose.yml apps/portal/deploy/nginx.conf /data/apps/portal/
+          cd /data/apps/portal
+          docker compose up -d
+          docker exec portal nginx -t
+          docker exec portal nginx -s reload
+
+      - name: Comprobar que responde
+        run: docker exec portal wget -qS -O /dev/null http://127.0.0.1/ 2>&1 | head -1

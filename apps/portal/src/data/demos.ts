@@ -2,16 +2,21 @@
 // Nunca poner aqui datos reales de clientes.
 
 // ---------- Cuentas Sulotec (Keycloak en cuenta.sulotec.com) ----------
-// activa: false -> no se muestran "Iniciar sesion"/"Crear cuenta" y la invitacion ofrece avisar por correo.
+// activa: false -> no se muestra "Iniciar sesion" y la invitacion ofrece avisar por correo.
+// registro: false -> no se ofrece "Crear cuenta" (se enciende cuando cuenta.sulotec.com tenga correo de salida).
+// En GitHub: variables CUENTA_ACTIVA y CUENTA_REGISTRO (ver .github/workflows/portal.yml).
 // Para probar en local: PUBLIC_CUENTA_ACTIVA=true PUBLIC_CUENTA_EMISOR=http://localhost:8180/realms/sulotec npm run build
 export const cuenta = {
-  activa: import.meta.env.PUBLIC_CUENTA_ACTIVA === 'true' || false,
+  activa: import.meta.env.PUBLIC_CUENTA_ACTIVA === 'true',
+  registro: import.meta.env.PUBLIC_CUENTA_REGISTRO === 'true',
   emisor: import.meta.env.PUBLIC_CUENTA_EMISOR || 'https://cuenta.sulotec.com/realms/sulotec',
   cliente: 'portal',
 };
 
-// La invitacion aparece tras esta cantidad de acciones bloqueadas o de segundos de uso.
-export const invitacion = { acciones: 3, segundos: 75 };
+// Visitante sin sesion: recorre las demos libremente `segundos` (sumados entre todas las demos);
+// despues debe iniciar sesion para seguir. Cada `acciones` opciones bloqueadas se le invita antes.
+// Con sesion: tras `consulta` segundos se le recomienda agendar una consulta (una vez por visita).
+export const invitacion = { acciones: 3, segundos: 120, consulta: 60 };
 
 // ---------- MiRadar360 ----------
 export type EstadoAsesor = 'visita' | 'ruta' | 'termino';

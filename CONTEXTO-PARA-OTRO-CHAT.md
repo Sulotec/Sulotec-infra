@@ -68,7 +68,13 @@ Usuario → Cloudflare (DNS, SSL, WAF, Access) → Cloudflare Tunnel → VM Orac
   - Invitación de administrador ("Actualiza tu cuenta").
   - Permisos del grupo.
   - SQL del script contra Postgres 16 (repetible).
-- **Pedido del usuario (2026-10-08):** crear 3 cuentas de equipo: `jeliases`, `sjuarez`, `AbelCEO` (queda `abelceo`; CEO). Se crean en la consola cuando cuenta.sulotec.com esté arriba (README, Parte 2), en el grupo Administradores Generales y con `Configure OTP`. Los correos de jeliases y sjuarez los pone el usuario.
+- **Desplegado el 2026-10-08:** `cuenta.sulotec.com` arriba, con la app de Access "cuenta" (`/admin`, política "Equipo de cuentas") y la ruta del túnel `cuenta.sulotec.com → http://cuenta:8080`. **"Iniciar sesión" encendido en sulotec.com**, con `CUENTA_ACTIVA` en `true` por defecto en `portal.yml`. **"Crear cuenta" apagado** hasta tener SMTP: `CUENTA_REGISTRO=true` en GitHub, y Keycloak abre el registro solo con `ajustar-realm.sh`.
+- **Reglas pedidas por el usuario:**
+  - Visitante sin sesión: 2 minutos de demo en total (en localStorage `sulotec.demo.inicio`); después, una ventana obligatoria pide iniciar sesión, con la opción "Solicitar acceso" por correo.
+  - Con sesión: demo sin límite; al minuto se recomienda agendar una cita (una vez por visita).
+  - Al iniciar sesión desde la cabecera se llega a **`/mis-productos`**. Grupo **Administradores Generales** (rol `administrador-general` en el claim `roles` del id_token) = **ve todo, incluido el Buscador** (hoy: el CEO). Los demás ven solo las demos y la invitación a la consulta.
+  - Los botones "Abrir" esperan las URLs reales: `url` en `soluciones.ts`. Para el Buscador: puerta `buscadorinterno.sulotec.com` (Access) → redirección a Vercel, **pendiente la URL de Vercel**.
+- **Pedido del usuario (2026-10-08):** crear 3 cuentas de equipo: `jeliases`, `sjuarez`, `AbelCEO` (queda `abelceo`; CEO). Se crean en la consola cuando cuenta.sulotec.com esté arriba (README, Parte 2), con `Configure OTP`. Solo `abelceo` va en Administradores Generales (ve todo); jeliases y sjuarez van sin grupo y solo ven las demos, salvo que el usuario diga otra cosa. Los correos de jeliases y sjuarez los pone el usuario.
 - **Pendiente:**
   - Desplegar en el servidor (preparar.sh + Cloudflare).
   - Crear las 3 cuentas.

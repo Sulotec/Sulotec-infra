@@ -36,6 +36,7 @@ jobs:
           docker compose up -d --force-recreate
           for i in $(seq 1 40); do
             if [ "$(docker inspect -f '{{.State.Health.Status}}' cuenta)" = healthy ]; then
+              docker exec -i cuenta bash -s < /data/apps/cuenta/ajustar-realm.sh
               echo "cuenta.sulotec.com listo"; exit 0
             fi
             sleep 6

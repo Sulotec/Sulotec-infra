@@ -1,0 +1,116 @@
+---
+// Pagina a la que se llega al iniciar sesion. public/cuenta.js manda a iniciar sesion si no hay sesion
+// y marca <html class="es-admin"> si la persona esta en el grupo "Administradores Generales" de Keycloak:
+// - Administradores Generales: ven todos los productos (incluido el Buscador Interno, que ademas
+//   esta protegido por Cloudflare Access).
+// - Los demas: ven las demos y la invitacion a agendar una consulta.
+import Base from '../layouts/Base.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import Icon from '../components/Icon.astro';
+import { soluciones, solucionesPublicas, estados } from '../data/soluciones';
+import { sitio } from '../data/sitio';
+
+const abrirDe = (s: (typeof soluciones)[number]) => s.url ?? (s.publicado ? `https://${s.subdominio}` : null);
+const demos = solucionesPublicas.filter((s) => s.demo);
+const asunto = encodeURIComponent('Quiero agendar una consulta con Sulotec');
+---
+<Base titulo="Mis productos | Sulotec" descripcion="Tus productos y demos de Sulotec." ruta="/mis-productos">
+  <meta slot="head" name="robots" content="noindex" />
+  <Header />
+  <main id="contenido">
+    <section class="cabecera">
+      <div class="contenedor">
+        <h1>Hola, <span data-cuenta-nombre></span></h1>
+        <p class="solo-admin">Estos son todos los productos de Sulotec. Los privados te pedirán confirmar tu identidad otra vez antes de abrirse.</p>
+        <p class="solo-no-admin">Recorre las demos completas con datos de ejemplo. Cuando quieras usar un producto en tu empresa, agenda una consulta.</p>
+      </div>
+    </section>
+
+    <section class="contenedor lista solo-admin" aria-label="Todos los productos">
+      {soluciones.map((s) => {
+        const abrir = abrirDe(s);
+        return (
+          <article class="producto">
+            <span class="icono"><Icon name={s.icono} size={26} /></span>
+            <div class="texto">
+              <div class="nombre">
+                <h2>{s.nombre}</h2>
+                <span class:list={['estado', s.estado]}>{estados[s.estado]}</span>
+                {!s.publico && <span class="estado privado"><Icon name="lock" size={13} />Solo administradores generales</span>}
+              </div>
+              <p>{s.descripcion}</p>
+            </div>
+            <div class="acciones">
+              {abrir
+                ? <a class="boton boton-azul" href={abrir} target="_blank" rel="noopener">Abrir</a>
+                : <span class="pendiente">Enlace en preparación</span>}
+              {s.demo && <a class="secundario" href={s.demo}>Ver demo</a>}
+            </div>
+          </article>
+        );
+      })}
+    </section>
+
+    <section class="contenedor solo-no-admin" aria-label="Demos">
+      <div class="lista">
+        {demos.map((s) => (
+          <article class="producto">
+            <span class="icono"><Icon name={s.icono} size={26} /></span>
+            <div class="texto">
+              <div class="nombre"><h2>{s.nombre}</h2></div>
+              <p>{s.descripcion}</p>
+            </div>
+            <div class="acciones">
+              <a class="boton boton-azul" href={s.demo}>Abrir demo</a>
+            </div>
+          </article>
+        ))}
+      </div>
+      <div class="consulta">
+        <div>
+          <h2>¿Quieres alguno de estos productos en tu empresa?</h2>
+          <p>Agenda una consulta personalizada: vemos tu operación y te mostramos cómo se adapta.</p>
+        </div>
+        <a class="boton boton-blanco" data-correo-sesion href={`mailto:${sitio.correo}?subject=${asunto}`}>Agendar una consulta</a>
+      </div>
+    </section>
+  </main>
+  <Footer />
+</Base>
+
+<style>
+  .cabecera { background: var(--azul); color: #fff; padding: 56px 0 64px; margin-bottom: -28px; }
+  h1 { font-size: clamp(2rem, 4vw, 2.8rem); letter-spacing: -.02em; }
+  .cabecera p { margin: 10px 0 0; max-width: 62ch; color: var(--azul-25); }
+  .lista { display: grid; gap: 16px; padding-bottom: 28px; }
+  .producto {
+    display: grid; grid-template-columns: auto 1fr auto; gap: 20px; align-items: center;
+    background: #fff; border: 1px solid var(--borde); border-radius: var(--radio); padding: 22px 26px; box-shadow: var(--sombra);
+  }
+  .icono { width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; background: var(--azul); color: #fff; }
+  .nombre { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+  h2 { font-size: 1.2rem; color: var(--texto); }
+  .texto p { margin: 6px 0 0; color: var(--gris); max-width: 70ch; }
+  .estado { display: inline-flex; align-items: center; gap: 6px; font-size: .76rem; font-weight: 700; padding: 4px 11px; border-radius: 999px; white-space: nowrap; }
+  .produccion { background: #e5f5ec; color: #0d7a3d; }
+  .implementacion { background: var(--azul-10); color: var(--azul); }
+  .interno { background: #eef0f3; color: var(--gris); }
+  .privado { background: #fdecec; color: #b3141a; }
+  .acciones { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: flex-end; }
+  .acciones .boton { padding: 10px 22px; }
+  .secundario { color: var(--azul); font-weight: 700; text-decoration: none; }
+  .secundario:hover { text-decoration: underline; }
+  .pendiente { font-size: .88rem; color: var(--gris); }
+  .consulta {
+    display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap;
+    margin: 12px 0 72px; padding: 30px 34px; border-radius: var(--radio); background: var(--azul-oscuro); color: #fff;
+  }
+  .consulta h2 { color: #fff; font-size: 1.35rem; }
+  .consulta p { margin: 6px 0 0; color: var(--azul-25); }
+  .solo-admin.lista { padding-bottom: 72px; }
+  @media (max-width: 720px) {
+    .producto { grid-template-columns: auto 1fr; }
+    .acciones { grid-column: 1 / -1; justify-content: flex-start; }
+  }
+</style>

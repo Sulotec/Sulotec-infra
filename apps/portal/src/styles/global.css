@@ -78,6 +78,8 @@ svg { display: block; }
 /* ---------- Cuenta: mostrar solo lo que corresponde (la clase la pone public/cuenta.js) ---------- */
 .con-sesion .solo-invitado { display: none !important; }
 html:not(.con-sesion) .solo-sesion { display: none !important; }
+html:not(.es-admin) .solo-admin { display: none !important; }
+.es-admin .solo-no-admin { display: none !important; }
 
 /* ---------- Etiqueta de seccion ---------- */
 .kicker { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; color: var(--rojo); font-size: .95rem; letter-spacing: .02em; }

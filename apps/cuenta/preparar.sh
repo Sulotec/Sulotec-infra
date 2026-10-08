@@ -91,4 +91,6 @@ if [ -n "$smtp" ]; then
     rm -f /tmp/kcadm.config'
   echo "Correo configurado. Pruebalo en la consola: Configuracion del realm > Correo electronico > Probar conexion."
 fi
+# Ajustes del realm (roles en el token del portal; registro publico solo si hay correo)
+docker exec -i cuenta bash -s < "$APP/ajustar-realm.sh"
 echo "Listo."

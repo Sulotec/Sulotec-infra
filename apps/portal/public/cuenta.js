@@ -9,6 +9,10 @@
   if (!EMISOR || !CLIENTE) return;
 
   const CALLBACK = `${location.origin}/cuenta/callback`;
+  const MIS_PRODUCTOS = '/mis-productos';
+  // Rol de Keycloak (grupo "Administradores Generales") que ve todos los productos. Solo cambia lo que
+  // se muestra: cada producto privado tiene su propia proteccion (ej. Cloudflare Access en el Buscador).
+  const ROL_TOTAL = 'administrador-general';
   const CLAVE_SESION = 'sulotec.sesion';
   // Inicios pendientes por "state": el enlace del correo de verificacion suele abrirse en otra pestana
   const CLAVE_PKCE = 'sulotec.pkce';
@@ -34,11 +38,11 @@
     return null;
   };
 
-  // modo: 'ingresar' o 'crear'
-  async function ir(modo) {
+  // modo: 'ingresar' o 'crear'; destino: pagina a la que se vuelve (por defecto, la actual)
+  async function ir(modo, destino) {
     const verificador = aleatorio(48);
     const estado = aleatorio(16);
-    const volver = location.pathname.startsWith('/cuenta/') ? '/' : location.pathname;
+    const volver = destino || (location.pathname.startsWith('/cuenta/') ? MIS_PRODUCTOS : location.pathname);
     const pendientes = Object.fromEntries(Object.entries(leer(CLAVE_PKCE) || {}).filter(([, p]) => p.creado > Date.now() - VIGENCIA_PKCE));
     pendientes[estado] = { verificador, volver, creado: Date.now() };
     guardar(CLAVE_PKCE, pendientes);
@@ -74,6 +78,7 @@
     guardar(CLAVE_SESION, {
       nombre: datos.given_name || datos.name || datos.email,
       correo: datos.email,
+      roles: Array.isArray(datos.roles) ? datos.roles : [],
       idToken: t.id_token,
       expira: Date.now() + (t.refresh_expires_in || t.expires_in) * 1000,
     });
@@ -88,23 +93,34 @@
     location.assign(`${EMISOR}/protocol/openid-connect/logout?${p}`);
   }
 
-  window.sulotecCuenta = { sesion, ir, salir };
+  const esAdmin = () => Boolean(sesion()?.roles?.includes(ROL_TOTAL));
+
+  window.sulotecCuenta = { sesion, esAdmin, ir, salir };
   // Se marca antes de pintar la pagina para no mostrar botones que no corresponden
   document.documentElement.classList.toggle('con-sesion', Boolean(sesion()));
+  document.documentElement.classList.toggle('es-admin', esAdmin());
 
   document.addEventListener('click', (e) => {
     const boton = e.target.closest('[data-cuenta]');
     if (!boton) return;
     e.preventDefault();
     if (boton.dataset.cuenta === 'salir') salir();
-    else ir(boton.dataset.cuenta);
+    else ir(boton.dataset.cuenta, boton.dataset.volver);
   });
 
   document.addEventListener('DOMContentLoaded', () => {
     const s = sesion();
     document.querySelectorAll('[data-cuenta-nombre]').forEach((el) => { el.textContent = s ? s.nombre : ''; });
+    // Los correos de consulta ya llevan el nombre y correo de quien tiene sesion
+    if (s) document.querySelectorAll('a[data-correo-sesion]').forEach((a) => {
+      a.href += `&body=${encodeURIComponent(`Hola, soy ${s.nombre} (${s.correo}). Me gustaría agendar una consulta para solicitar un producto de Sulotec.`)}`;
+    });
     if (location.pathname === '/cuenta/entrar') {
-      if (s) location.replace('/'); else ir('ingresar');
+      if (s) location.replace(MIS_PRODUCTOS); else ir('ingresar', MIS_PRODUCTOS);
+      return;
+    }
+    if (location.pathname === MIS_PRODUCTOS && !s) {
+      ir('ingresar', MIS_PRODUCTOS);
       return;
     }
     if (location.pathname === '/cuenta/callback') {

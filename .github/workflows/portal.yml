@@ -21,12 +21,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Las cuentas (cuenta.sulotec.com) se encienden con la variable CUENTA_ACTIVA=true
-      # en GitHub > Settings > Secrets and variables > Actions > Variables, y se vuelve a correr este workflow.
+      # Cuentas (cuenta.sulotec.com), en GitHub > Settings > Secrets and variables > Actions > Variables;
+      # despues de cambiarlas se vuelve a correr este workflow:
+      #   CUENTA_ACTIVA=false   apaga "Iniciar sesion" en todo el portal (emergencias). Por defecto: encendido.
+      #   CUENTA_REGISTRO=true  muestra "Crear cuenta" (cuando cuenta.sulotec.com ya tenga correo de salida).
       - name: Compilar el sitio (Node en Docker)
         run: |
           docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
-            -e PUBLIC_CUENTA_ACTIVA="${{ vars.CUENTA_ACTIVA || 'false' }}" \
+            -e PUBLIC_CUENTA_ACTIVA="${{ vars.CUENTA_ACTIVA || 'true' }}" \
+            -e PUBLIC_CUENTA_REGISTRO="${{ vars.CUENTA_REGISTRO || 'false' }}" \
             -v "$PWD/apps/portal:/app" -w /app node:24-alpine \
             sh -c "npm ci --no-audit --no-fund && npm run build"
 

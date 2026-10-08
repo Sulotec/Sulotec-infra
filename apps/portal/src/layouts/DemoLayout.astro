@@ -16,10 +16,12 @@ interface Props {
 const { producto, titulo, bajada, ruta, menu } = Astro.props;
 const demos = solucionesPublicas.filter((s) => s.demo);
 const asunto = encodeURIComponent('Quiero crear mi cuenta Sulotec');
+const asuntoAcceso = encodeURIComponent(`Quiero acceso a la demo completa de ${producto}`);
 ---
 <Base titulo={`Demo de ${producto} | Sulotec`} descripcion={`Prueba ${producto} con datos de ejemplo.`} ruta={ruta}>
   <script is:inline slot="head" src="/demo.js" defer></script>
-  <div class="app" data-acciones={invitacion.acciones} data-segundos={invitacion.segundos}>
+  <div class="app" data-acciones={invitacion.acciones} data-segundos={invitacion.segundos} data-consulta={invitacion.consulta}
+    data-limite={cuenta.activa ? 'si' : undefined}>
     <aside class="lateral" aria-label="Productos">
       <a class="volver" href="/">
         <svg viewBox="0 0 64 64" width="30" height="30" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#fff" /><path d="M42 22c-2-3-6-5-10-5-6 0-10 3-10 8 0 11 20 6 20 16 0 5-4 8-10 8-5 0-9-2-11-6" fill="none" stroke="#1b4589" stroke-width="5.5" stroke-linecap="round" /><circle cx="50" cy="50" r="4.5" fill="#ed1c24" /></svg>
@@ -50,7 +52,9 @@ const asunto = encodeURIComponent('Quiero crear mi cuenta Sulotec');
           <a class="enlace" href="/">Volver a sulotec.com</a>
           {cuenta.activa ? (
             <>
-              <button type="button" class="boton boton-azul pequeno solo-invitado" data-cuenta="crear">Crear cuenta</button>
+              {cuenta.registro
+                ? <button type="button" class="boton boton-azul pequeno solo-invitado" data-cuenta="crear">Crear cuenta</button>
+                : <button type="button" class="boton boton-azul pequeno solo-invitado" data-cuenta="ingresar">Iniciar sesión</button>}
               <span class="saludo solo-sesion">Hola, <strong data-cuenta-nombre></strong></span>
               <button type="button" class="boton boton-azul pequeno solo-sesion" data-abrir-consulta>Agendar una consulta</button>
             </>
@@ -75,17 +79,30 @@ const asunto = encodeURIComponent('Quiero crear mi cuenta Sulotec');
   <dialog id="invitacion" aria-labelledby="titulo-invitacion">
     <svg class="curva" viewBox="0 0 400 90" preserveAspectRatio="none" aria-hidden="true"><path d="M0 0H400V40C260 90 120 30 0 70Z" fill="#1b4589" /><path d="M0 78C120 38 260 98 400 48" fill="none" stroke="#ed1c24" stroke-width="5" /></svg>
     <div class="dialogo">
-      <h2 id="titulo-invitacion">Crea tu cuenta para seguir explorando</h2>
       {cuenta.activa ? (
         <>
-          <p>Con tu cuenta Sulotec recorres la demo completa de {producto} sin interrupciones y puedes agendar una consulta personalizada. Es gratis.</p>
+          <h2 id="titulo-invitacion">{cuenta.registro ? 'Crea tu cuenta para seguir explorando' : 'Inicia sesión para seguir explorando'}</h2>
+          <p class="solo-obligatoria">Terminó tu recorrido libre de 2 minutos por las demos.</p>
+          <p>Con tu cuenta Sulotec recorres la demo completa de {producto} sin límite de tiempo y puedes agendar una consulta personalizada.{cuenta.registro && ' Es gratis.'}</p>
           <div class="botones">
-            <button type="button" class="boton boton-azul" data-cuenta="crear">Crear cuenta</button>
-            <button type="button" class="boton secundario" data-cuenta="ingresar">Ya tengo cuenta</button>
+            {cuenta.registro ? (
+              <>
+                <button type="button" class="boton boton-azul" data-cuenta="crear">Crear cuenta</button>
+                <button type="button" class="boton secundario" data-cuenta="ingresar">Ya tengo cuenta</button>
+              </>
+            ) : (
+              <>
+                <button type="button" class="boton boton-azul" data-cuenta="ingresar">Iniciar sesión</button>
+                <a class="boton secundario" href={`mailto:${sitio.correo}?subject=${asuntoAcceso}`}>Solicitar acceso</a>
+              </>
+            )}
+            <button type="button" class="boton secundario solo-suave" data-cerrar-invitacion>Seguir viendo la demo</button>
           </div>
+          <a class="salir-demo solo-obligatoria" href="/">Volver a sulotec.com</a>
         </>
       ) : (
         <>
+          <h2 id="titulo-invitacion">Crea tu cuenta para seguir explorando</h2>
           <p>Las cuentas de Sulotec se habilitan muy pronto. Déjanos tu correo y te avisamos apenas estén listas para que veas la demo completa de {producto}.</p>
           <div class="botones">
             <a class="boton boton-azul" href={`mailto:${sitio.correo}?subject=${asunto}`}>Avísame por correo</a>
@@ -157,6 +174,10 @@ const asunto = encodeURIComponent('Quiero crear mi cuenta Sulotec');
   .botones { display: flex; flex-wrap: wrap; gap: 10px; }
   .botones .boton { border: 0; cursor: pointer; font: inherit; font-weight: 700; }
   .secundario { background: var(--azul-10); color: var(--azul); }
+  /* Invitacion suave (se puede cerrar) u obligatoria (termino el tiempo libre de la demo) */
+  dialog:not([data-obligatoria]) .solo-obligatoria, dialog[data-obligatoria] .solo-suave { display: none; }
+  .dialogo p.solo-obligatoria { color: var(--rojo); font-weight: 700; margin-bottom: 8px; }
+  .salir-demo { display: inline-block; margin-top: 18px; color: var(--gris); font-size: .92rem; }
 
   @media (max-width: 900px) {
     .app { grid-template-columns: 1fr; }

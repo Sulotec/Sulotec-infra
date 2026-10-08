@@ -11,10 +11,15 @@ import { cuenta } from '../data/demos';
         {sitio.menu.map((item) => <li class="opcion"><a href={item.href}>{item.texto}</a></li>)}
         {cuenta.activa ? (
           <>
-            <li class="solo-invitado"><button type="button" class="enlace-cuenta" data-cuenta="ingresar">Iniciar sesión</button></li>
-            <li class="solo-invitado"><button type="button" class="boton boton-azul pequeno" data-cuenta="crear">Crear cuenta</button></li>
+            <li class="solo-invitado"><button type="button" class="enlace-cuenta" data-cuenta="ingresar" data-volver="/mis-productos">Iniciar sesión</button></li>
+            <li class="solo-invitado">
+              {cuenta.registro
+                ? <button type="button" class="boton boton-azul pequeno" data-cuenta="crear" data-volver="/mis-productos">Crear cuenta</button>
+                : <a class="boton boton-azul pequeno" href="/#contacto">Contáctanos</a>}
+            </li>
             <li class="solo-sesion saludo">Hola, <strong data-cuenta-nombre></strong></li>
-            <li class="solo-sesion"><button type="button" class="enlace-cuenta" data-cuenta="salir">Cerrar sesión</button></li>
+            <li class="solo-sesion"><button type="button" class="enlace-cuenta" data-cuenta="salir"><span class="largo">Cerrar sesión</span><span class="corto">Salir</span></button></li>
+            <li class="solo-sesion"><a class="boton boton-azul pequeno" href="/mis-productos">Mis productos</a></li>
           </>
         ) : (
           <li><a class="boton boton-azul pequeno" href="#contacto">Contáctanos</a></li>
@@ -31,11 +36,13 @@ import { cuenta } from '../data/demos';
   .opcion a { position: relative; text-decoration: none; font-weight: 700; color: var(--azul); padding: 6px 0; }
   .opcion a::after { content: ""; position: absolute; left: 0; bottom: 0; height: 2px; width: 100%; background: var(--rojo); transform: scaleX(0); transform-origin: right; transition: transform .3s var(--curva); }
   .opcion a:hover::after { transform: scaleX(1); transform-origin: left; }
-  .pequeno { padding: 10px 20px; border: 0; cursor: pointer; font: inherit; font-weight: 700; }
-  .enlace-cuenta { background: none; border: 0; padding: 6px 0; font: inherit; font-weight: 700; color: var(--azul); cursor: pointer; }
+  .pequeno { padding: 10px 20px; border: 0; cursor: pointer; font: inherit; font-weight: 700; white-space: nowrap; }
+  .enlace-cuenta { background: none; border: 0; padding: 6px 0; font: inherit; font-weight: 700; color: var(--azul); cursor: pointer; white-space: nowrap; }
+  .corto { display: none; }
   .enlace-cuenta:hover { color: var(--rojo); }
   .saludo { color: var(--gris); }
   .saludo strong { color: var(--azul); }
   @media (max-width: 980px) { .opcion { display: none; } }
-  @media (max-width: 520px) { ul { gap: 14px; } .saludo { display: none; } }
+  @media (max-width: 640px) { ul { gap: 14px; } .saludo { display: none; } .pequeno { padding: 9px 16px; } }
+  @media (max-width: 440px) { .largo { display: none; } .corto { display: inline; } }
 </style>

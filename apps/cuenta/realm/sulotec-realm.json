@@ -4,8 +4,7 @@
   "displayName": "Sulotec",
   "displayNameHtml": "<div class=\"kc-logo-text\"><span>Sulotec</span></div>",
   "sslRequired": "external",
-
-  "registrationAllowed": true,
+  "registrationAllowed": false,
   "registrationEmailAsUsername": false,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
@@ -13,7 +12,6 @@
   "resetPasswordAllowed": true,
   "rememberMe": false,
   "editUsernameAllowed": false,
-
   "bruteForceProtected": true,
   "permanentLockout": false,
   "failureFactor": 5,
@@ -23,39 +21,56 @@
   "minimumQuickLoginWaitSeconds": 60,
   "quickLoginCheckMilliSeconds": 1000,
   "passwordPolicy": "length(10) and upperCase(1) and lowerCase(1) and digits(1) and notEmail(undefined) and notUsername(undefined) and passwordHistory(3)",
-
   "accessTokenLifespan": 300,
   "ssoSessionIdleTimeout": 1800,
   "ssoSessionMaxLifespan": 28800,
   "actionTokenGeneratedByUserLifespan": 900,
-
   "internationalizationEnabled": true,
-  "supportedLocales": ["es"],
+  "supportedLocales": [
+    "es"
+  ],
   "defaultLocale": "es",
   "loginTheme": "sulotec",
   "accountTheme": "keycloak.v3",
   "emailTheme": "keycloak",
-
   "eventsEnabled": true,
   "eventsExpiration": 7776000,
-  "enabledEventTypes": ["LOGIN", "LOGIN_ERROR", "REGISTER", "REGISTER_ERROR", "LOGOUT", "VERIFY_EMAIL", "RESET_PASSWORD", "UPDATE_PASSWORD"],
+  "enabledEventTypes": [
+    "LOGIN",
+    "LOGIN_ERROR",
+    "REGISTER",
+    "REGISTER_ERROR",
+    "LOGOUT",
+    "VERIFY_EMAIL",
+    "RESET_PASSWORD",
+    "UPDATE_PASSWORD"
+  ],
   "adminEventsEnabled": true,
-
   "roles": {
     "realm": [
-      { "name": "administrador-general", "description": "Personal de Sulotec que administra las cuentas y ve todo el ecosistema" }
+      {
+        "name": "administrador-general",
+        "description": "Personal de Sulotec que administra las cuentas y ve todo el ecosistema"
+      }
     ]
   },
   "groups": [
     {
       "name": "Administradores Generales",
-      "realmRoles": ["administrador-general"],
+      "realmRoles": [
+        "administrador-general"
+      ],
       "clientRoles": {
-        "realm-management": ["view-users", "query-users", "query-groups", "manage-users", "view-events"]
+        "realm-management": [
+          "view-users",
+          "query-users",
+          "query-groups",
+          "manage-users",
+          "view-events"
+        ]
       }
     }
   ],
-
   "clients": [
     {
       "clientId": "portal",
@@ -72,14 +87,49 @@
       "fullScopeAllowed": false,
       "rootUrl": "https://sulotec.com",
       "baseUrl": "/cuenta/entrar",
-      "redirectUris": ["https://sulotec.com/cuenta/callback", "https://www.sulotec.com/cuenta/callback"],
-      "webOrigins": ["https://sulotec.com", "https://www.sulotec.com"],
+      "redirectUris": [
+        "https://sulotec.com/cuenta/callback",
+        "https://www.sulotec.com/cuenta/callback"
+      ],
+      "webOrigins": [
+        "https://sulotec.com",
+        "https://www.sulotec.com"
+      ],
       "attributes": {
         "pkce.code.challenge.method": "S256",
         "post.logout.redirect.uris": "https://sulotec.com/*##https://www.sulotec.com/*"
       },
-      "defaultClientScopes": ["web-origins", "profile", "email"],
-      "optionalClientScopes": []
+      "defaultClientScopes": [
+        "web-origins",
+        "profile",
+        "email"
+      ],
+      "optionalClientScopes": [],
+      "protocolMappers": [
+        {
+          "name": "roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "false",
+            "userinfo.token.claim": "false",
+            "introspection.token.claim": "false"
+          }
+        }
+      ]
+    }
+  ],
+  "scopeMappings": [
+    {
+      "client": "portal",
+      "roles": [
+        "administrador-general"
+      ]
     }
   ]
 }

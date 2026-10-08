@@ -16,7 +16,10 @@ Reglas del realm `sulotec` (en `realm/sulotec-realm.json`):
 - Contraseñas de 10 o más caracteres, con mayúscula, minúscula y número, sin repetir las 3 últimas.
 - 5 intentos fallidos bloquean la cuenta de 1 a 15 minutos.
 - La sesión se cierra tras 30 minutos sin uso y dura 8 horas como máximo.
-- El grupo **Administradores Generales** puede crear, editar y desactivar cuentas y ver los eventos, pero no puede cambiar la configuración ni darse más permisos (probado).
+- El grupo **Administradores Generales**:
+  - En sulotec.com/mis-productos ve **todos** los productos, incluido el Buscador Interno. El Buscador, además, está protegido por su propia política de Cloudflare Access.
+  - Puede crear, editar y desactivar cuentas y ver los eventos, pero no puede cambiar la configuración ni darse más permisos (probado).
+  - Quien no está en el grupo solo ve las demos.
 
 ---
 
@@ -55,7 +58,7 @@ Reglas del realm `sulotec` (en `realm/sulotec-realm.json`):
    - **Correo electrónico**, **Nombre** y **Apellido**.
    - **Correo electrónico verificado**: actívalo solo si confirmaste el correo con la persona.
    - **Acciones de usuario requeridas**: elige `Configure OTP` (verificación en dos pasos). Es obligatoria para administradores.
-   - **Unirse a grupos** → `Administradores Generales`, solo si esa persona también debe poder crear cuentas.
+   - **Unirse a grupos** → `Administradores Generales`, **solo** si esa persona debe ver todos los productos y crear cuentas (hoy: el CEO). Sin grupo, la persona solo ve las demos.
    - Pulsa **Crear**.
 3. En la pestaña **Credenciales**, elige una de dos formas:
    - **Con correo SMTP configurado (recomendado).** Pulsa **Restablecimiento de credenciales**, elige `Update Password` y pulsa **Enviar correo electrónico**. La persona recibe "Actualiza tu cuenta" y elige su propia contraseña: nadie más la conoce.
@@ -72,7 +75,7 @@ Reglas del realm `sulotec` (en `realm/sulotec-realm.json`):
 
 ## Parte 3 — Abrir las cuentas al público en sulotec.com
 
-Hasta este paso, el portal no muestra "Iniciar sesión" ni "Crear cuenta". El registro público necesita correo de salida, porque cada persona confirma su correo.
+"Iniciar sesión" ya está encendido en sulotec.com. "Crear cuenta" sigue apagado: el registro público necesita correo de salida, porque cada persona confirma su correo. Mientras tanto, las cuentas las crea el equipo en la consola.
 
 1. **OCI Email Delivery** (consola de Oracle):
    - Crea el remitente aprobado `no-reply@sulotec.com`.
@@ -80,7 +83,7 @@ Hasta este paso, el portal no muestra "Iniciar sesión" ni "Crear cuenta". El re
    - Genera las credenciales SMTP en *Identity → tu usuario → SMTP credentials*.
 2. En el servidor, corre `sudo bash /data/apps/cuenta/preparar.sh`, responde `s` y pega los datos SMTP.
 3. Prueba el correo en la consola: **Configuración del realm → Correo electrónico → Probar conexión**.
-4. En GitHub, ve a **Settings → Secrets and variables → Actions → Variables**. Crea `CUENTA_ACTIVA` con el valor `true`. Luego ve a **Actions → Publicar portal → Run workflow**.
+4. El registro de Keycloak se abre solo, porque ya hay correo. En GitHub, ve a **Settings → Secrets and variables → Actions → Variables**. Crea `CUENTA_REGISTRO` con el valor `true`. Luego ve a **Actions → Publicar portal → Run workflow**.
 
 Para apagar las cuentas en una emergencia, cambia `CUENTA_ACTIVA` a `false` y vuelve a correr *Publicar portal*.
 
@@ -88,6 +91,7 @@ Para apagar las cuentas en una emergencia, cambia `CUENTA_ACTIVA` a `false` y vu
 
 ## Notas
 
+- `ajustar-realm.sh` aplica al realm que ya existe los ajustes que el JSON no puede aplicar. Hoy son dos: el rol en el token del portal, y el registro público solo si hay correo. Lo corren solos el workflow y `preparar.sh`; es seguro repetirlo.
 - `realm/sulotec-realm.json` solo se importa la primera vez que arranca Keycloak. Los cambios posteriores se hacen en la consola maestra. Copia también el cambio al JSON para que el repositorio refleje la configuración real.
 - Los cambios del tema (`themes/sulotec`) se aplican solos: el workflow reinicia Keycloak.
 - Pendiente ISO 27001: crear un administrador maestro con nombre propio y OTP, y dejar `admin-temporal` solo para emergencias.

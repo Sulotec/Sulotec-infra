@@ -8,7 +8,7 @@ export const sitio = {
   ciudad: 'Lima, Perú',
   titulo: 'Sulotec | Soluciones digitales para tu operación',
   descripcion:
-    'Plataformas seguras en la nube para monitorear equipos en campo, auditar visitas, prevenir el lavado de activos y encontrar información al instante.',
+    'Plataformas seguras en la nube para monitorear equipos en campo, auditar visitas y prevenir el lavado de activos.',
   menu: [
     { texto: 'Soluciones', href: '#soluciones' },
     { texto: 'Cómo trabajamos', href: '#metodologia' },
@@ -18,7 +18,7 @@ export const sitio = {
     etiqueta: 'Ecosistema de soluciones en la nube',
     titulo: { antes: 'Soluciones digitales que ', resalte: 'se adaptan', despues: ' a tu operación' },
     texto:
-      'Monitorea a tus equipos en campo, audita visitas, cumple la normativa PLAFT y encuentra información al instante. Todo en un solo lugar, en la web y en el celular.',
+      'Monitorea a tus equipos en campo, audita cada visita y cumple la normativa PLAFT. Todo en un solo lugar, en la web y en el celular.',
   },
   // Franja en movimiento bajo la portada
   capacidades: [

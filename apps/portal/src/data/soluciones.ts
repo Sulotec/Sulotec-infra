@@ -2,6 +2,8 @@ import type { IconName } from '../components/Icon.astro';
 
 // Una entrada por producto. La tarjeta, el pie de pagina y todo lo demas se generan desde aqui.
 // - Para agregar un producto nuevo: copia un bloque completo ({ ... },) y cambia sus datos.
+// - `publico: false` = producto privado de la empresa: NO aparece en el portal (ej. Buscador Interno).
+// - Para enlazar YA a la direccion donde hoy funciona el producto, agrega `url: 'https://...'`.
 // - Cuando un producto ya este en linea en su subdominio, cambia `publicado: false` a `true`:
 //   el boton de la tarjeta pasa de "Solicitar informacion" a "Ingresar" y lleva a https://<subdominio>.
 export type Estado = 'produccion' | 'implementacion' | 'interno';
@@ -12,8 +14,10 @@ export interface Solucion {
   estado: Estado;
   plataformas: string[];
   icono: IconName;
+  publico: boolean;    // false = privado de la empresa, no se muestra en el portal
   subdominio: string; // reservado en Cloudflare para este producto
   publicado: boolean;
+  url?: string;       // opcional: direccion actual del producto mientras se muda a su subdominio
 }
 
 export const soluciones: Solucion[] = [
@@ -24,6 +28,7 @@ export const soluciones: Solucion[] = [
     estado: 'produccion',
     plataformas: ['Web', 'Android', 'iOS'],
     icono: 'radar',
+    publico: true,
     subdominio: 'miradar360.sulotec.com',
     publicado: false,
   },
@@ -34,6 +39,7 @@ export const soluciones: Solucion[] = [
     estado: 'produccion',
     plataformas: ['Web', 'App móvil'],
     icono: 'mapCheck',
+    publico: true,
     subdominio: 'auditoria.sulotec.com',
     publicado: false,
   },
@@ -44,6 +50,7 @@ export const soluciones: Solucion[] = [
     estado: 'implementacion',
     plataformas: ['Web', 'App móvil'],
     icono: 'shield',
+    publico: true,
     subdominio: 'plaft.sulotec.com',
     publicado: false,
   },
@@ -54,6 +61,7 @@ export const soluciones: Solucion[] = [
     estado: 'interno',
     plataformas: ['Web'],
     icono: 'search',
+    publico: false, // privado: solo administradores generales (Cloudflare Access)
     subdominio: 'buscador.sulotec.com',
     publicado: false,
   },
@@ -65,5 +73,10 @@ export const estados: Record<Estado, string> = {
   interno: 'Uso interno',
 };
 
-// Enlace de cada producto: su subdominio si ya esta publicado; si no, la seccion de contacto.
-export const enlaceDe = (s: Solucion) => (s.publicado ? `https://${s.subdominio}` : '#contacto');
+// Enlace de cada producto: su `url` actual si la tiene; si no, su subdominio si ya esta publicado;
+// si no, la seccion de contacto.
+export const tieneAcceso = (s: Solucion) => Boolean(s.url) || s.publicado;
+export const enlaceDe = (s: Solucion) => s.url ?? (s.publicado ? `https://${s.subdominio}` : '#contacto');
+
+// Solo los productos publicos se muestran en el portal.
+export const solucionesPublicas = soluciones.filter((s) => s.publico);

@@ -32,8 +32,8 @@ import Icon from './Icon.astro';
     <span><strong>Revisión PLAFT</strong><small>Sin coincidencias</small></span>
   </div>
   <div class="chip chip-3">
-    <span class="ico"><Icon name="search" size={16} /></span>
-    <span class="buscar">Buscar expediente<b></b></span>
+    <span class="ico"><Icon name="mapCheck" size={16} /></span>
+    <span><strong>Ruta del día</strong><small>Asesor en camino</small></span>
   </div>
 </div>
 
@@ -65,9 +65,6 @@ import Icon from './Icon.astro';
   .chip-1 { right: 0; top: 70px; }
   .chip-2 { left: 0; top: 176px; animation-delay: -2s; animation-duration: 7s; }
   .chip-3 { right: 12px; bottom: 6px; animation-delay: -4s; }
-  .buscar { color: var(--gris); }
-  .buscar b { display: inline-block; width: 2px; height: 1em; margin-left: 3px; vertical-align: -2px; background: var(--azul); animation: parpadeo 1s steps(1) infinite; }
-  @keyframes parpadeo { 50% { opacity: 0; } }
 
   @media (max-width: 960px) { .escena { justify-self: center; height: 400px; } }
   @media (max-width: 480px) { .escena { height: 360px; } .panel { inset: 24px 8px 40px 8px; } .chip-2 { top: 150px; } }

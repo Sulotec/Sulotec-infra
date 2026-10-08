@@ -1,0 +1,44 @@
+# cuenta.sulotec.com: inicio de sesion, registro y administracion de cuentas (Keycloak).
+# En el servidor vive en /data/apps/cuenta. Cloudflare Tunnel: cuenta.sulotec.com -> http://cuenta:8080
+# Las claves estan en /opt/sulotec/cuenta.env (lo crea preparar.sh), nunca en el repositorio.
+# Los datos (cuentas, sesiones, configuracion) viven en PostgreSQL, base "keycloak".
+name: cuenta
+
+services:
+  cuenta:
+    image: quay.io/keycloak/keycloak:26.8.0
+    container_name: cuenta
+    restart: unless-stopped
+    # --import-realm crea el realm "sulotec" la primera vez; si ya existe no lo toca
+    command: ["start", "--import-realm"]
+    env_file: /opt/sulotec/cuenta.env
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_HOSTNAME: https://cuenta.sulotec.com
+      # Cloudflare termina el HTTPS; el tunel entra por HTTP dentro de la red sulotec_edge
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
+      KC_HEALTH_ENABLED: "true"
+      JAVA_OPTS_KC_HEAP: "-XX:MaxRAMPercentage=65"
+    volumes:
+      - ./realm:/opt/keycloak/data/import:ro
+      - ./themes/sulotec:/opt/keycloak/themes/sulotec:ro
+    networks: [edge, data]
+    mem_limit: 1536m
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q UP <&3"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+
+networks:
+  edge:
+    external: true
+    name: sulotec_edge
+  data:
+    external: true
+    name: sulotec_data

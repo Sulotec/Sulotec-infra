@@ -1,44 +1,60 @@
 // Comportamiento de las demos publicas (/demo/...). Sin datos reales ni llamadas a servidores.
+// - Visitante sin cuenta: tras unas acciones bloqueadas o unos segundos, se le invita a crear su cuenta.
+// - Con cuenta (public/cuenta.js): recorre la demo sin interrupciones y se le invita a una consulta personal.
 document.addEventListener('DOMContentLoaded', () => {
   const app = document.querySelector('.app');
-  const dialogo = document.getElementById('invitacion');
+  const invitacion = document.getElementById('invitacion');
+  const consulta = document.getElementById('consulta');
   const aviso = document.querySelector('.aviso-bloqueo');
   const reducido = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (!app || !dialogo) return;
+  if (!app || !invitacion) return;
 
+  const sesion = window.sulotecCuenta?.sesion?.() || null;
   const limiteAcciones = Number(app.dataset.acciones) || 3;
   const limiteSegundos = Number(app.dataset.segundos) || 75;
   let accionesBloqueadas = 0;
   let invitacionMostrada = false;
 
-  const abrirInvitacion = () => {
-    if (dialogo.open) return;
-    invitacionMostrada = true;
-    dialogo.showModal();
-  };
+  const abrir = (dialogo) => { if (dialogo && !dialogo.open) dialogo.showModal(); };
+  const abrirInvitacion = () => { invitacionMostrada = true; abrir(invitacion); };
 
-  // Invitacion: tras unos segundos de uso (una sola vez) o al tocar varias opciones bloqueadas
-  setTimeout(() => { if (!invitacionMostrada) abrirInvitacion(); }, limiteSegundos * 1000);
+  // Con cuenta: el correo de la consulta ya lleva su nombre y correo
+  if (sesion) {
+    const enlace = consulta?.querySelector('[data-consulta-correo]');
+    if (enlace) {
+      const cuerpo = `Hola, soy ${sesion.nombre} (${sesion.correo}). Vi la demo de ${enlace.dataset.producto} y me gustaría agendar una consulta personalizada.`;
+      enlace.href += `&body=${encodeURIComponent(cuerpo)}`;
+    }
+    aviso.textContent = 'Te mostramos esta función en una consulta personalizada';
+  } else {
+    setTimeout(() => { if (!invitacionMostrada) abrirInvitacion(); }, limiteSegundos * 1000);
+  }
 
   let temporizadorAviso;
   const mostrarAviso = () => {
     aviso.hidden = false;
     clearTimeout(temporizadorAviso);
-    temporizadorAviso = setTimeout(() => { aviso.hidden = true; }, 2200);
+    temporizadorAviso = setTimeout(() => { aviso.hidden = true; }, 2400);
   };
 
   document.addEventListener('click', (e) => {
-    const objetivo = e.target.closest('[data-bloqueado], [data-abrir-invitacion], [data-cerrar-invitacion], [data-mostrar], [data-asesor], [data-evaluar]');
+    const objetivo = e.target.closest('[data-bloqueado], [data-abrir-invitacion], [data-cerrar-invitacion], [data-abrir-consulta], [data-cerrar-consulta], [data-mostrar], [data-asesor], [data-evaluar]');
     if (!objetivo) return;
 
     if (objetivo.hasAttribute('data-abrir-invitacion')) { abrirInvitacion(); return; }
-    if (objetivo.hasAttribute('data-cerrar-invitacion')) { dialogo.close(); return; }
+    if (objetivo.hasAttribute('data-cerrar-invitacion')) { invitacion.close(); return; }
+    if (objetivo.hasAttribute('data-abrir-consulta')) { abrir(consulta); return; }
+    if (objetivo.hasAttribute('data-cerrar-consulta')) { consulta.close(); return; }
 
     if (objetivo.hasAttribute('data-bloqueado')) {
       e.preventDefault();
       accionesBloqueadas += 1;
-      if (accionesBloqueadas >= limiteAcciones) { accionesBloqueadas = 0; abrirInvitacion(); }
-      else mostrarAviso();
+      if (accionesBloqueadas >= limiteAcciones) {
+        accionesBloqueadas = 0;
+        if (sesion) abrir(consulta); else abrirInvitacion();
+      } else {
+        mostrarAviso();
+      }
       return;
     }
 

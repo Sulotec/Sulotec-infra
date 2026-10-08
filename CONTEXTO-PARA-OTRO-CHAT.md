@@ -40,6 +40,42 @@ Usuario → Cloudflare (DNS, SSL, WAF, Access) → Cloudflare Tunnel → VM Orac
 - Portal: cada producto tiene `url` opcional (dirección actual mientras se muda) y `publicado` (subdominio propio). Pendiente: que el usuario pase las URLs actuales de MiRadar360, Auditoría y Lavado de Activos.
 - En el terminal web de Cloudflare el pegado agrega `^[[200~ … ~`: antes de pegar comandos, ejecutar `bind 'set enable-bracketed-paste off'`.
 
+## Cuentas: cuenta.sulotec.com + demos públicas (2026-10-08)
+- **Decisiones del usuario:**
+  - Keycloak como sistema de cuentas.
+  - Cualquier correo puede registrarse, con restricciones de seguridad.
+  - Quien tiene cuenta ve la demo completa y se le invita a una consulta personal.
+  - **Prohibido usar datos personales en demos**: solo datos de ejemplo.
+- **Demos públicas** en `/demo/miradar360`, `/demo/auditoria` y `/demo/plaft`, con datos ficticios (`src/data/demos.ts`). Tras 3 acciones bloqueadas o 75 segundos, se invita a crear cuenta. Con sesión iniciada, se invita a agendar una consulta (mailto).
+- **Keycloak 26.8.0** en `apps/cuenta/` (guía completa en `apps/cuenta/README.md`):
+  - Realm `sulotec` con usuario propio (`registrationEmailAsUsername=false`) o correo.
+  - Verificación de correo obligatoria: con KC 26.8 el registro no pide contraseña, se pone después de verificar.
+  - Política de contraseñas y protección contra fuerza bruta.
+  - Grupo **Administradores Generales**: rol `administrador-general` + `manage-users`/`view-users`/`query-*`/`view-events`. Puede crear cuentas pero no cambiar la configuración (probado: 403).
+  - Tema `sulotec` (keycloak.v2).
+  - Cliente público `portal` con PKCE y `baseUrl=/cuenta/entrar`, que inicia sesión automáticamente.
+- **Portal:**
+  - `public/cuenta.js` (OIDC + PKCE sin librerías). El inicio pendiente va en localStorage por `state`, porque el enlace del correo se abre en otra pestaña (bug encontrado y corregido). La sesión dura 30 minutos.
+  - Páginas `/cuenta/callback` y `/cuenta/entrar`.
+  - CSP con `connect-src https://cuenta.sulotec.com`.
+  - Se enciende con la variable de GitHub **`CUENTA_ACTIVA=true`** + correr "Publicar portal". Mientras no se encienda, el portal se ve igual que antes.
+- **Despliegue:**
+  - Workflow `.github/workflows/cuenta.yml` copia a `/data/apps/cuenta`.
+  - Una sola vez: `sudo bash /data/apps/cuenta/preparar.sh`. Crea la base `keycloak` y `/opt/sulotec/cuenta.env` (root:docker 640), muestra una vez la clave de `admin-temporal`, levanta el contenedor `cuenta` (redes edge + data) y opcionalmente configura el SMTP.
+  - Cloudflare: primero la app de Access "Consola de cuentas" (`cuenta.sulotec.com/admin`), luego la ruta `cuenta.sulotec.com → http://cuenta:8080`.
+- **Probado en local** (Docker Desktop, contenedores temporales `kc-prueba` + `mailpit`):
+  - Registro → correo → verificación en otra pestaña → contraseña → vuelve a la demo con "Hola, <nombre>".
+  - Invitación de administrador ("Actualiza tu cuenta").
+  - Permisos del grupo.
+  - SQL del script contra Postgres 16 (repetible).
+- **Pedido del usuario (2026-10-08):** crear 3 cuentas de equipo: `jeliases`, `sjuarez`, `AbelCEO` (queda `abelceo`; CEO). Se crean en la consola cuando cuenta.sulotec.com esté arriba (README, Parte 2), en el grupo Administradores Generales y con `Configure OTP`. Los correos de jeliases y sjuarez los pone el usuario.
+- **Pendiente:**
+  - Desplegar en el servidor (preparar.sh + Cloudflare).
+  - Crear las 3 cuentas.
+  - SMTP con OCI Email Delivery (remitente `no-reply@sulotec.com`, SPF/DKIM en Cloudflare).
+  - Luego `CUENTA_ACTIVA=true`.
+  - Reemplazar `admin-temporal` por un administrador maestro con nombre propio + OTP.
+
 ## Estado actual (2026-10-06, noche)
 - **Cloudflare:** `sulotec.com` activo, plan Free. Túnel `sulotec-oci` ya creado (ver "Avance" más abajo). **Para el estado más reciente y el plan de mañana, ir a "Plan para mañana".**
 - **Oracle Cloud:** tenancy `InformaPeru`, región home Chile Central (Santiago) = `sa-santiago-1`. Cuenta en **Free Trial** (sin método de pago). El usuario solo tiene tarjeta de débito y no la tenía a mano; se decidió **seguir sin upgrade** y hacerlo luego si hace falta (Billing → Change Payment Method → Upgrade your account).

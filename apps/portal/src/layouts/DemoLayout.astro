@@ -48,7 +48,15 @@ const asunto = encodeURIComponent('Quiero crear mi cuenta Sulotec');
         <div class="aviso"><span class="punto" aria-hidden="true"></span><span class="largo">Estás en modo demo: todo lo que ves son datos de ejemplo</span><span class="corto">Modo demo con datos de ejemplo</span></div>
         <div class="acciones">
           <a class="enlace" href="/">Volver a sulotec.com</a>
-          <button type="button" class="boton boton-azul pequeno" data-abrir-invitacion>Crear cuenta</button>
+          {cuenta.activa ? (
+            <>
+              <button type="button" class="boton boton-azul pequeno solo-invitado" data-cuenta="crear">Crear cuenta</button>
+              <span class="saludo solo-sesion">Hola, <strong data-cuenta-nombre></strong></span>
+              <button type="button" class="boton boton-azul pequeno solo-sesion" data-abrir-consulta>Agendar una consulta</button>
+            </>
+          ) : (
+            <button type="button" class="boton boton-azul pequeno" data-abrir-invitacion>Crear cuenta</button>
+          )}
         </div>
       </header>
 
@@ -70,10 +78,10 @@ const asunto = encodeURIComponent('Quiero crear mi cuenta Sulotec');
       <h2 id="titulo-invitacion">Crea tu cuenta para seguir explorando</h2>
       {cuenta.activa ? (
         <>
-          <p>Con tu cuenta Sulotec ves la demo completa de {producto} y puedes pedir una prueba con tus propios datos.</p>
+          <p>Con tu cuenta Sulotec recorres la demo completa de {producto} sin interrupciones y puedes agendar una consulta personalizada. Es gratis.</p>
           <div class="botones">
-            <a class="boton boton-azul" href={cuenta.crear}>Crear cuenta</a>
-            <a class="boton secundario" href={cuenta.ingresar}>Ya tengo cuenta</a>
+            <button type="button" class="boton boton-azul" data-cuenta="crear">Crear cuenta</button>
+            <button type="button" class="boton secundario" data-cuenta="ingresar">Ya tengo cuenta</button>
           </div>
         </>
       ) : (
@@ -85,6 +93,18 @@ const asunto = encodeURIComponent('Quiero crear mi cuenta Sulotec');
           </div>
         </>
       )}
+    </div>
+  </dialog>
+
+  <dialog id="consulta" aria-labelledby="titulo-consulta">
+    <svg class="curva" viewBox="0 0 400 90" preserveAspectRatio="none" aria-hidden="true"><path d="M0 0H400V40C260 90 120 30 0 70Z" fill="#1b4589" /><path d="M0 78C120 38 260 98 400 48" fill="none" stroke="#ed1c24" stroke-width="5" /></svg>
+    <div class="dialogo">
+      <h2 id="titulo-consulta">Veamos esto con tu operación</h2>
+      <p>En una consulta personalizada te mostramos cómo {producto} se adapta a tu equipo y resolvemos tus dudas. La demo usa solo datos de ejemplo: nunca te pediremos datos personales para probarla.</p>
+      <div class="botones">
+        <a class="boton boton-azul" data-consulta-correo data-producto={producto} href={`mailto:${sitio.correo}?subject=${encodeURIComponent(`Consulta personalizada: ${producto}`)}`}>Agendar una consulta</a>
+        <button type="button" class="boton secundario" data-cerrar-consulta>Seguir viendo la demo</button>
+      </div>
     </div>
   </dialog>
 </Base>
@@ -115,6 +135,8 @@ const asunto = encodeURIComponent('Quiero crear mi cuenta Sulotec');
   .enlace { color: var(--azul); font-weight: 700; text-decoration: none; font-size: .92rem; }
   .enlace:hover { text-decoration: underline; }
   .pequeno { padding: 9px 18px; border: 0; cursor: pointer; font: inherit; font-weight: 700; }
+  .saludo { color: var(--gris); font-size: .92rem; }
+  .saludo strong { color: var(--azul); }
 
   .contenido { padding: 28px; max-width: 1280px; }
   .encabezado { margin-bottom: 22px; }

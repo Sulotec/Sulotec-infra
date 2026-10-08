@@ -1,0 +1,44 @@
+# Publica cuenta.sulotec.com (Keycloak) cada vez que cambia apps/cuenta en la rama main.
+# La primera vez, despues de este workflow, se prepara el servidor una sola vez:
+#   sudo bash /data/apps/cuenta/preparar.sh   (ver apps/cuenta/README.md)
+name: Publicar cuenta
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/cuenta/**'
+      - '.github/workflows/cuenta.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: cuenta
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: [self-hosted, sulotec]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copiar a /data/apps/cuenta
+        run: |
+          mkdir -p /data/apps/cuenta
+          rsync -a --delete apps/cuenta/ /data/apps/cuenta/
+
+      - name: Reiniciar Keycloak con los cambios
+        run: |
+          if [ ! -r /opt/sulotec/cuenta.env ]; then
+            echo "::warning::Archivos copiados. Falta preparar el servidor una vez: sudo bash /data/apps/cuenta/preparar.sh"
+            exit 0
+          fi
+          cd /data/apps/cuenta
+          docker compose up -d --force-recreate
+          for i in $(seq 1 40); do
+            if [ "$(docker inspect -f '{{.State.Health.Status}}' cuenta)" = healthy ]; then
+              echo "cuenta.sulotec.com listo"; exit 0
+            fi
+            sleep 6
+          done
+          docker logs --tail 60 cuenta
+          exit 1

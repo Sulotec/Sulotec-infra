@@ -30,7 +30,8 @@ Object Storage: sulotec-backups (copias diarias) · sulotec-archivos (archivos d
 | 8.8 Vulnerabilidades técnicas | `unattended-upgrades` (parches de seguridad automáticos), `fail2ban`, imágenes oficiales de Docker. | VM |
 | 8.9 Gestión de la configuración · 8.32 Gestión de cambios | Infraestructura como código (Terraform) y scripts en el repositorio privado `Sulotec/Sulotec-infra` (organización de la empresa). Los cambios del portal se publican solo desde `main` con GitHub Actions y un runner propio sin puertos abiertos; cada publicación queda registrada (quién, qué, cuándo). | GitHub → Sulotec-infra → Commits / Actions |
 | 5.23 Servicios en la nube | Proveedores: Oracle Cloud (cómputo, discos, Object Storage; región Santiago de Chile) y Cloudflare (DNS, TLS, túnel, Access). | Este documento |
-| 5.17 Información de autenticación | Secretos solo en `/opt/sulotec/.env` (root:docker, 640) y en el gestor de contraseñas de la empresa; nunca en Git ni en chats. | VM |
+| 5.17 Información de autenticación | Secretos solo en `/opt/sulotec/.env` y `/opt/sulotec/cuenta.env` (root:docker, 640) y en el gestor de contraseñas de la empresa; nunca en Git ni en chats. | VM |
+| 5.16 · 5.18 · 8.5 Cuentas de clientes y del equipo (cuenta.sulotec.com) | Keycloak en el servidor propio. Correo verificado antes de entrar; contraseñas de 10+ caracteres con historial; bloqueo tras 5 intentos; sesión de 30 min sin uso y 8 h máximo. Los administradores de cuentas (grupo *Administradores Generales*) pueden crear o desactivar cuentas, pero no cambiar la configuración, y deben usar OTP. La consola `/admin` está además detrás de Cloudflare Access. El portal usa OIDC con PKCE y no guarda contraseñas. Las demos no usan datos personales. | Consola → Usuarios / Eventos; `apps/cuenta/` |
 
 ## Pendientes para cerrar brechas
 0. Rotar `POSTGRES_PASSWORD` y `MYSQL_ROOT_PASSWORD` (quedaron expuestas en un chat el 2026-10-07) antes de cargar datos reales (control 5.17).
@@ -39,3 +40,4 @@ Object Storage: sulotec-backups (copias diarias) · sulotec-archivos (archivos d
 3. Proteger la rama `main` en GitHub (revisión antes de publicar) y activar 2FA obligatorio en la organización `Sulotec`.
 4. **Legal/cumplimiento:** los datos residen en Santiago de Chile → flujo transfronterizo según la Ley 29733; clientes supervisados por la SBS pueden exigir evidencias sobre tercerización en la nube. Validar antes de cargar datos reales.
 5. Para producción con clientes financieros: evaluar VM de pago (SLA) y separar producción de pruebas.
+6. Cuentas: reemplazar `admin-temporal` de Keycloak por un administrador maestro con nombre propio y OTP. Exigir OTP por regla del flujo de inicio de sesión para el rol `administrador-general`; hoy se exige al crear cada cuenta. Aviso de privacidad y consentimiento en el registro (Ley 29733) antes de abrir las cuentas al público.

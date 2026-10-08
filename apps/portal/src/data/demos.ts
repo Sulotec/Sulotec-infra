@@ -1,12 +1,13 @@
 // Datos de EJEMPLO para las demos publicas. Todo es ficticio: nombres, expedientes, empresas y cifras.
 // Nunca poner aqui datos reales de clientes.
 
-// ---------- Cuentas: a donde llevan los botones de la invitacion ----------
-// Mientras las cuentas no esten activas, la invitacion ofrece dejar el correo (activa: false).
+// ---------- Cuentas Sulotec (Keycloak en cuenta.sulotec.com) ----------
+// activa: false -> no se muestran "Iniciar sesion"/"Crear cuenta" y la invitacion ofrece avisar por correo.
+// Para probar en local: PUBLIC_CUENTA_ACTIVA=true PUBLIC_CUENTA_EMISOR=http://localhost:8180/realms/sulotec npm run build
 export const cuenta = {
-  activa: false,
-  crear: 'https://cuenta.sulotec.com/registro',
-  ingresar: 'https://cuenta.sulotec.com/ingresar',
+  activa: import.meta.env.PUBLIC_CUENTA_ACTIVA === 'true' || false,
+  emisor: import.meta.env.PUBLIC_CUENTA_EMISOR || 'https://cuenta.sulotec.com/realms/sulotec',
+  cliente: 'portal',
 };
 
 // La invitacion aparece tras esta cantidad de acciones bloqueadas o de segundos de uso.

@@ -1,6 +1,7 @@
 ---
 import Logo from './Logo.astro';
 import { sitio } from '../data/sitio';
+import { cuenta } from '../data/demos';
 ---
 <header>
   <div class="contenedor barra">
@@ -8,7 +9,16 @@ import { sitio } from '../data/sitio';
     <nav aria-label="Principal">
       <ul>
         {sitio.menu.map((item) => <li class="opcion"><a href={item.href}>{item.texto}</a></li>)}
-        <li><a class="boton boton-azul pequeno" href="#contacto">Contáctanos</a></li>
+        {cuenta.activa ? (
+          <>
+            <li class="solo-invitado"><button type="button" class="enlace-cuenta" data-cuenta="ingresar">Iniciar sesión</button></li>
+            <li class="solo-invitado"><button type="button" class="boton boton-azul pequeno" data-cuenta="crear">Crear cuenta</button></li>
+            <li class="solo-sesion saludo">Hola, <strong data-cuenta-nombre></strong></li>
+            <li class="solo-sesion"><button type="button" class="enlace-cuenta" data-cuenta="salir">Cerrar sesión</button></li>
+          </>
+        ) : (
+          <li><a class="boton boton-azul pequeno" href="#contacto">Contáctanos</a></li>
+        )}
       </ul>
     </nav>
   </div>
@@ -16,11 +26,16 @@ import { sitio } from '../data/sitio';
 
 <style>
   header { position: sticky; top: 0; z-index: 50; background: rgba(238, 242, 248, .84); backdrop-filter: saturate(170%) blur(14px); -webkit-backdrop-filter: saturate(170%) blur(14px); border-bottom: 1px solid rgba(27, 69, 137, .08); }
-  .barra { height: 74px; display: flex; align-items: center; justify-content: space-between; }
-  ul { display: flex; align-items: center; gap: 30px; list-style: none; margin: 0; padding: 0; }
+  .barra { height: 74px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  ul { display: flex; align-items: center; gap: 26px; list-style: none; margin: 0; padding: 0; }
   .opcion a { position: relative; text-decoration: none; font-weight: 700; color: var(--azul); padding: 6px 0; }
   .opcion a::after { content: ""; position: absolute; left: 0; bottom: 0; height: 2px; width: 100%; background: var(--rojo); transform: scaleX(0); transform-origin: right; transition: transform .3s var(--curva); }
   .opcion a:hover::after { transform: scaleX(1); transform-origin: left; }
-  .pequeno { padding: 10px 20px; }
-  @media (max-width: 860px) { .opcion { display: none; } }
+  .pequeno { padding: 10px 20px; border: 0; cursor: pointer; font: inherit; font-weight: 700; }
+  .enlace-cuenta { background: none; border: 0; padding: 6px 0; font: inherit; font-weight: 700; color: var(--azul); cursor: pointer; }
+  .enlace-cuenta:hover { color: var(--rojo); }
+  .saludo { color: var(--gris); }
+  .saludo strong { color: var(--azul); }
+  @media (max-width: 980px) { .opcion { display: none; } }
+  @media (max-width: 520px) { ul { gap: 14px; } .saludo { display: none; } }
 </style>

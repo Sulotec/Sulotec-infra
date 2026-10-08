@@ -1,0 +1,53 @@
+/* Identidad Sulotec sobre el tema keycloak.v2 (PatternFly 5).
+   Azul #1B4589 principal, rojo #ED1C24 solo como acento, Leelawadee UI / Arial. */
+:root {
+  --keycloak-logo-url: url('../img/sulotec-logo-blanco.svg');
+  --keycloak-logo-height: 46px;
+  --keycloak-logo-width: 190px;
+  --keycloak-card-top-color: #ed1c24;
+
+  --pf-v5-global--primary-color--100: #1b4589;
+  --pf-v5-global--primary-color--200: #12305f;
+  --pf-v5-global--link--Color: #1b4589;
+  --pf-v5-global--link--Color--hover: #12305f;
+  --pf-v5-global--FontFamily--text: "Leelawadee UI", "Leelawadee", Arial, sans-serif;
+  --pf-v5-global--FontFamily--heading: "Leelawadee UI", "Leelawadee", Arial, sans-serif;
+  --pf-v5-global--FontFamily--redhat-updated--heading: "Leelawadee UI", "Leelawadee", Arial, sans-serif;
+  --pf-v5-global--FontFamily--redhat-updated--text: "Leelawadee UI", "Leelawadee", Arial, sans-serif;
+}
+
+/* Fondo: azul de la marca con el corte curvo y filete rojo abajo */
+.login-pf body {
+  background:
+    url("../img/curva.svg") no-repeat bottom center / 100% 160px,
+    linear-gradient(135deg, #2a5cab 0%, #1b4589 55%, #12305f 100%) fixed;
+  min-height: 100vh;
+}
+
+#kc-header-wrapper { text-transform: none; letter-spacing: 0; }
+
+/* Tarjeta del formulario */
+.pf-v5-c-login__main {
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(18, 48, 95, .10), 0 30px 60px rgba(8, 20, 45, .35);
+}
+.pf-v5-c-login__main-header { border-top-width: 5px; }
+#kc-page-title { color: #1b4589; font-weight: 700; }
+
+/* Botones redondeados como en sulotec.com */
+.pf-v5-c-button.pf-m-primary {
+  --pf-v5-c-button--m-primary--BackgroundColor: #1b4589;
+  --pf-v5-c-button--m-primary--hover--BackgroundColor: #12305f;
+  --pf-v5-c-button--m-primary--focus--BackgroundColor: #12305f;
+  --pf-v5-c-button--m-primary--active--BackgroundColor: #12305f;
+  border-radius: 999px;
+  font-weight: 700;
+}
+.pf-v5-c-form-control { border-radius: 10px; }
+.pf-v5-c-form-control::after { border-radius: 0 0 10px 10px; }
+
+a, .pf-v5-c-button.pf-m-link { color: #1b4589; font-weight: 700; }
+a:hover { color: #12305f; }
+
+:focus-visible { outline: 3px solid #ed1c24; outline-offset: 2px; }

@@ -1,0 +1,22 @@
+---
+// Pagina a la que vuelve la persona despues de iniciar sesion o crear su cuenta en cuenta.sulotec.com.
+// public/cuenta.js completa el inicio de sesion y la devuelve a donde estaba.
+import Base from '../../layouts/Base.astro';
+---
+<Base titulo="Iniciando sesión | Sulotec" descripcion="Completando tu inicio de sesión en Sulotec." ruta="/cuenta/callback">
+  <main id="contenido" class="centro">
+    <div class="tarjeta">
+      <p data-cuenta-cargando><span class="giro" aria-hidden="true"></span>Completando tu inicio de sesión…</p>
+      <p class="error" data-cuenta-error role="alert" hidden></p>
+      <a class="boton boton-azul" href="/">Volver a sulotec.com</a>
+    </div>
+  </main>
+</Base>
+
+<style>
+  .centro { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+  .tarjeta { background: #fff; border: 1px solid var(--borde); border-radius: 18px; padding: 32px; max-width: 440px; width: 100%; box-shadow: var(--sombra); display: grid; gap: 18px; justify-items: start; }
+  p { margin: 0; display: flex; align-items: center; gap: 12px; color: var(--azul); font-weight: 700; }
+  .error { color: #b3141b; }
+  .giro { width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--azul-10); border-top-color: var(--azul); animation: girar .8s linear infinite; flex: none; }
+</style>

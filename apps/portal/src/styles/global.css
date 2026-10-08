@@ -75,6 +75,10 @@ svg { display: block; }
 .boton-blanco::after { background: linear-gradient(110deg, transparent 30%, rgba(27, 69, 137, .12) 50%, transparent 70%); }
 .boton-blanco svg { color: var(--rojo); }
 
+/* ---------- Cuenta: mostrar solo lo que corresponde (la clase la pone public/cuenta.js) ---------- */
+.con-sesion .solo-invitado { display: none !important; }
+html:not(.con-sesion) .solo-sesion { display: none !important; }
+
 /* ---------- Etiqueta de seccion ---------- */
 .kicker { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; color: var(--rojo); font-size: .95rem; letter-spacing: .02em; }
 .kicker::before { content: ""; width: 26px; height: 3px; border-radius: 3px; background: var(--rojo); }

@@ -1,6 +1,7 @@
 ---
 import '../styles/global.css';
 import { sitio } from '../data/sitio';
+import { cuenta } from '../data/demos';
 
 interface Props {
   titulo?: string;
@@ -24,6 +25,13 @@ const { titulo = sitio.titulo, descripcion = sitio.descripcion, ruta = '/' } = A
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <!-- Siempre empezar arriba al entrar (archivo externo: lo permite la politica de seguridad CSP) -->
     <script is:inline src="/inicio.js"></script>
+    {cuenta.activa && (
+      <>
+        <meta name="cuenta-emisor" content={cuenta.emisor} />
+        <meta name="cuenta-cliente" content={cuenta.cliente} />
+        <script is:inline src="/cuenta.js"></script>
+      </>
+    )}
     <slot name="head" />
   </head>
   <body>

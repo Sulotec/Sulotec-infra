@@ -33,7 +33,10 @@ Usuario → Cloudflare (DNS, SSL, WAF, Access) → Cloudflare Tunnel → VM Orac
 - Productos: **MiRadar360** (antes AFACOP; repos `jeliases-informaDev/Afacop-*`, "torre de control" de asesores en campo, web + Android/iOS, en producción), **Auditoría de Visitas** (Caja Huancayo; Node + MySQL), **Prevención de Lavado de Activos** (web + app), **Buscador Interno** (repos `InternalBuscador` (T-SQL → SQL Server) e `internal-search-frontend`).
 - Despliegue: nginx `stable-alpine` en `/data/apps/portal` (red `sulotec_edge`, contenedor `portal`); rutas del túnel `sulotec.com` y `www.sulotec.com` → `http://portal:80`. El build (`npm run build`) se hace en una PC por ahora; luego CI/CD desde GitHub.
 - Subdominios propuestos (un solo nivel): `miradar360`/`api-miradar360`, `auditoria`/`api-auditoria`, `plaft`/`api-plaft`, `buscador` (con Cloudflare Access). Por confirmar con el usuario.
-- Repo Git local inicializado (rama `main`); falta crear el repo **privado** en GitHub (idealmente en una organización de la empresa) y hacer push.
+- **GitHub:** organización **`Sulotec`** (creada desde la cuenta de empresa `informaperu2-cmyk`, como "business"), repo **privado `Sulotec/Sulotec-infra`** con todo este proyecto. Es la fuente oficial: editar → push a `main` → se publica solo.
+- **CI/CD:** `.github/workflows/portal.yml` corre en un **runner propio** `sulotec-main` (servicio `actions.runner.Sulotec-Sulotec-infra.sulotec-main`, usuario `github-runner` en grupo docker, `/opt/actions-runner`, etiqueta `sulotec`), instalado con `vm/scripts/instalar-runner.sh`. Conexión saliente, sin puertos. Compila Astro en `node:24-alpine` y publica en `/data/apps/portal/sitio` (dueño `github-runner:docker`). Primera publicación OK (2026-10-08 ~01:20).
+- **Rutas del túnel:** `ssh.sulotec.com → ssh://10.0.1.178:22`, `sulotec.com → http://portal:80`, `www.sulotec.com → http://portal:80`. **https://sulotec.com en línea** (HTTP 200, encabezados de seguridad del nginx).
+- En el terminal web de Cloudflare el pegado agrega `^[[200~ … ~`: antes de pegar comandos, ejecutar `bind 'set enable-bracketed-paste off'`.
 
 ## Estado actual (2026-10-06, noche)
 - **Cloudflare:** `sulotec.com` activo, plan Free. Túnel `sulotec-oci` ya creado (ver "Avance" más abajo). **Para el estado más reciente y el plan de mañana, ir a "Plan para mañana".**

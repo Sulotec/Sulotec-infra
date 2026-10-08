@@ -28,7 +28,7 @@ Object Storage: sulotec-backups (copias diarias) · sulotec-archivos (archivos d
 | 8.14 Redundancia · 5.30 Continuidad TIC | Datos en un disco separado del sistema (se puede conectar a otra VM). Infraestructura reproducible con Terraform + `bootstrap.sh` + `setup-datos.sh`. Sin SLA en el plan actual. | `oracle/`, `vm/` |
 | 8.15 Registro · 8.16 Monitoreo | Cloudflare Access registra cada inicio de sesión; Oracle Audit registra cambios en la nube (activo por defecto); `journalctl -u ssh` en la VM; alertas de presupuesto (US$10) al correo. | Cloudflare One → Insights & Logs; Oracle → Audit |
 | 8.8 Vulnerabilidades técnicas | `unattended-upgrades` (parches de seguridad automáticos), `fail2ban`, imágenes oficiales de Docker. | VM |
-| 8.9 Gestión de la configuración · 8.32 Gestión de cambios | Infraestructura como código (Terraform) y scripts versionables. Pendiente: repositorio Git privado de la empresa. | `sulotec-infra/` |
+| 8.9 Gestión de la configuración · 8.32 Gestión de cambios | Infraestructura como código (Terraform) y scripts en el repositorio privado `Sulotec/Sulotec-infra` (organización de la empresa). Los cambios del portal se publican solo desde `main` con GitHub Actions y un runner propio sin puertos abiertos; cada publicación queda registrada (quién, qué, cuándo). | GitHub → Sulotec-infra → Commits / Actions |
 | 5.23 Servicios en la nube | Proveedores: Oracle Cloud (cómputo, discos, Object Storage; región Santiago de Chile) y Cloudflare (DNS, TLS, túnel, Access). | Este documento |
 | 5.17 Información de autenticación | Secretos solo en `/opt/sulotec/.env` (root:docker, 640) y en el gestor de contraseñas de la empresa; nunca en Git ni en chats. | VM |
 
@@ -36,6 +36,6 @@ Object Storage: sulotec-backups (copias diarias) · sulotec-archivos (archivos d
 0. Rotar `POSTGRES_PASSWORD` y `MYSQL_ROOT_PASSWORD` (quedaron expuestas en un chat el 2026-10-07) antes de cargar datos reales (control 5.17).
 1. MFA obligatorio en la política de Cloudflare Access y 2FA en `informaperu2@gmail.com`, Cloudflare y Oracle.
 2. Prueba de restauración de un backup, con fecha y resultado anotados aquí.
-3. Repositorio Git privado de la empresa para `sulotec-infra`.
+3. Proteger la rama `main` en GitHub (revisión antes de publicar) y activar 2FA obligatorio en la organización `Sulotec`.
 4. **Legal/cumplimiento:** los datos residen en Santiago de Chile → flujo transfronterizo según la Ley 29733; clientes supervisados por la SBS pueden exigir evidencias sobre tercerización en la nube. Validar antes de cargar datos reales.
 5. Para producción con clientes financieros: evaluar VM de pago (SLA) y separar producción de pruebas.

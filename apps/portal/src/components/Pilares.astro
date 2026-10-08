@@ -1,0 +1,36 @@
+---
+import Icon from './Icon.astro';
+import SectionTitle from './SectionTitle.astro';
+import { pilares } from '../data/sitio';
+---
+<section class="pilares" id="pilares" aria-labelledby="titulo-pilares">
+  <svg class="curva-arriba" viewBox="0 0 1440 100" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M0 0H1440V40C1000 100 420 20 0 70Z" fill="#e8ecf3" />
+    <path d="M0 78C420 28 1000 108 1440 48" fill="none" stroke="#ed1c24" stroke-width="8" />
+  </svg>
+  <div class="contenedor">
+    <SectionTitle id="titulo-pilares" kicker="Por qué Sulotec" titulo="Los pilares detrás de cada solución" bajada="Una misma plataforma, segura y en la nube, para todo el ecosistema." claro />
+    <div class="rejilla">
+      {pilares.map((p) => (
+        <div class="pilar revelar">
+          <span class="icono"><Icon name={p.icono} size={26} /></span>
+          <h3>{p.titulo}</h3>
+          <p>{p.texto}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .pilares { position: relative; padding: 150px 0 100px; color: #fff; background: radial-gradient(700px 400px at 90% 100%, rgba(84, 116, 167, .45), transparent 60%), linear-gradient(160deg, var(--azul) 0%, var(--azul-oscuro) 100%); overflow: hidden; }
+  .curva-arriba { position: absolute; left: 0; top: -1px; width: 100%; height: 90px; }
+  .rejilla { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; }
+  .pilar { border: 1px solid rgba(255, 255, 255, .18); background: rgba(255, 255, 255, .05); border-radius: var(--radio); padding: 28px 24px; transition: background .3s ease, transform .3s var(--curva); }
+  .pilar:hover { background: rgba(255, 255, 255, .1); transform: translateY(-4px); }
+  .icono { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: #fff; color: var(--azul); margin-bottom: 20px; }
+  h3 { font-size: 1.2rem; margin-bottom: 10px; }
+  p { margin: 0; color: #d7e0ef; font-size: .97rem; }
+  @media (max-width: 1000px) { .rejilla { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 600px) { .rejilla { grid-template-columns: 1fr; } .pilares { padding-top: 110px; } }
+</style>

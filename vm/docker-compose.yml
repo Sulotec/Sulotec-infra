@@ -1,0 +1,52 @@
+name: sulotec
+
+# Servicios base de la VM. Cada proyecto va en su propio compose (ver ../templates/app-compose.yml)
+# y se une a estas dos redes:
+#   sulotec_edge -> contenedores que Cloudflare Tunnel puede alcanzar
+#   sulotec_data -> acceso a PostgreSQL y MySQL
+# Los datos viven en el disco de datos montado en /data (ver setup-datos.sh).
+# Ninguna base publica puertos: solo se llega a ellas desde la red sulotec_data.
+
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CF_TUNNEL_TOKEN:?falta CF_TUNNEL_TOKEN en .env}
+    networks: [edge]
+
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?falta POSTGRES_PASSWORD en .env}
+    volumes:
+      - /data/postgres:/var/lib/postgresql/data
+    networks: [data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?falta MYSQL_ROOT_PASSWORD en .env}
+    volumes:
+      - /data/mysql:/var/lib/mysql
+    networks: [data]
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+networks:
+  edge:
+    name: sulotec_edge
+  data:
+    name: sulotec_data

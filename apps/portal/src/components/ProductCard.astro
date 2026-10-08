@@ -1,0 +1,50 @@
+---
+import Icon from './Icon.astro';
+import { estados, type Solucion } from '../data/soluciones';
+
+interface Props {
+  solucion: Solucion;
+}
+
+const { nombre, descripcion, estado, plataformas, icono, enlace } = Astro.props.solucion;
+---
+<article class="tarjeta revelar">
+  <div class="arriba">
+    <span class="icono"><Icon name={icono} size={28} /></span>
+    <span class:list={['estado', estado]}>{estados[estado]}</span>
+  </div>
+  <h3>{nombre}</h3>
+  <p>{descripcion}</p>
+  <ul class="plataformas">
+    {plataformas.map((p) => <li>{p}</li>)}
+  </ul>
+  <a class="enlace" href={enlace ?? '#contacto'}>
+    {enlace ? 'Ingresar' : 'Solicitar información'}
+    <Icon name="arrow" size={18} />
+  </a>
+</article>
+
+<style>
+  .tarjeta { position: relative; overflow: hidden; background: #fff; border: 1px solid var(--azul-25); border-radius: var(--radio); padding: 30px; display: flex; flex-direction: column; gap: 14px; transition: box-shadow .3s var(--curva), transform .3s var(--curva), border-color .3s ease; }
+  /* Filete rojo que crece al pasar el mouse */
+  .tarjeta::before { content: ""; position: absolute; left: 0; top: 0; height: 4px; width: 100%; background: linear-gradient(90deg, var(--rojo), var(--azul)); transform: scaleX(0); transform-origin: left; transition: transform .45s var(--curva); }
+  .tarjeta:hover { box-shadow: var(--sombra-alta); transform: translateY(-6px); border-color: transparent; }
+  .tarjeta:hover::before { transform: scaleX(1); }
+  .arriba { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .icono { position: relative; width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; background: var(--azul); color: #fff; transition: transform .35s var(--curva); }
+  .icono::after { content: ""; position: absolute; inset: -6px; border-radius: 50%; border: 2px solid var(--azul-25); transition: inset .35s var(--curva), opacity .35s ease; opacity: 0; }
+  .tarjeta:hover .icono { transform: rotate(-8deg) scale(1.06); }
+  .tarjeta:hover .icono::after { inset: -9px; opacity: 1; }
+  .estado { font-size: .78rem; font-weight: 700; padding: 5px 12px; border-radius: 999px; white-space: nowrap; }
+  .produccion { background: #e7f6ee; color: #0d7a3d; }
+  .produccion::before { content: "● "; }
+  .implementacion { background: var(--azul-10); color: var(--azul); }
+  .interno { background: #eef0f3; color: var(--gris); }
+  h3 { font-size: 1.4rem; color: var(--texto); margin-top: 6px; letter-spacing: -.01em; }
+  p { margin: 0; color: var(--gris); }
+  .plataformas { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0; padding: 0; }
+  .plataformas li { font-size: .8rem; font-weight: 700; color: var(--azul); background: var(--azul-10); padding: 4px 11px; border-radius: 999px; }
+  .enlace { margin-top: auto; padding-top: 8px; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; color: var(--azul); text-decoration: none; }
+  .enlace :global(svg) { color: var(--rojo); transition: transform .2s var(--curva); }
+  .tarjeta:hover .enlace :global(svg) { transform: translateX(5px); }
+</style>

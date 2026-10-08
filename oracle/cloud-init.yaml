@@ -1,0 +1,28 @@
+#cloud-config
+# Se ejecuta una sola vez, al crear la VM. Deja el servidor listo para Docker.
+timezone: America/Lima
+package_update: true
+package_upgrade: true
+packages:
+  - ca-certificates
+  - curl
+  - git
+  - htop
+  - fail2ban
+  - unattended-upgrades
+
+write_files:
+  - path: /etc/docker/daemon.json
+    content: |
+      {
+        "log-driver": "json-file",
+        "log-opts": { "max-size": "10m", "max-file": "3" }
+      }
+
+runcmd:
+  - curl -fsSL https://get.docker.com | sh
+  - usermod -aG docker ubuntu
+  - systemctl enable --now docker fail2ban
+  - mkdir -p /opt/sulotec /opt/backups
+  - chown -R ubuntu:ubuntu /opt/sulotec /opt/backups
+  - touch /opt/sulotec/.cloud-init-ok

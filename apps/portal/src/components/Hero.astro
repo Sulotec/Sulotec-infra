@@ -1,0 +1,62 @@
+---
+import Icon from './Icon.astro';
+import HeroVisual from './HeroVisual.astro';
+import { sitio } from '../data/sitio';
+const { etiqueta, titulo, texto } = sitio.portada;
+---
+<section class="portada" id="inicio" aria-labelledby="titulo-portada">
+  <!-- Marca de agua del simbolo y luces de fondo -->
+  <svg class="marca-agua" viewBox="0 0 64 64" aria-hidden="true">
+    <path d="M42 22c-2-3-6-5-10-5-6 0-10 3-10 8 0 11 20 6 20 16 0 5-4 8-10 8-5 0-9-2-11-6" fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="round" />
+  </svg>
+  <span class="luz luz-1" aria-hidden="true"></span>
+  <span class="luz luz-2" aria-hidden="true"></span>
+
+  <div class="contenedor rejilla">
+    <div class="texto">
+      <span class="etiqueta aparecer">{etiqueta}</span>
+      <h1 id="titulo-portada" class="aparecer" style="--d:100ms">
+        {titulo.antes}<span class="resalte">{titulo.resalte}</span>{titulo.despues}
+      </h1>
+      <p class="aparecer" style="--d:200ms">{texto}</p>
+      <div class="acciones aparecer" style="--d:300ms">
+        <a class="boton boton-blanco" href="#soluciones">Ver soluciones <Icon name="arrow" size={18} /></a>
+        <a class="boton contorno" href="#contacto">Contáctanos</a>
+      </div>
+    </div>
+    <HeroVisual />
+  </div>
+
+  <!-- Corte curvo con filete rojo que se dibuja al cargar -->
+  <svg class="curva" viewBox="0 0 1440 140" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M0 140V112C420 132 900 90 1440 10V140Z" fill="#fff" />
+    <path class="filete" d="M0 106C420 126 900 84 1440 4" fill="none" stroke="#ed1c24" stroke-width="12" />
+  </svg>
+</section>
+
+<style>
+  .portada { position: relative; overflow: hidden; color: #fff; background: linear-gradient(135deg, var(--azul-claro) 0%, var(--azul) 50%, var(--azul-oscuro) 100%); }
+  .marca-agua { position: absolute; width: 640px; height: 640px; left: -170px; top: -70px; color: rgba(255, 255, 255, .06); }
+  .luz { position: absolute; border-radius: 50%; filter: blur(70px); pointer-events: none; animation: flotar 12s ease-in-out infinite; }
+  .luz-1 { width: 420px; height: 420px; right: 4%; top: -120px; background: rgba(84, 116, 167, .55); }
+  .luz-2 { width: 300px; height: 300px; right: 30%; bottom: 40px; background: rgba(237, 28, 36, .12); animation-duration: 16s; }
+
+  .rejilla { position: relative; display: grid; grid-template-columns: 1.05fr .95fr; gap: 48px; align-items: center; padding: 88px 0 160px; }
+  .etiqueta { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; font-size: .92rem; color: var(--azul-25); background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .16); padding: 7px 14px; border-radius: 999px; }
+  .etiqueta::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--rojo); animation: pulso 2s infinite; }
+  h1 { font-size: clamp(2.3rem, 4.8vw, 3.7rem); letter-spacing: -.025em; margin: 20px 0 20px; }
+  .resalte { position: relative; white-space: nowrap; }
+  .resalte::after { content: ""; position: absolute; left: 0; right: 0; bottom: .02em; height: .14em; border-radius: 99px; background: var(--rojo); transform-origin: left; animation: trazo .9s var(--curva) .7s both; }
+  p { font-size: 1.15rem; color: #d7e0ef; margin: 0 0 34px; max-width: 560px; }
+  .acciones { display: flex; flex-wrap: wrap; gap: 12px; }
+  .contorno { color: #fff; border: 2px solid rgba(255, 255, 255, .55); }
+  .contorno:hover { background: rgba(255, 255, 255, .1); }
+
+  .curva { position: absolute; left: 0; bottom: -1px; width: 100%; height: 110px; }
+  .filete { stroke-dasharray: 1600; animation: dibujar 1.6s var(--curva) .3s both; }
+
+  @media (max-width: 960px) {
+    .rejilla { grid-template-columns: 1fr; padding: 64px 0 140px; }
+  }
+  @media (max-width: 720px) { .curva { height: 70px; } }
+</style>

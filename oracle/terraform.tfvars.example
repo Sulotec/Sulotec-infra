@@ -1,0 +1,10 @@
+# Copia este archivo como terraform.tfvars y completa los valores.
+# En Cloud Shell:  echo $OCI_TENANCY   y   echo $OCI_REGION
+
+tenancy_ocid     = "ocid1.tenancy.oc1..xxxxxxxx"
+compartment_ocid = "ocid1.tenancy.oc1..xxxxxxxx"   # igual al tenancy si no creaste otro compartment
+region           = "sa-santiago-1"                 # tu region HOME
+ssh_public_key   = "ssh-ed25519 AAAA... usuario@pc"
+admin_cidr       = "190.0.0.0/32"                  # tu IP publica (https://ifconfig.me) + /32
+alert_email      = "serviciosdigitales@informaperu.com"
+budget_usd       = 10

@@ -1,0 +1,74 @@
+---
+// Composicion ilustrativa del ecosistema: panel con radar en vivo y tarjetas flotantes de cada solucion.
+import Icon from './Icon.astro';
+---
+<div class="escena aparecer" style="--d:250ms" aria-hidden="true">
+  <div class="panel">
+    <div class="panel-top">
+      <span class="marca"><Icon name="radar" size={18} /></span>
+      <strong>MiRadar360</strong>
+      <span class="vivo">En vivo</span>
+    </div>
+    <div class="radar">
+      <span class="barrido"></span>
+      <span class="punto p1"></span>
+      <span class="punto p2"></span>
+      <span class="punto p3"></span>
+      <span class="punto p4"></span>
+      <span class="centro"></span>
+    </div>
+    <div class="barras">
+      <div><span>Rutas activas</span><i style="--w:78%"></i></div>
+      <div><span>Visitas verificadas</span><i style="--w:64%"></i></div>
+    </div>
+  </div>
+
+  <div class="chip chip-1">
+    <span class="ico ok"><Icon name="check" size={16} /></span>
+    <span><strong>Visita verificada</strong><small>Geocerca y foto OK</small></span>
+  </div>
+  <div class="chip chip-2">
+    <span class="ico"><Icon name="shield" size={16} /></span>
+    <span><strong>Revisión PLAFT</strong><small>Sin coincidencias</small></span>
+  </div>
+  <div class="chip chip-3">
+    <span class="ico"><Icon name="search" size={16} /></span>
+    <span class="buscar">Buscar expediente<b></b></span>
+  </div>
+</div>
+
+<style>
+  .escena { position: relative; height: 440px; max-width: 480px; width: 100%; justify-self: end; }
+  .panel { position: absolute; inset: 30px 30px 40px 40px; background: #fff; color: var(--texto); border-radius: 24px; box-shadow: var(--sombra-alta); padding: 20px 22px; display: flex; flex-direction: column; gap: 16px; }
+  .panel-top { display: flex; align-items: center; gap: 10px; font-size: .98rem; }
+  .marca { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: var(--azul); color: #fff; }
+  .vivo { margin-left: auto; display: inline-flex; align-items: center; gap: 7px; font-size: .78rem; font-weight: 700; color: var(--rojo); background: #fdecec; padding: 4px 10px; border-radius: 999px; }
+  .vivo::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--rojo); animation: pulso 1.8s infinite; }
+
+  .radar { position: relative; flex: 1; min-height: 0; aspect-ratio: 1; align-self: center; border-radius: 50%; overflow: hidden;
+    background: repeating-radial-gradient(circle, transparent 0 26px, var(--azul-10) 26px 27.5px), radial-gradient(circle, #f6f8fc, #eef2f8); border: 1.5px solid var(--azul-25); }
+  .barrido { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 0deg, rgba(27, 69, 137, .32), rgba(27, 69, 137, 0) 26%); animation: girar 4s linear infinite; }
+  .centro { position: absolute; left: 50%; top: 50%; width: 12px; height: 12px; margin: -6px; border-radius: 50%; background: var(--azul); }
+  .punto { position: absolute; width: 11px; height: 11px; border-radius: 50%; background: var(--azul); box-shadow: 0 0 0 4px rgba(27, 69, 137, .15); }
+  .p1 { left: 28%; top: 30%; } .p2 { left: 66%; top: 24%; } .p3 { left: 70%; top: 64%; background: var(--rojo); box-shadow: none; animation: pulso 2s infinite; } .p4 { left: 34%; top: 70%; }
+
+  .barras { display: grid; gap: 10px; font-size: .8rem; color: var(--gris); }
+  .barras div { display: grid; gap: 4px; }
+  .barras i { display: block; height: 7px; border-radius: 99px; background: var(--azul-10); position: relative; overflow: hidden; }
+  .barras i::after { content: ""; position: absolute; inset: 0; width: var(--w); border-radius: 99px; background: linear-gradient(90deg, var(--azul-75), var(--azul)); transform-origin: left; animation: trazo 1.4s var(--curva) 1s both; }
+
+  .chip { position: absolute; display: flex; align-items: center; gap: 10px; background: #fff; color: var(--texto); border-radius: 14px; padding: 10px 14px; box-shadow: var(--sombra-alta); font-size: .82rem; animation: flotar 6s ease-in-out infinite; }
+  .chip strong { display: block; font-size: .86rem; }
+  .chip small { color: var(--gris); }
+  .ico { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--azul); color: #fff; flex: none; }
+  .ico.ok { background: var(--verde); }
+  .chip-1 { right: 0; top: 70px; }
+  .chip-2 { left: 0; top: 176px; animation-delay: -2s; animation-duration: 7s; }
+  .chip-3 { right: 12px; bottom: 6px; animation-delay: -4s; }
+  .buscar { color: var(--gris); }
+  .buscar b { display: inline-block; width: 2px; height: 1em; margin-left: 3px; vertical-align: -2px; background: var(--azul); animation: parpadeo 1s steps(1) infinite; }
+  @keyframes parpadeo { 50% { opacity: 0; } }
+
+  @media (max-width: 960px) { .escena { justify-self: center; height: 400px; } }
+  @media (max-width: 480px) { .escena { height: 360px; } .panel { inset: 24px 8px 40px 8px; } .chip-2 { top: 150px; } }
+</style>

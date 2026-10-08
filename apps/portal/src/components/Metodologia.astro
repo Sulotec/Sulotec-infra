@@ -1,0 +1,41 @@
+---
+import Icon from './Icon.astro';
+import SectionTitle from './SectionTitle.astro';
+import { pasos } from '../data/sitio';
+---
+<section class="metodologia" id="metodologia" aria-labelledby="titulo-metodologia">
+  <div class="contenedor">
+    <SectionTitle id="titulo-metodologia" kicker="Cómo trabajamos" titulo="Del diagnóstico a resultados medibles" bajada="Te acompañamos en cada etapa para que la solución funcione desde el primer día." centrado />
+    <ol class="pasos">
+      {pasos.map((p, i) => (
+        <li class:list={['paso', 'revelar', { destacado: i === 1 }]}>
+          <span class="numero">{i + 1}</span>
+          <span class="icono"><Icon name={p.icono} size={26} /></span>
+          <h3>{p.titulo}</h3>
+          <p>{p.texto}</p>
+        </li>
+      ))}
+    </ol>
+  </div>
+</section>
+
+<style>
+  .metodologia { padding: 96px 0; background: var(--azul-10); }
+  .pasos { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; counter-reset: paso; }
+  .paso { position: relative; background: #fff; border-radius: var(--radio); padding: 32px 28px 30px; box-shadow: var(--sombra); }
+  /* Flecha roja entre pasos */
+  .paso:not(:last-child)::after { content: ""; position: absolute; right: -30px; top: 56px; width: 20px; height: 20px; background: no-repeat center / contain url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ed1c24' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14M13 6l6 6-6 6'/%3E%3C/svg%3E"); }
+  .numero { position: absolute; right: 24px; top: 14px; font-size: 3rem; font-weight: 700; color: var(--azul-25); line-height: 1; }
+  .icono { width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center; background: var(--azul); color: #fff; margin-bottom: 22px; }
+  h3 { font-size: 1.25rem; margin-bottom: 10px; }
+  p { margin: 0; color: var(--gris); }
+  .destacado { background: var(--azul); color: #fff; transform: translateY(-12px); }
+  .destacado .icono { background: #fff; color: var(--azul); }
+  .destacado .numero { color: rgba(255, 255, 255, .25); }
+  .destacado p { color: #d7e0ef; }
+  @media (max-width: 860px) {
+    .pasos { grid-template-columns: 1fr; gap: 20px; }
+    .paso:not(:last-child)::after { display: none; }
+    .destacado { transform: none; }
+  }
+</style>

@@ -1,0 +1,24 @@
+---
+// Logo de Sulotec. "claro" = para fondos azules (texto blanco).
+interface Props {
+  claro?: boolean;
+}
+const { claro = false } = Astro.props;
+---
+<a class:list={['logo', { claro }]} href="#inicio" aria-label="Sulotec, ir al inicio">
+  <svg viewBox="0 0 64 64" width="36" height="36" aria-hidden="true">
+    <rect width="64" height="64" rx="16" class="fondo" />
+    <path d="M42 22c-2-3-6-5-10-5-6 0-10 3-10 8 0 11 20 6 20 16 0 5-4 8-10 8-5 0-9-2-11-6" fill="none" class="trazo" stroke-width="5.5" stroke-linecap="round" />
+    <circle cx="50" cy="50" r="4.5" fill="#ed1c24" />
+  </svg>
+  <span>sulotec</span>
+</a>
+
+<style>
+  .logo { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 700; font-size: 1.4rem; letter-spacing: -.02em; color: var(--azul); }
+  .fondo { fill: var(--azul); }
+  .trazo { stroke: #fff; }
+  .claro { color: #fff; }
+  .claro .fondo { fill: #fff; }
+  .claro .trazo { stroke: var(--azul); }
+</style>

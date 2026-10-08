@@ -1,0 +1,27 @@
+---
+// Titulo de seccion reutilizable: etiqueta roja + titulo + bajada. "claro" para fondos azules.
+interface Props {
+  id: string;
+  kicker: string;
+  titulo: string;
+  bajada?: string;
+  claro?: boolean;
+  centrado?: boolean;
+}
+const { id, kicker, titulo, bajada, claro = false, centrado = false } = Astro.props;
+---
+<div class:list={['titulo', 'revelar', { claro, centrado }]}>
+  <span class="kicker">{kicker}</span>
+  <h2 id={id}>{titulo}</h2>
+  {bajada && <p>{bajada}</p>}
+</div>
+
+<style>
+  .titulo { max-width: 680px; margin-bottom: 44px; }
+  .centrado { margin-inline: auto; text-align: center; }
+  h2 { font-size: clamp(2rem, 3.6vw, 2.7rem); color: var(--azul); margin: 12px 0 12px; letter-spacing: -.02em; }
+  p { color: var(--gris); font-size: 1.1rem; margin: 0; }
+  .claro h2 { color: #fff; }
+  .claro p { color: #d7e0ef; }
+  .claro .kicker { color: #fff; }
+</style>

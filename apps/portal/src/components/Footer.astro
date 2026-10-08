@@ -1,0 +1,39 @@
+---
+import Logo from './Logo.astro';
+import { sitio } from '../data/sitio';
+import { soluciones } from '../data/soluciones';
+const anio = new Date().getFullYear();
+---
+<footer>
+  <div class="contenedor columnas">
+    <div>
+      <Logo />
+      <p>Soluciones digitales en la nube para entidades financieras y empresas. {sitio.ciudad}.</p>
+    </div>
+    <div>
+      <h3>Soluciones</h3>
+      <ul>
+        {soluciones.map((s) => <li><a href={s.enlace ?? '#soluciones'}>{s.nombre}</a></li>)}
+      </ul>
+    </div>
+    <div>
+      <h3>Contacto</h3>
+      <ul>
+        <li><a href={`mailto:${sitio.correo}`}>{sitio.correo}</a></li>
+      </ul>
+    </div>
+  </div>
+  <p class="contenedor legal">© {anio} {sitio.nombre}. Todos los derechos reservados.</p>
+</footer>
+
+<style>
+  footer { border-top: 1px solid var(--azul-10); padding: 48px 0 28px; color: var(--gris); font-size: .93rem; }
+  .columnas { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 32px; padding-bottom: 28px; }
+  .columnas p { max-width: 340px; margin: 12px 0 0; }
+  h3 { font-size: .95rem; color: var(--texto); margin-bottom: 12px; }
+  ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  a { text-decoration: none; }
+  ul a:hover { color: var(--azul); }
+  .legal { border-top: 1px solid var(--azul-10); padding-top: 20px; margin-top: 0; text-align: center; font-size: .85rem; }
+  @media (max-width: 720px) { .columnas { grid-template-columns: 1fr; } }
+</style>

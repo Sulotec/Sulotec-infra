@@ -1,0 +1,41 @@
+# Plantilla de un proyecto. Copiala a /opt/apps/<proyecto>/docker-compose.yml en la VM.
+# Cambia "afacop" por el nombre del proyecto y borra el servicio que no uses.
+#
+# En Cloudflare Tunnel (Public hostname) apunta cada subdominio al nombre del contenedor:
+#   afacop.sulotec.com      -> http://afacop-web:80
+#   api-afacop.sulotec.com  -> http://afacop-api:8080
+
+name: afacop
+
+services:
+  web:
+    build:
+      context: ./web            # repo del frontend (React/Angular) con spa.Dockerfile como Dockerfile
+    container_name: afacop-web
+    restart: unless-stopped
+    mem_limit: 128m
+    networks: [edge]
+
+  api:
+    build:
+      context: ./api            # repo del backend (.NET o Spring Boot) con su Dockerfile
+    container_name: afacop-api
+    restart: unless-stopped
+    mem_limit: 1g
+    environment:
+      # .NET:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Default: ${DB_CONN}
+      # Spring Boot (usa estas en vez de las de .NET):
+      # SPRING_DATASOURCE_URL: ${DB_URL}
+      # SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      # SPRING_DATASOURCE_PASSWORD: ${DB_PASS}
+    networks: [edge, data]
+
+networks:
+  edge:
+    external: true
+    name: sulotec_edge
+  data:
+    external: true
+    name: sulotec_data

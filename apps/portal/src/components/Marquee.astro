@@ -1,0 +1,24 @@
+---
+// Franja de capacidades en movimiento continuo. La lista se repite por codigo para un bucle sin cortes.
+import { sitio } from '../data/sitio';
+const vueltas = [0, 1];
+---
+<div class="franja" role="region" aria-label="Capacidades de las soluciones">
+  <div class="pista">
+    {vueltas.map((v) => (
+      <ul aria-hidden={v === 1 ? 'true' : undefined}>
+        {sitio.capacidades.map((c) => <li>{c}</li>)}
+      </ul>
+    ))}
+  </div>
+</div>
+
+<style>
+  .franja { overflow: hidden; padding: 22px 0; border-bottom: 1px solid var(--azul-10); -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
+  .pista { display: flex; width: max-content; animation: deslizar 38s linear infinite; }
+  .franja:hover .pista { animation-play-state: paused; }
+  ul { display: flex; list-style: none; margin: 0; padding: 0; }
+  li { display: inline-flex; align-items: center; gap: 16px; padding: 0 16px; white-space: nowrap; font-weight: 700; color: var(--azul); font-size: 1.02rem; }
+  li::after { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--rojo); margin-left: 16px; }
+  @keyframes deslizar { to { transform: translateX(-50%); } }
+</style>

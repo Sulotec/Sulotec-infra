@@ -1,6 +1,7 @@
-# Publica buscadorinterno.sulotec.com cada vez que cambia apps/buscador en la rama main.
-# La primera vez, despues de este workflow: sudo bash /data/apps/buscador/preparar.sh (ver apps/buscador/README.md)
-name: Publicar buscador
+# Copia al servidor la OPERACION del Buscador Interno (compose, configuracion y publicador automatico).
+# El codigo del Buscador vive en Sulotec/buscador-interno; el servidor lo publica solo con
+# apps/buscador/deploy/actualizar.sh (ver apps/buscador/README.md).
+name: Publicar buscador (operacion)
 
 on:
   push:
@@ -15,32 +16,14 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  publicar:
+  copiar:
     runs-on: [self-hosted, sulotec]
     steps:
       - uses: actions/checkout@v4
 
-      - name: Construir la imagen
-        run: docker build -t buscador-web:latest apps/buscador/web
-
       - name: Copiar a /data/apps/buscador
         run: |
           mkdir -p /data/apps/buscador
-          cp apps/buscador/deploy/docker-compose.yml apps/buscador/deploy/preparar.sh /data/apps/buscador/
-
-      - name: Levantar
-        run: |
-          if [ ! -r /opt/sulotec/buscador.env ]; then
-            echo "::warning::Imagen lista. Falta configurar una vez: sudo bash /data/apps/buscador/preparar.sh"
-            exit 0
-          fi
-          cd /data/apps/buscador
-          docker compose up -d --force-recreate
-          for i in $(seq 1 20); do
-            if [ "$(docker inspect -f '{{.State.Health.Status}}' buscador)" = healthy ]; then
-              echo "buscadorinterno.sulotec.com listo"; docker image prune -f >/dev/null; exit 0
-            fi
-            sleep 3
-          done
-          docker logs --tail 40 buscador
-          exit 1
+          cp apps/buscador/deploy/docker-compose.yml apps/buscador/deploy/preparar.sh \
+             apps/buscador/deploy/actualizar.sh apps/buscador/deploy/instalar-actualizador.sh /data/apps/buscador/
+          echo "Operacion del Buscador copiada."

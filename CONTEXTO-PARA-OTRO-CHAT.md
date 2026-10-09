@@ -18,6 +18,20 @@ Usuario → Cloudflare (DNS, SSL, WAF, Access) → Cloudflare Tunnel → VM Orac
 - Subdominios de **un solo nivel** (`api-afacop.sulotec.com`, no `api.afacop.sulotec.com`) por el SSL gratis de Cloudflare.
 - Todo está en la carpeta `sulotec-infra/`: `README.md` (fases paso a paso), `oracle/` (Terraform), `vm/` (compose base + scripts), `templates/` (Dockerfiles .NET, Spring Boot, SPA).
 
+## >>> ÚLTIMO (2026-10-09) — leer primero <<<
+- **Documentación completa en `docs/`:** índice, 1) Proyecto Sulotec, 2) Oracle Cloud, 3) Cloudflare, 4) Integración de proyectos.
+- **Buscador Interno separado en su propio repo privado: `Sulotec/buscador-interno`.**
+  - Contiene `web/` (Next.js 16 + React 19 + TS, por módulos) y `api/` (.NET, sin `reportes/` y sin historial).
+  - `Sulotec-infra/apps/buscador/` queda solo con la operación: compose, `preparar.sh`, `actualizar.sh`, `instalar-actualizador.sh`.
+  - El servidor publica el Buscador **leyendo** el repo con una llave de solo lectura cada 2 minutos (systemd `buscador-actualizador.timer`). Así los desarrolladores no tienen acceso al servidor.
+  - **Pendiente:** correr `sudo bash /data/apps/buscador/instalar-actualizador.sh` y agregar la *deploy key* (solo lectura) en GitHub.
+- **Buscador en el servidor:** contenedor `buscador` en marcha.
+  - `/opt/sulotec/buscador.env`: API `https://win-hkbui0id607.tail4a0d10.ts.net:8443` (Funnel), SEDES_IPS vacío (solo ADMIN GENERAL).
+  - **Pendiente:** ruta del túnel `buscadorinterno.sulotec.com → http://buscador:3000`, si no se agregó.
+- **Portal:** Mis productos renovado (bienvenida por rol, panel "Tu cuenta", botón Abrir Buscador); pie con "Síguenos" (`sitio.ts → redes`).
+- **Cuentas:** SaaS sin registro libre; las crea el equipo; recuperación encendida.
+  - El usuario creó su cuenta (Administrador General) y ya entra a Mis productos.
+
 ## >>> ESTADO ACTUAL (2026-10-07, 23:40 Lima) — leer esto primero <<<
 **Plataforma base terminada y funcionando.** Lo de más abajo es historial.
 - **Oracle (Pay As You Go, todo en Always Free = US$0):** VM `sulotec-main` A1 4 OCPU/24 GB, Ubuntu 24.04 ARM, IP pública 155.181.132.137 (IP privada 10.0.1.178). Boot 150 GB + **disco de datos 50 GB montado en `/data`** (etiqueta `sulotec-data`). Buckets privados `sulotec-backups` y `sulotec-archivos` (namespace `axkjo5bh8iys`). **Puerto 22 cerrado** (`ssh_enabled = false` en tfvars). Presupuesto real: US$260/mes, gastar solo si hace falta; alerta en US$10.

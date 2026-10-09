@@ -1,5 +1,7 @@
 # Sulotec — infraestructura base (Oracle Cloud + Cloudflare)
 
+> **Documentación completa:** [docs/README.md](docs/README.md) (proyecto, Oracle, Cloudflare e integración). Código del Buscador: [Sulotec/buscador-interno](https://github.com/Sulotec/buscador-interno).
+
 ```
 Usuario → Cloudflare (DNS, SSL, WAF, Access) → Cloudflare Tunnel → VM Oracle (ARM, Ubuntu) → Docker
                                                                      ├─ cloudflared

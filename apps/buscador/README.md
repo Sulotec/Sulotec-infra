@@ -1,76 +1,60 @@
-# Buscador Interno — buscadorinterno.sulotec.com
+# Buscador Interno — operación (buscadorinterno.sulotec.com)
 
-Frontend nuevo en **Next.js 16 + React 19 + TypeScript + Tailwind 4**. Reemplaza al front Angular que estaba en Vercel.
-Es responsive, usa el diseño de Sulotec y está armado por módulos para que sea fácil de mantener y de ampliar.
-
-```
-Navegador ──▶ buscadorinterno.sulotec.com (Next.js, servidor Oracle, contenedor "buscador")
-                 │  /backend/...  (intermediario: sesión en cookie segura + regla de sedes)
-                 ▼
-              API del Buscador (.NET, servidor de la oficina) ──▶ SQL Server 192.168.1.17
-```
-
-- El navegador **nunca** conoce la dirección de la API ni el token. El token vive en una cookie `httpOnly`.
-- **Regla de sedes:** solo se usa desde las IPs públicas de las sedes (Lince, Los Olivos). El rol **ADMIN GENERAL** puede entrar desde cualquier lugar. Se aplica dos veces:
-  1. En el servidor, al iniciar sesión y en cada consulta (`src/lib/sesion-servidor.ts`).
-  2. En Cloudflare Access, delante del sitio.
-
-## Estructura
+> **El código del Buscador está en su propio repositorio:** https://github.com/Sulotec/buscador-interno
+> (`web/` React/Next.js y `api/` .NET). Esta carpeta solo tiene cómo corre en el servidor; es para administradores.
 
 ```
-web/src/
-├── app/                     Rutas: cada pantalla solo arma piezas de los módulos
-│   ├── auth/                login, forgot-password, reset-password (mismas direcciones que los correos)
-│   ├── (app)/               pantallas con sesión: inicio, personas, empresas, masivas, admin
-│   ├── backend/[...ruta]/   intermediario hacia la API (sesión, sedes, token de Cloudflare)
-│   └── sesion/salir/        cerrar sesión
-├── components/
-│   ├── ui/                  componentes base: Boton, Campo, Tarjeta, Tabla, Modal, Pestanas, Aviso…
-│   └── layout/              armazón (menú lateral, cabecera), marca, marco de acceso
-├── modulos/                 una carpeta por área de negocio
-│   ├── sesion/              tipos · servicio · proveedor (usuario, roles, saldo, menú)
-│   ├── consultas/           tipos y tablas compartidas (deudas, líneas, calificaciones, laboral, teléfonos)
-│   ├── personas/            tipos · servicio (DNI, teléfono, RENIEC) · ficha RENIEC
-│   ├── empresas/            tipos · servicio (RUC, razón social)
-│   ├── masiva/              tipos · servicio · documentos (validación) · carga masiva · historial
-│   └── admin/               tipos · servicio · usuarios · formularios · auditoría
-├── lib/                     api.ts (cliente), formato.ts (moneda, fechas, periodos), sesion-servidor.ts
-└── proxy.ts                 sin sesión → al login
+Desarrolladores ──push a main──▶ Sulotec/buscador-interno
+                                        │  (llave de solo lectura, cada 2 min)
+Servidor Oracle: actualizar.sh ◀────────┘
+   └─ docker build web/ ─▶ contenedor "buscador" (red sulotec_edge)
+                               │
+Cloudflare Tunnel: buscadorinterno.sulotec.com ─▶ http://buscador:3000
+Cloudflare Access: app "buscadorinterno" (Administradores Generales; sedes por IP)
 ```
 
-**Agregar una integración nueva** (por ejemplo, otra fuente de datos):
-1. Crea `src/modulos/<nombre>/` con `tipos.ts` (lo que devuelve la API) y `servicio.ts` (las llamadas).
-2. Arma sus componentes en esa misma carpeta, reutilizando `@/components/ui`.
-3. Crea la pantalla en `src/app/(app)/<ruta>/page.tsx` y agrega el enlace en `components/layout/shell.tsx`.
+| Archivo | Para qué |
+|---|---|
+| `deploy/docker-compose.yml` | Contenedor `buscador` (solo lectura, 512 MB, red `sulotec_edge`) |
+| `deploy/preparar.sh` | Crea `/opt/sulotec/buscador.env`: dirección de la API, IPs de las sedes y token de Cloudflare Access |
+| `deploy/instalar-actualizador.sh` | Una sola vez: llave de despliegue de solo lectura + temporizador systemd cada 2 minutos |
+| `deploy/actualizar.sh` | Si hay un commit nuevo en `main`, construye la imagen y la cambia; si falla, vuelve a la anterior |
 
-Las pantallas no llaman a la API directamente: siempre pasan por el `servicio.ts` de su módulo. Así, cuando una parte de la API pase de .NET a TypeScript (fase 2), solo cambia el servicio.
+Cada cambio en esta carpeta llega a `/data/apps/buscador` con el workflow *Publicar buscador (operación)*.
 
-## Puesta en marcha (una vez)
+## Puesta en marcha (ya hecha la parte 1)
 
-1. **GitHub:** al subir esta carpeta, el workflow *Publicar buscador* construye la imagen en el servidor. La primera vez avisa "falta configurar".
-2. **Servidor** (https://ssh.sulotec.com):
+1. ✅ `sudo bash /data/apps/buscador/preparar.sh` → contenedor `buscador` en marcha.
+2. **Ruta del túnel:** Cloudflare → Networks → Tunnels → `sulotec` → Add route → `buscadorinterno.sulotec.com` → `http://buscador:3000`.
+3. **Publicación automática** desde el repositorio nuevo:
    ```bash
-   sudo bash /data/apps/buscador/preparar.sh
+   sudo bash /data/apps/buscador/instalar-actualizador.sh
    ```
-   - **API:** por ahora, la dirección actual de la oficina (`https://win-hkbui0id607.tail4a0d10.ts.net:8443`).
-   - **Sedes:** las IPs públicas de Lince y Los Olivos. Sin ellas, solo entra ADMIN GENERAL.
-   - **Token de Cloudflare:** `N` por ahora.
-3. **Cloudflare → Networks → Tunnels → sulotec → Published application routes:** `buscadorinterno.sulotec.com` → `http://buscador:3000`.
-4. **Cloudflare Access:** la app `buscadorinterno` ya existe, con la política *Administradores Generales*. Cuando estén las IPs de las sedes, agrega una política **Sedes** con acción **Bypass** e *Include → IP ranges* con esas IPs.
+   Muestra una llave pública. Agrégala en GitHub:
+   - Ruta: `Sulotec/buscador-interno` → **Settings → Deploy keys → Add deploy key**.
+   - Title: `servidor-sulotec-main`.
+   - **Sin** "Allow write access".
 
-## Siguientes pasos
+   Luego pulsa Enter.
+4. **Sedes:** cuando estén las IPs de Lince y Los Olivos:
+   - Vuelve a correr `preparar.sh` con esas IPs.
+   - En Cloudflare Access, agrega a la app `buscadorinterno` una política **Sedes** con acción **Bypass** e *Include → IP ranges*.
 
-- **Túnel en la oficina:** instalar `cloudflared` como servicio en el servidor de la API, con la ruta `api-buscadorinterno.sulotec.com` → `http://localhost:8090`.
-  - Protegerla con Access **Service Auth** y un token de servicio, que se pega con `preparar.sh`.
-  - Después: apagar Tailscale Funnel y el front de Vercel. Hasta entonces, la API vieja sigue expuesta como hoy.
-- **IP real en la auditoría:** la API debe tomar la IP que envía este intermediario (`X-Forwarded-For`). Con Funnel, la API puede ver la IP del servidor Oracle.
-- **Fase 2:** pasar la API a TypeScript módulo por módulo (login y tokens → personas → empresas → masivas), con los mismos contratos.
-- **Base de datos:** se queda en SQL Server de la oficina. Los Excel de `reportes/` del repositorio viejo tienen datos reales: no se migran a GitHub.
+## Día a día
 
-## Desarrollo local
+- **Ver qué versión está publicada:** `sudo cat /opt/sulotec/buscador-actualizador/publicado`
+- **Registro de publicaciones:** `sudo tail -f /var/log/buscador-actualizador.log`
+- **Forzar una revisión ahora:** `sudo systemctl start buscador-actualizador.service`
+- **Volver a una versión anterior a mano:**
+  1. `docker images buscador-web` muestra las versiones guardadas.
+  2. `docker tag buscador-web:<commit> buscador-web:latest`
+  3. `cd /data/apps/buscador && docker compose up -d --force-recreate`
+- **Commit que falló:** queda en `/opt/sulotec/buscador-actualizador/fallido` y no se reintenta. El siguiente commit se prueba solo.
 
-```bash
-cd apps/buscador/web
-npm install
-BUSCADOR_API_URL=https://<api> SEDES_IPS=<tu-ip> npm run dev
-```
+## Pendientes
+
+- **Túnel en la oficina:** `cloudflared` como servicio en el servidor de la API, con `api-buscadorinterno.sulotec.com` → `http://localhost:8090`.
+  - Protegerla con Access **Service Auth** y pegar el token con `preparar.sh`.
+  - Después, apagar Tailscale Funnel y el front de Vercel.
+- **API desde el repositorio nuevo:** mover el actualizador de la oficina a `Sulotec/buscador-interno` (ver `api/DESPLIEGUE.md` en ese repositorio).
+- **Fase 2:** pasar la API a TypeScript módulo por módulo.

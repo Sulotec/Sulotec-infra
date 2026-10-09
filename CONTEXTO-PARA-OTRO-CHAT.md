@@ -29,6 +29,11 @@ Usuario → Cloudflare (DNS, SSL, WAF, Access) → Cloudflare Tunnel → VM Orac
 - **Buscador en el servidor:** contenedor `buscador` en marcha.
   - `/opt/sulotec/buscador.env`: API `https://win-hkbui0id607.tail4a0d10.ts.net:8443` (Funnel), SEDES_IPS vacío (solo ADMIN GENERAL).
   - **Pendiente:** ruta del túnel `buscadorinterno.sulotec.com → http://buscador:3000`, si no se agregó.
+- **Equipo en GitHub (2026-10-09):**
+  - Jorge Luis Elias Estrada (jeliases) ya trabaja con pull requests. PR #1 en Sulotec-infra: MiRadar360 `publicado: true` → `miradar360.sulotec.com` (responde 200).
+  - Rol recomendado para programadores en `buscador-interno`: **Write**. **Admin** solo para `informaperu2-cmyk`. Nadie del equipo en `Sulotec-infra`.
+  - Plan GitHub Free: las reglas de protección de `main` no se aplican en repositorios privados; para que sean obligatorias hace falta GitHub Team.
+- **Cómo retomar en un chat nuevo:** clonar `Sulotec/Sulotec-infra` y `Sulotec/buscador-interno` (cuenta `informaperu2-cmyk`), leer `docs/README.md` y este archivo, y seguir la tabla de pendientes de `docs/01-proyecto-sulotec.md`. Preferencias del usuario: español simple, paso a paso con capturas, sin rondas de pruebas, nada de configuración que dependa de su PC, nunca secretos ni datos personales en chats o repositorios.
 - **Portal:** Mis productos renovado (bienvenida por rol, panel "Tu cuenta", botón Abrir Buscador); pie con "Síguenos" (`sitio.ts → redes`).
 - **Cuentas:** SaaS sin registro libre; las crea el equipo; recuperación encendida.
   - El usuario creó su cuenta (Administrador General) y ya entra a Mis productos.

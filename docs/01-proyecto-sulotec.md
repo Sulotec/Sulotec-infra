@@ -107,7 +107,6 @@ docs/          esta documentación
 | Prioridad | Pendiente | Dónde |
 |---|---|---|
 | Alta | Ruta del túnel `buscadorinterno.sulotec.com` → `http://buscador:3000`, si aún no está | [3. Cloudflare](03-cloudflare.md) |
-| Alta | Publicación automática del Buscador: `sudo bash /data/apps/buscador/instalar-actualizador.sh` + *deploy key* | [`apps/buscador/README.md`](../apps/buscador/README.md) |
 | Alta | `contacto@sulotec.com` con Cloudflare Email Routing (hoy los correos de "Solicitar acceso" rebotan) | [3. Cloudflare](03-cloudflare.md) |
 | Alta | Correo de salida (OCI Email Delivery) para invitaciones y recuperación de contraseñas | [2. Oracle](02-oracle-cloud.md) |
 | Alta | IPs de las sedes (Lince, Los Olivos) → `preparar.sh` + política *Bypass* en Access | [`apps/buscador/README.md`](../apps/buscador/README.md) |

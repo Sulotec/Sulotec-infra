@@ -26,7 +26,7 @@ Cada cambio en esta carpeta llega a `/data/apps/buscador` con el workflow *Publi
 
 1. ✅ `sudo bash /data/apps/buscador/preparar.sh` → contenedor `buscador` en marcha.
 2. **Ruta del túnel:** Cloudflare → Networks → Tunnels → `sulotec` → Add route → `buscadorinterno.sulotec.com` → `http://buscador:3000`.
-3. **Publicación automática** desde el repositorio nuevo:
+3. ✅ **Publicación automática** desde el repositorio nuevo (instalada el 2026-10-09; primera publicación `3cb1f71`):
    ```bash
    sudo bash /data/apps/buscador/instalar-actualizador.sh
    ```

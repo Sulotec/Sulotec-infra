@@ -24,7 +24,8 @@ Usuario → Cloudflare (DNS, SSL, WAF, Access) → Cloudflare Tunnel → VM Orac
   - Contiene `web/` (Next.js 16 + React 19 + TS, por módulos) y `api/` (.NET, sin `reportes/` y sin historial).
   - `Sulotec-infra/apps/buscador/` queda solo con la operación: compose, `preparar.sh`, `actualizar.sh`, `instalar-actualizador.sh`.
   - El servidor publica el Buscador **leyendo** el repo con una llave de solo lectura cada 2 minutos (systemd `buscador-actualizador.timer`). Así los desarrolladores no tienen acceso al servidor.
-  - **Pendiente:** correr `sudo bash /data/apps/buscador/instalar-actualizador.sh` y agregar la *deploy key* (solo lectura) en GitHub.
+  - ✅ Publicador automático instalado el 2026-10-09 (primera publicación `3cb1f71`).
+  - En la organización se encendieron las deploy keys; la llave `servidor-sulotec-main` es de solo lectura.
 - **Buscador en el servidor:** contenedor `buscador` en marcha.
   - `/opt/sulotec/buscador.env`: API `https://win-hkbui0id607.tail4a0d10.ts.net:8443` (Funnel), SEDES_IPS vacío (solo ADMIN GENERAL).
   - **Pendiente:** ruta del túnel `buscadorinterno.sulotec.com → http://buscador:3000`, si no se agregó.

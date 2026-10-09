@@ -1,0 +1,26 @@
+# Copia los archivos de apps/miradar360 al servidor (/data/apps/miradar360). SOLO A MANO.
+# No construye, no levanta nada y no toca datos: es solo la copia de archivos.
+# Uso: GitHub > Actions > "Copiar MiRadar360 al servidor" > Run workflow.
+name: Copiar MiRadar360 al servidor
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: miradar360
+  cancel-in-progress: false
+
+jobs:
+  copiar:
+    runs-on: [self-hosted, sulotec]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copiar a /data/apps/miradar360
+        run: |
+          set -e
+          mkdir -p /data/apps/miradar360
+          # --exclude src: ahi viven las copias del codigo de la API y la web (las baja desplegar.sh)
+          rsync -a --exclude 'src' apps/miradar360/ /data/apps/miradar360/
+          chmod +x /data/apps/miradar360/scripts/*.sh
+          ls -la /data/apps/miradar360

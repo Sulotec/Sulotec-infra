@@ -28,9 +28,13 @@ for par in "backend|$REPO_BACK" "web|$REPO_WEB"; do
 done
 
 # 2) Imagenes
-VITE_API_URL="$(grep -E '^VITE_API_URL=' "$ENV" | head -1 | cut -d= -f2-)"
+VITE_PROD_API_URL="$(grep -E '^VITE_PROD_API_URL=' "$ENV" | head -1 | cut -d= -f2-)"
 docker build -f "$APP/backend.Dockerfile" -t miradar360-api:latest "$APP/src/backend"
-docker build -f "$APP/web.Dockerfile" --build-arg VITE_API_URL="$VITE_API_URL" -t miradar360-web:latest "$APP/src/web"
+docker build -f "$APP/web.Dockerfile" --build-arg VITE_PROD_API_URL="$VITE_PROD_API_URL" -t miradar360-web:latest "$APP/src/web"
+# Aviso: si el panel todavia no tiene el "cambio previo" (README), seguira hablando con Render.
+if ! docker run --rm miradar360-web:latest sh -c "grep -rqs 'api-miradar360' /usr/share/nginx/html"; then
+  echo "AVISO: el panel construido no apunta a la API nueva (falta el cambio previo en Afacop-FrontEnd; ver README.md)." >&2
+fi
 
 # 3) Levantar (la API aplica las migraciones al arrancar)
 cd "$APP"

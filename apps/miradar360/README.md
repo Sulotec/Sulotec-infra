@@ -52,11 +52,28 @@ Se puede hacer ya. Render sigue siendo la fuente de verdad.
 
 `GEOCODING_WORKER_ENABLED` queda en `false` durante el ensayo para no duplicar el trabajo de Render.
 
+## Cambio previo en el panel web (obligatorio antes del día del cambio)
+
+Hoy el panel **siempre** usa `https://afacop-backend.onrender.com` en producción. Está escrito a propósito en
+`src/app/providers/AuthContext.jsx` del repo `Afacop-FrontEnd` (`PRODUCTION_API_URL`, con `if (import.meta.env.PROD) return PRODUCTION_API_URL;`)
+para que una variable vieja de Render no desvíe el login. Por eso `VITE_API_URL` no sirve y el panel construido en
+el servidor seguiría hablando con Render.
+
+Cambio mínimo y compatible (con el mismo comportamiento si la variable no existe), en un PR de `Afacop-FrontEnd`:
+
+```js
+const PRODUCTION_API_URL = import.meta.env.VITE_PROD_API_URL || "https://afacop-backend.onrender.com";
+```
+
+`web.Dockerfile` ya pasa `VITE_PROD_API_URL` al construir y `desplegar.sh` avisa si el panel no quedó apuntando a la API nueva.
+Ese PR se puede unir antes del cambio sin efecto alguno: en Render la variable no existe y todo sigue igual.
+
 ## Fase 2 — Día del cambio
 
 Antes de empezar, que se cumpla todo esto:
 
 - [ ] Google Play ya aprobó la app (producción).
+- [ ] El cambio previo del panel web (sección anterior) está unido y publicado.
 - [ ] Ensayo de la Fase 1 hecho y repetido por segunda vez sin diferencias.
 - [ ] La base `miradar360-db` está en el respaldo diario (`vm/scripts/backup.sh`; **hoy no está incluida**).
 - [ ] Decididos los puntos de "Decisiones pendientes".
@@ -88,7 +105,18 @@ Pasos:
 4. **Respaldo:** agregar `miradar360-db` a `vm/scripts/backup.sh` y hacer una prueba de restauración.
 5. **Content-Security-Policy** del panel web: agregarla después del ensayo, midiendo que no rompa los mapas.
 
-## Qué NO se probó
+## Qué se probó y qué no (9-oct-2026)
 
-Los Dockerfile y los scripts se escribieron sin poder construir las imágenes (en la PC donde se prepararon Docker no estaba
-corriendo). Para eso es el ensayo de la Fase 1: si algo falla, se corrige aquí antes del día del cambio.
+Probado en una PC con Docker (Linux x86_64), con una base **de mentira** y sin tocar Render:
+
+- Las dos imágenes se construyen (`backend.Dockerfile`, `web.Dockerfile`) y `docker compose config` valida el compose.
+- La API arranca con PostgreSQL 18 vacío: aplica las 14 tablas de migraciones, crea el administrador inicial,
+  responde `/health/live` y `/health/ready` con 200, corre como usuario `node` (sin privilegios) y con `cap_drop: ALL`.
+- CORS: acepta `https://miradar360.sulotec.com` y rechaza un origen ajeno (403).
+- Chromium arranca dentro de la imagen (lo usan los PDF de admisión).
+- nginx: las rutas del panel vuelven a `index.html`, un archivo inexistente de `/assets/` da 404 y salen los encabezados de seguridad.
+- Descubierto: el panel NO apunta a la API nueva (ver "Cambio previo en el panel web").
+
+**No probado:** que corra en ARM (el servidor es ARM; las imágenes base `node:24-bookworm-slim` y `postgres:18` tienen versión
+ARM, pero no se ejecutó), el `healthcheck` de la API dentro de compose, `migrar-bd.sh` con una base real y los PDF de
+admisión de punta a punta. Para eso es el ensayo de la Fase 1: si algo falla, se corrige aquí antes del día del cambio.

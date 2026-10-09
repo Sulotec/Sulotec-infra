@@ -32,7 +32,7 @@ export const soluciones: Solucion[] = [
     publico: true,
     subdominio: 'miradar360.sulotec.com',
     demo: '/demo/miradar360',
-    publicado: false,
+    publicado: true,
   },
   {
     nombre: 'Auditoría de Visitas',

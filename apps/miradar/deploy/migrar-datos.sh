@@ -45,12 +45,17 @@ ORIGEN_URI="${ORIGEN_URI//[[:space:]]/}"; ORIGEN_URI="${ORIGEN_URI//$'\e'\[200~/
 ORIGEN_URI="$(printf '%s' "$ORIGEN_URI" | sed -E 's/[?&](schema|connection_limit|pool_timeout|pgbouncer|socket_timeout|statement_cache_size)=[^&]*//g')"
 case "$ORIGEN_URI" in *'?'*) ;; *'&'*) ORIGEN_URI="${ORIGEN_URI/&/?}" ;; esac
 [[ "$ORIGEN_URI" =~ ^postgres(ql)?:// ]]  || { echo "El origen debe empezar con postgres:// o postgresql:// (recibi ${#ORIGEN_URI} caracteres)." >&2; exit 1; }
-# La direccion INTERNA de Render (sin dominio de region) solo funciona dentro de Render
+# La direccion INTERNA de Render (dpg-xxxx-a, sin dominio) solo funciona dentro de Render: se busca la region mas abajo
 resto_origen="${ORIGEN_URI#*://}"; resto_origen="${resto_origen#*@}"; host_origen="${resto_origen%%[:/?]*}"
+BUSCAR_REGION=""
 if [[ "$host_origen" != *.* ]]; then
-  echo "Esa es la direccion INTERNA de Render ($host_origen): solo funciona dentro de Render." >&2
-  echo "En Render abre la base de datos (PostgreSQL) -> Connections -> 'External Database URL' y pega esa." >&2
-  exit 1
+  if [[ "$host_origen" == dpg-* ]]; then
+    BUSCAR_REGION=1
+  else
+    echo "La direccion de origen no tiene dominio ($host_origen): hace falta la direccion EXTERNA de la base." >&2
+    echo "En Render: la base de datos (PostgreSQL) -> Connections -> 'External Database URL'." >&2
+    exit 1
+  fi
 fi
 # La copia viaja por internet: siempre cifrada
 case "$ORIGEN_URI" in *sslmode=*) ;; *'?'*) ORIGEN_URI="$ORIGEN_URI&sslmode=require" ;; *) ORIGEN_URI="$ORIGEN_URI?sslmode=require" ;; esac
@@ -61,6 +66,25 @@ echo "   origen: $(printf '%s' "$ORIGEN_URI" | sed -E 's#(://[^:/@]+:)[^@]*@#\1*
 cliente() { local v="$1"; shift; docker run --rm --network "$RED_DOCKER" -e ORIGEN="$ORIGEN_URI" -e DESTINO="$DESTINO_URI" -v "$CARPETA:/backup" "postgres:$v" "$@"; }
 sql_origen()  { cliente "$VCLI" sh -c 'psql "$ORIGEN" -X -At -v ON_ERROR_STOP=1 -c "$0"' "$1"; }
 sql_destino() { cliente "$VDEST" sh -c 'psql "$DESTINO" -X -At -v ON_ERROR_STOP=1 -c "$0"' "$1"; }
+
+# Si pegaron la direccion interna de Render (dpg-xxxx-a), se prueba con las cinco regiones de Render hasta que una conecte
+if [ -n "$BUSCAR_REGION" ]; then
+  echo "== 0. La direccion es la interna de Render: busco la region de la base (puede tardar hasta un minuto)"
+  VCLI=16; encontrada=""; sin_region="$ORIGEN_URI"
+  for region in oregon ohio virginia frankfurt singapore; do
+    ORIGEN_URI="${sin_region/@$host_origen/@$host_origen.$region-postgres.render.com}"
+    case "$ORIGEN_URI" in *'?'*) ORIGEN_URI="$ORIGEN_URI&connect_timeout=10" ;; *) ORIGEN_URI="$ORIGEN_URI?connect_timeout=10" ;; esac
+    printf '   %s: ' "$region"
+    if sql_origen 'select 1' >/dev/null 2>&1; then echo "conecta"; encontrada="$region"; break; else echo "no"; fi
+  done
+  if [ -z "$encontrada" ]; then
+    echo "No pude conectar desde fuera de Render en ninguna region. En Render abre la base (afacop-postgres) y revisa:" >&2
+    echo "  - Connections -> 'External Database URL': pega esa en vez de la interna." >&2
+    echo "  - Access Control: debe permitir la IP publica de este servidor." >&2
+    exit 1
+  fi
+  echo "   region de la base: $encontrada"
+fi
 
 echo "== 1. Versiones"
 VCLI=16; VDEST=16   # para la primera consulta basta cualquier cliente: psql se conecta a servidores mas nuevos

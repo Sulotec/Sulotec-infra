@@ -1,0 +1,57 @@
+# PLAFT (Prevención de Lavado de Activos, repos Security-*): API y web. En el servidor vive en /data/apps/plaft.
+# Cloudflare Tunnel (Public hostname):
+#   plaft.sulotec.com      -> http://plaft-web:3000
+#   api-plaft.sulotec.com  -> http://plaft-api:8081
+# Configuración y secretos (nunca en el repositorio): /opt/sulotec/plaft.env, lo crea deploy/preparar.sh.
+# La base es la MySQL compartida de la VM (red sulotec_data); no publica puertos.
+# La llave de Oracle Object Storage (svc-plaft) está en /opt/sulotec/plaft-oci y entra solo a plaft-api, en modo lectura.
+name: plaft
+
+services:
+  api:
+    image: plaft-api:latest
+    container_name: plaft-api
+    restart: unless-stopped
+    env_file: /opt/sulotec/plaft.env
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    networks: [edge, data]
+    mem_limit: 1g
+    volumes:
+      - /opt/sulotec/plaft-oci/config:/run/oci/config:ro
+      - /opt/sulotec/plaft-oci/key.pem:/run/oci/key.pem:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8081/actuator/health | grep -q UP"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 90s
+
+  web:
+    image: plaft-web:latest
+    container_name: plaft-web
+    restart: unless-stopped
+    user: node
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/.next/cache:uid=1000,gid=1000,mode=0755
+      - /home/node:uid=1000,gid=1000,mode=0755
+    security_opt: ["no-new-privileges:true"]
+    networks: [edge]
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+networks:
+  edge:
+    external: true
+    name: sulotec_edge
+  data:
+    external: true
+    name: sulotec_data

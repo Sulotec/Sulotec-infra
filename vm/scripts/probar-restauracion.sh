@@ -25,6 +25,14 @@ limpiar_todo() {
 }
 trap limpiar_todo EXIT
 fallos=0
+# Cuenta tablas y filas de una base en una sola consulta (se define aqui, fuera de $(...): bash 5.1 no lo interpreta bien dentro)
+read -r -d '' SQL_CONTEO <<'SQL' || true
+select count(*) || '|' || coalesce(sum((xpath('/row/c/text()', query_to_xml(format('select count(*) as c from %I.%I', table_schema, table_name), false, true, '')))[1]::text::bigint), 0)
+from information_schema.tables where table_schema not in ('pg_catalog','information_schema') and table_type = 'BASE TABLE';
+SQL
+conteo() { docker exec "$1" psql -U postgres -X -At -d "$2" -c "$SQL_CONTEO" 2>/dev/null || echo "?|?"; }
+# restos de una prueba anterior interrumpida
+docker ps -aq --filter name=restauracion- 2>/dev/null | xargs -r docker rm -f >/dev/null 2>&1 || true
 falla() { echo "  FALLA  $*"; fallos=$((fallos+1)); }
 ok() { echo "  OK     $*"; }
 tam() { du -h "$1" | cut -f1; }
@@ -76,19 +84,11 @@ if [ -n "$pgf" ]; then
     [ -n "$bases" ] || falla "PostgreSQL: no aparecio ninguna base de datos restaurada"
     echo "   base de datos          tablas        filas (restaurado)    filas (en vivo)"
     for b in $bases; do
-      calc() { docker exec -i "$1" psql -U postgres -X -At -d "$b" <<'SQL' 2>/dev/null || echo "?|?"
-select count(*) || '|' || coalesce(sum((xpath('/row/c/text()', query_to_xml(format('select count(*) as c from %I.%I', table_schema, table_name), false, true, '')))[1]::text::bigint), 0)
-from information_schema.tables where table_schema not in ('pg_catalog','information_schema') and table_type = 'BASE TABLE';
-SQL
-      }
-      r="$(calc "$pc")"
+      r="$(conteo "$pc" "$b")"
       vivo="n/d"
       if [ -r "$BASE/docker-compose.yml" ] && [ -z "${PRUEBA:-}" ]; then
-        vivo="$( ( cd "$BASE" && docker compose exec -T postgres psql -U postgres -X -At -d "$b" <<'SQL' 2>/dev/null || echo "?|?"
-select count(*) || '|' || coalesce(sum((xpath('/row/c/text()', query_to_xml(format('select count(*) as c from %I.%I', table_schema, table_name), false, true, '')))[1]::text::bigint), 0)
-from information_schema.tables where table_schema not in ('pg_catalog','information_schema') and table_type = 'BASE TABLE';
-SQL
-        ) | cut -d'|' -f2)"
+        vivo="$( cd "$BASE" && docker compose exec -T postgres psql -U postgres -X -At -d "$b" -c "$SQL_CONTEO" 2>/dev/null || echo '?|?' )"
+        vivo="${vivo##*|}"
       fi
       printf '   %-22s %6s %18s %18s\n' "$b" "${r%%|*}" "${r##*|}" "$vivo"
       [ "${r%%|*}" != "?" ] && [ "${r%%|*}" != "0" ] || falla "base $b: sin tablas"

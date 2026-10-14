@@ -28,6 +28,7 @@ desde GitHub (`desplegar.sh`); las bases y las claves nunca van en el repositori
 | `deploy/migrar-archivos.sh` | Copia fotos y firmas de Backblaze B2 al bucket de Oracle, con las mismas rutas |
 | `deploy/desplegar.sh` | Baja el código, construye, levanta y vuelve a la versión anterior si algo falla |
 | `deploy/probar.sh` | Pruebas de humo: salud, almacenamiento, direcciones públicas y CORS |
+| `deploy/rotar-s3.sh` | Cambia la clave S3 de `svc-miradar`, prueba el almacenamiento y vuelve a la anterior si falla |
 
 ## Puesta en marcha (en este orden)
 
@@ -88,6 +89,15 @@ apagar Aiven, Render y el bucket de Backblaze, y borrar sus claves.
 | Volver a una versión anterior | `docker tag miradar-api:<commit> miradar-api:latest && cd /data/apps/miradar && docker compose up -d --force-recreate` |
 | Cambiar una clave | `sudo bash /data/apps/miradar/preparar.sh` (Enter conserva) y luego `desplegar.sh` |
 | Respaldo | La base entra en el respaldo diario de la VM (`pg_dumpall`); los archivos tienen versionado y llave propia en Oracle |
+
+## Rotar claves
+
+| Clave | Cómo |
+|---|---|
+| Base de datos (`miradar`, `postgres`, `root` de MySQL) | `sudo /opt/sulotec/scripts/rotar-claves.sh`. Las genera en el servidor, no se imprimen, y comprueba que la nueva entra y la anterior ya no. |
+| Clave S3 de `svc-miradar` (cada 90 días o si se expone) | 1) Cloud Shell: `USR=$(oci iam user list --all --query "data[?name=='svc-miradar'].id \| [0]" --raw-output); oci iam customer-secret-key create --user-id "$USR" --display-name miradar-api-2 --query 'data.{ACCESO:id,SECRETO:key}' --output table` (Oracle permite 2 claves por usuario). 2) Servidor: `sudo bash /data/apps/miradar/rotar-s3.sh` (pide ACCESO y SECRETO, prueba el almacenamiento y vuelve a la anterior si falla). 3) Cloud Shell: borrar la clave anterior (el script imprime el comando exacto). |
+| `MFA_ENCRYPTION_KEY` | **No rotar**: si cambia, nadie puede usar su verificación en dos pasos. Guardarla en el gestor de contraseñas. |
+| `JWT_SECRET` | Se puede cambiar en `/opt/sulotec/miradar.env` y `desplegar.sh`; cierra todas las sesiones abiertas. |
 
 ## Reglas de seguridad de este producto
 

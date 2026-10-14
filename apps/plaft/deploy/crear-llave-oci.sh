@@ -57,8 +57,8 @@ done
 
 obj="pruebas/ping-$(date +%s).txt"; openssl rand -hex 16 > "$TMP/ping.txt"
 oci_ os object put --namespace-name "$NS" --bucket-name "$BUCKET" --name "$obj" --file "$TMP/ping.txt" --force >/dev/null 2>"$TMP/err.txt" \
-  || { echo "svc-plaft NO puede escribir en $BUCKET. Detalle:" >&2; tail -4 "$TMP/err.txt" | sed 's/^/   /' >&2
-       echo "   Falta (o esta mal) la politica del usuario: debe permitir 'manage objects' sobre el bucket $BUCKET y 'read buckets'." >&2; exit 1; }
+  || { echo "svc-plaft NO puede escribir en $BUCKET. Detalle de Oracle:" >&2; grep -E '"(code|message|status)"' "$TMP/err.txt" | sed 's/^ */   /' >&2
+       echo "   Si el codigo es NotAuthorizedOrNotFound: falta la politica del grupo de svc-plaft ('manage objects' y 'read buckets' sobre $BUCKET) o el bucket no existe con ese nombre." >&2; exit 1; }
 oci_ os object get --namespace-name "$NS" --bucket-name "$BUCKET" --name "$obj" --file "$TMP/ping.out" >/dev/null 2>&1 || { echo "No pude leer el archivo de prueba." >&2; exit 1; }
 cmp -s "$TMP/ping.txt" "$TMP/ping.out" && echo "   OK: subir y leer funcionan" || { echo "El archivo leido no coincide con el subido." >&2; exit 1; }
 anonimo="$(curl -s -m 15 -o /dev/null -w '%{http_code}' "https://objectstorage.$REGION.oraclecloud.com/n/$NS/b/$BUCKET/o/$obj" || true)"

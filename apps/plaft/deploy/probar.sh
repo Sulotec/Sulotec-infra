@@ -48,7 +48,7 @@ if [ -f "$OCI_DIR/config" ]; then
     if [ "$a" = 200 ]; then falla "el bucket entrega archivos SIN firma"; else ok "el bucket no es publico (sin firma: HTTP $a)"; fi
     oci --config-file "$TMP/config" --profile DEFAULT os object delete --namespace-name "$NS" --bucket-name "$BUCKET" --name "$obj" --force >/dev/null 2>&1 && ok "borrar funciona"
   else
-    falla "el almacenamiento no funciona. Detalle:"; tail -4 "$TMP/e.txt" | sed 's/^/         /'
+    falla "el almacenamiento no funciona. Detalle:"; grep -E '"(code|message|status)"' "$TMP/e.txt" | sed 's/^ */         /'
   fi
 else
   falla "no existe $OCI_DIR/config (corre crear-llave-oci.sh)"

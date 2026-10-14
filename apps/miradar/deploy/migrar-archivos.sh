@@ -12,31 +12,6 @@ RED_DOCKER="${RED_DOCKER:-sulotec_data}"
 [ "$(id -u)" -eq 0 ] || [ -n "${PRUEBA:-}" ] || { echo "Correlo con sudo: sudo bash $0" >&2; exit 1; }
 valor() { if [ -r "$ENVFILE" ]; then grep -E "^$1=" "$ENVFILE" | head -1 | cut -d= -f2- || true; fi; }
 limpiar() { local v="$1"; v="${v//$'\e'\[200~/}"; v="${v//$'\e'\[201~/}"; v="${v//\[200~/}"; v="${v//\[201~/}"; printf '%s' "${v//[[:space:]]/}"; }
-
-DESTINO_ENDPOINT="${DESTINO_ENDPOINT:-$(valor B2_ENDPOINT)}"
-DESTINO_REGION="${DESTINO_REGION:-$(valor B2_REGION)}"
-DESTINO_BUCKET="${DESTINO_BUCKET:-$(valor B2_BUCKET)}"
-DESTINO_KEY="${DESTINO_KEY:-$(valor B2_KEY_ID)}"
-DESTINO_SECRET="${DESTINO_SECRET:-$(valor B2_APPLICATION_KEY)}"
-if [ -z "$DESTINO_ENDPOINT" ] || [ -z "$DESTINO_BUCKET" ] || [ -z "$DESTINO_KEY" ] || [ -z "$DESTINO_SECRET" ]; then
-  echo "Faltan los datos del bucket de Oracle en $ENVFILE (corre preparar.sh)." >&2
-  exit 1
-fi
-
-if [ -z "${ORIGEN_BUCKET:-}" ]; then
-  echo "Datos de Backblaze B2 (solo lectura). Los secretos no se muestran al escribir."
-  read -rp "Endpoint S3 de B2 (ej. https://s3.us-west-004.backblazeb2.com): " ORIGEN_ENDPOINT
-  read -rp "Region (ej. us-west-004): " ORIGEN_REGION
-  read -rp "Bucket (ej. afacop-evidencias): " ORIGEN_BUCKET
-  read -rp "keyID: " ORIGEN_KEY
-  leer_secreto "applicationKey: "; ORIGEN_SECRET="$V"
-fi
-ORIGEN_ENDPOINT="$(limpiar "$ORIGEN_ENDPOINT")"
-ORIGEN_REGION="$(limpiar "$ORIGEN_REGION")"
-ORIGEN_BUCKET="$(limpiar "$ORIGEN_BUCKET")"
-ORIGEN_KEY="$(limpiar "$ORIGEN_KEY")"
-ORIGEN_SECRET="$(limpiar "$ORIGEN_SECRET")"
-
 # Lee un secreto mostrando un * por cada caracter: asi se ve que el pegado funciono sin mostrar el valor. Resultado en $V.
 leer_secreto() {
   local c; V=""
@@ -51,6 +26,30 @@ leer_secreto() {
   done
   echo
 }
+
+DESTINO_ENDPOINT="${DESTINO_ENDPOINT:-$(valor B2_ENDPOINT)}"
+DESTINO_REGION="${DESTINO_REGION:-$(valor B2_REGION)}"
+DESTINO_BUCKET="${DESTINO_BUCKET:-$(valor B2_BUCKET)}"
+DESTINO_KEY="${DESTINO_KEY:-$(valor B2_KEY_ID)}"
+DESTINO_SECRET="${DESTINO_SECRET:-$(valor B2_APPLICATION_KEY)}"
+if [ -z "$DESTINO_ENDPOINT" ] || [ -z "$DESTINO_BUCKET" ] || [ -z "$DESTINO_KEY" ] || [ -z "$DESTINO_SECRET" ]; then
+  echo "Faltan los datos del bucket de Oracle en $ENVFILE (corre preparar.sh)." >&2
+  exit 1
+fi
+
+echo "Datos de Backblaze B2 (solo lectura). Lo que ya venga como ORIGEN_ENDPOINT/REGION/BUCKET/KEY/SECRET no se vuelve a preguntar."
+[ -n "${ORIGEN_ENDPOINT:-}" ] || read -rp "Endpoint S3 de B2 (ej. https://s3.us-west-004.backblazeb2.com): " ORIGEN_ENDPOINT
+[ -n "${ORIGEN_REGION:-}" ]   || read -rp "Region (ej. us-west-004): " ORIGEN_REGION
+[ -n "${ORIGEN_BUCKET:-}" ]   || read -rp "Bucket (ej. afacop-evidencias): " ORIGEN_BUCKET
+[ -n "${ORIGEN_KEY:-}" ]      || read -rp "keyID: " ORIGEN_KEY
+if [ -z "${ORIGEN_SECRET:-}" ]; then leer_secreto "applicationKey (saldran asteriscos): "; ORIGEN_SECRET="$V"; fi
+ORIGEN_ENDPOINT="$(limpiar "$ORIGEN_ENDPOINT")"
+ORIGEN_REGION="$(limpiar "$ORIGEN_REGION")"
+ORIGEN_BUCKET="$(limpiar "$ORIGEN_BUCKET")"
+ORIGEN_KEY="$(limpiar "$ORIGEN_KEY")"
+ORIGEN_SECRET="$(limpiar "$ORIGEN_SECRET")"
+echo "   origen: $ORIGEN_ENDPOINT | region $ORIGEN_REGION | bucket $ORIGEN_BUCKET | keyID ${ORIGEN_KEY:0:8}... | applicationKey ${#ORIGEN_SECRET} caracteres"
+echo "   destino: $DESTINO_ENDPOINT | bucket $DESTINO_BUCKET"
 
 # rclone se configura por variables de entorno: nada se guarda en disco ni se muestra
 rc() {

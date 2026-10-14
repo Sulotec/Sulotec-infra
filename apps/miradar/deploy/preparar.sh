@@ -11,6 +11,7 @@ mkdir -p /opt/sulotec
 
 # Quita los caracteres que algunos terminales web agregan al pegar, y los espacios
 limpiar() { local v="$1"; v="${v//$'\e'\[200~/}"; v="${v//$'\e'\[201~/}"; v="${v//\[200~/}"; v="${v//\[201~/}"; printf '%s' "${v//[[:space:]]/}"; }
+limpiar_texto() { local v="$1"; v="${v//$'\e'\[200~/}"; v="${v//$'\e'\[201~/}"; v="${v//\[200~/}"; v="${v//\[201~/}"; v="${v#"${v%%[![:space:]]*}"}"; v="${v%"${v##*[![:space:]]}"}"; printf '%s' "$v"; }
 actual() { [ -f "$ENV" ] && grep -E "^$1=" "$ENV" | head -1 | cut -d= -f2- || true; }
 # pregunta VARIABLE "texto" [por_defecto] [secreto]  -> deja el resultado en $R
 pregunta() {
@@ -60,6 +61,10 @@ pregunta REQUIRE_MFA "REQUIRE_MFA (true o false)" "true"; REQ_MFA="$R"
 pregunta MFA_EXEMPT_USERNAMES "MFA_EXEMPT_USERNAMES (usuarios sin verificacion en dos pasos, separados por coma)" ""; EXENTOS="$R"
 pregunta GEOCODING_PROVIDER "GEOCODING_PROVIDER (nominatim o mapbox)" "nominatim"; GEO_PROV="$R"
 pregunta GEOCODING_WORKER_ENABLED "GEOCODING_WORKER_ENABLED (true o false)" "true"; GEO_WORKER="$R"
+pregunta GEOCODING_BATCH_SIZE "GEOCODING_BATCH_SIZE" "5"; GEO_LOTE="$R"
+pregunta GEOCODING_INTERVAL_MS "GEOCODING_INTERVAL_MS (el de Render; Enter si no lo tiene)" ""; GEO_INTERVALO="$R"
+act_ua="$(actual GEOCODING_USER_AGENT)"
+read -rp "GEOCODING_USER_AGENT (copialo de Render; Enter = ${act_ua:-Radar360/1.0}): " ua; ua="$(limpiar_texto "${ua:-}")"; GEO_UA="${ua:-${act_ua:-Radar360/1.0}}"
 
 echo
 echo "== Direcciones"
@@ -108,9 +113,10 @@ install -m 640 -o root -g docker /dev/null "$ENV"
   echo "B2_APPLICATION_KEY=$S3S"
   echo "GEOCODING_PROVIDER=$GEO_PROV"
   echo "GEOCODING_BASE_URL=https://nominatim.openstreetmap.org"
-  echo "GEOCODING_USER_AGENT=Radar360/1.0 (soporte@sulotec.com)"
+  echo "GEOCODING_USER_AGENT=$GEO_UA"
   echo "GEOCODING_WORKER_ENABLED=$GEO_WORKER"
-  echo "GEOCODING_BATCH_SIZE=5"
+  echo "GEOCODING_BATCH_SIZE=$GEO_LOTE"
+  [ -n "$GEO_INTERVALO" ] && echo "GEOCODING_INTERVAL_MS=$GEO_INTERVALO"
   [ -n "$MAPBOX" ]   && echo "MAPBOX_ACCESS_TOKEN=$MAPBOX"
   [ -n "$RRCC_URL" ] && echo "RRCC_API_URL=$RRCC_URL"
   [ -n "$RRCC_KEY" ] && echo "RRCC_API_KEY=$RRCC_KEY"

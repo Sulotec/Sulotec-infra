@@ -44,7 +44,7 @@ aleatorio() { openssl rand -hex 32; }
 echo "== Base de datos"
 echo "   Pega la cadena 'Node' que mostro new-project-db.sh (empieza con postgresql://)."
 pregunta DATABASE_URL "DATABASE_URL" "" secreto; DB="$R"
-echo "   $(printf '%s' "$DB" | sed -E 's#(://[^:/@]+:)[^@]*@#***@#')"
+echo "   $(printf '%s' "$DB" | sed -E 's#(://[^:/@]+:)[^@]*@#\1***@#')"
 [[ "$DB" =~ ^postgres(ql)?:// ]] || { echo "La cadena debe empezar con postgresql://" >&2; exit 1; }
 
 echo

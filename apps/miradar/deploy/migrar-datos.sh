@@ -42,7 +42,7 @@ if [ -z "${ORIGEN_URI:-}" ]; then
 fi
 ORIGEN_URI="${ORIGEN_URI//[[:space:]]/}"; ORIGEN_URI="${ORIGEN_URI//$'\e'\[200~/}"; ORIGEN_URI="${ORIGEN_URI//$'\e'\[201~/}"
 [[ "$ORIGEN_URI" =~ ^postgres(ql)?:// ]]  || { echo "El origen debe empezar con postgres:// o postgresql:// (recibi ${#ORIGEN_URI} caracteres)." >&2; exit 1; }
-echo "   origen: $(printf '%s' "$ORIGEN_URI" | sed -E 's#(://[^:/@]+:)[^@]*@#***@#')"
+echo "   origen: $(printf '%s' "$ORIGEN_URI" | sed -E 's#(://[^:/@]+:)[^@]*@#\1***@#')"
 [[ "$DESTINO_URI" =~ ^postgres(ql)?:// ]] || { echo "El destino no es una direccion PostgreSQL valida" >&2; exit 1; }
 
 # psql/pg_dump/pg_restore corren en contenedores: $1 = version del cliente, resto = comando. Las URI viajan por entorno.

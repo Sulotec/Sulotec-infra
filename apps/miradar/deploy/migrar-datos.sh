@@ -37,7 +37,7 @@ if [ -z "${DESTINO_URI:-}" ]; then
   DESTINO_URI="$(grep -E '^DATABASE_URL=' "$ENVFILE" | head -1 | cut -d= -f2-)"
 fi
 if [ -z "${ORIGEN_URI:-}" ]; then
-  echo "Pega la 'Service URI' de Aiven (postgres://...?sslmode=require). No se muestra al escribir."
+  echo "Pega la direccion EXTERNA de la base de origen (Render: 'External Database URL'; Aiven: 'Service URI'). Saldran asteriscos."
   leer_secreto "ORIGEN: "; ORIGEN_URI="$V"
 fi
 ORIGEN_URI="${ORIGEN_URI//[[:space:]]/}"; ORIGEN_URI="${ORIGEN_URI//$'\e'\[200~/}"; ORIGEN_URI="${ORIGEN_URI//$'\e'\[201~/}"
@@ -45,6 +45,15 @@ ORIGEN_URI="${ORIGEN_URI//[[:space:]]/}"; ORIGEN_URI="${ORIGEN_URI//$'\e'\[200~/
 ORIGEN_URI="$(printf '%s' "$ORIGEN_URI" | sed -E 's/[?&](schema|connection_limit|pool_timeout|pgbouncer|socket_timeout|statement_cache_size)=[^&]*//g')"
 case "$ORIGEN_URI" in *'?'*) ;; *'&'*) ORIGEN_URI="${ORIGEN_URI/&/?}" ;; esac
 [[ "$ORIGEN_URI" =~ ^postgres(ql)?:// ]]  || { echo "El origen debe empezar con postgres:// o postgresql:// (recibi ${#ORIGEN_URI} caracteres)." >&2; exit 1; }
+# La direccion INTERNA de Render (sin dominio de region) solo funciona dentro de Render
+resto_origen="${ORIGEN_URI#*://}"; resto_origen="${resto_origen#*@}"; host_origen="${resto_origen%%[:/?]*}"
+if [[ "$host_origen" != *.* ]]; then
+  echo "Esa es la direccion INTERNA de Render ($host_origen): solo funciona dentro de Render." >&2
+  echo "En Render abre la base de datos (PostgreSQL) -> Connections -> 'External Database URL' y pega esa." >&2
+  exit 1
+fi
+# La copia viaja por internet: siempre cifrada
+case "$ORIGEN_URI" in *sslmode=*) ;; *'?'*) ORIGEN_URI="$ORIGEN_URI&sslmode=require" ;; *) ORIGEN_URI="$ORIGEN_URI?sslmode=require" ;; esac
 echo "   origen: $(printf '%s' "$ORIGEN_URI" | sed -E 's#(://[^:/@]+:)[^@]*@#\1***@#')"
 [[ "$DESTINO_URI" =~ ^postgres(ql)?:// ]] || { echo "El destino no es una direccion PostgreSQL valida" >&2; exit 1; }
 
@@ -55,7 +64,7 @@ sql_destino() { cliente "$VDEST" sh -c 'psql "$DESTINO" -X -At -v ON_ERROR_STOP=
 
 echo "== 1. Versiones"
 VCLI=16; VDEST=16   # para la primera consulta basta cualquier cliente: psql se conecta a servidores mas nuevos
-num_origen="$(sql_origen 'show server_version_num')"  || { echo "No pude conectar con el ORIGEN (¿Aiven permite la IP de este servidor?)." >&2; exit 1; }
+num_origen="$(sql_origen 'show server_version_num')"  || { echo "No pude conectar con el ORIGEN: revisa que sea la direccion EXTERNA y que el origen permita la IP publica de este servidor (en Render: la base -> Access Control)." >&2; exit 1; }
 mayor_origen=$(( num_origen / 10000 ))
 VCLI="$mayor_origen"; [ "$VCLI" -ge 14 ] || VCLI=14
 VDEST=16

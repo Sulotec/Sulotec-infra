@@ -60,8 +60,8 @@ Pide la cadena de la base, la `MFA_ENCRYPTION_KEY` **de Render** (debe ser la mi
 y las claves de `svc-miradar`. Al decir que la base ya tiene datos, deja vacía la clave del administrador inicial a propósito:
 con un administrador existente que nunca inició sesión, el arranque le **cambiaría la contraseña y le borraría la verificación en dos pasos**.
 
-**5. Datos de Aiven (antes de levantar la API):** `sudo bash /data/apps/miradar/migrar-datos.sh`.
-Pide la *Service URI* de Aiven (no se muestra). Solo lee del origen, guarda el volcado en `/data/backups/miradar` y compara cada tabla.
+**5. Datos de la base actual, Render o Aiven (antes de levantar la API):** `sudo bash /data/apps/miradar/migrar-datos.sh`.
+Pide la direccion **externa** de la base (en Render: la base PostgreSQL -> Connections -> *External Database URL*; en Aiven: *Service URI*; la interna de Render no sirve desde fuera). Saldran asteriscos. Solo lee del origen, guarda el volcado en `/data/backups/miradar` y compara cada tabla.
 Si el origen es de una versión de PostgreSQL más nueva que la de la VM (16), se detiene y lo explica.
 
 **6. Archivos de Backblaze:** `sudo bash /data/apps/miradar/migrar-archivos.sh` (repetible: copia solo lo que falte).

@@ -41,6 +41,9 @@ if [ -z "${ORIGEN_URI:-}" ]; then
   leer_secreto "ORIGEN: "; ORIGEN_URI="$V"
 fi
 ORIGEN_URI="${ORIGEN_URI//[[:space:]]/}"; ORIGEN_URI="${ORIGEN_URI//$'\e'\[200~/}"; ORIGEN_URI="${ORIGEN_URI//$'\e'\[201~/}"
+# Prisma y otros agregan parametros (schema, connection_limit...) que psql y pg_dump no entienden: se quitan
+ORIGEN_URI="$(printf '%s' "$ORIGEN_URI" | sed -E 's/[?&](schema|connection_limit|pool_timeout|pgbouncer|socket_timeout|statement_cache_size)=[^&]*//g')"
+case "$ORIGEN_URI" in *'?'*) ;; *'&'*) ORIGEN_URI="${ORIGEN_URI/&/?}" ;; esac
 [[ "$ORIGEN_URI" =~ ^postgres(ql)?:// ]]  || { echo "El origen debe empezar con postgres:// o postgresql:// (recibi ${#ORIGEN_URI} caracteres)." >&2; exit 1; }
 echo "   origen: $(printf '%s' "$ORIGEN_URI" | sed -E 's#(://[^:/@]+:)[^@]*@#\1***@#')"
 [[ "$DESTINO_URI" =~ ^postgres(ql)?:// ]] || { echo "El destino no es una direccion PostgreSQL valida" >&2; exit 1; }

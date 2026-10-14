@@ -3,7 +3,7 @@
 # Si la version nueva no arranca, vuelve a la anterior. Se puede repetir las veces que haga falta:
 #   sudo bash /data/apps/miradar/desplegar.sh
 # Variables opcionales (para probar una rama antes de unirla a main):
-#   RAMA_BACKEND=feat/oracle-docker RAMA_FRONTEND=feat/oracle-docker sudo -E bash /data/apps/miradar/desplegar.sh
+#   Para probar otra rama: RAMA_BACKEND=mi-rama RAMA_FRONTEND=mi-rama sudo -E bash /data/apps/miradar/desplegar.sh
 set -euo pipefail
 
 REPO_BACKEND="${REPO_BACKEND:-https://github.com/jeliases-informaDev/Afacop-Backend.git}"

@@ -18,6 +18,15 @@ Usuario → Cloudflare (DNS, SSL, WAF, Access) → Cloudflare Tunnel → VM Orac
 - Subdominios de **un solo nivel** (`api-afacop.sulotec.com`, no `api.afacop.sulotec.com`) por el SSL gratis de Cloudflare.
 - Todo está en la carpeta `sulotec-infra/`: `README.md` (fases paso a paso), `oracle/` (Terraform), `vm/` (compose base + scripts), `templates/` (Dockerfiles .NET, Spring Boot, SPA).
 
+## >>> MiRadar 360 en Oracle (2026-10-14) <<<
+- Producto: MiRadar 360 (antes AFACOP). Código en `jeliases-informaDev/Afacop-Backend`, `Afacop-FrontEnd` y `App-Afacop`; kit del servidor en `apps/miradar/` (su README trae los pasos y la operación).
+- Corre en `sulotec-main`: contenedores `miradar-api` (Node 24, puerto 4000) y `miradar-web` (nginx, 8080), compose en `/data/apps/miradar`, configuración en `/opt/sulotec/miradar.env` (root:docker 640; no está en ningún repositorio). Rutas del túnel: `miradar360.sulotec.com → http://miradar-web:8080` y `api-miradar360.sulotec.com → http://miradar-api:4000`.
+- Base: PostgreSQL 16 compartida de la VM, base `miradar`. Se copió el 2026-10-14 desde la PostgreSQL 18 de Render (14 tablas, mismas filas); el volcado queda en `/data/backups/miradar`.
+- Fotos y firmas: bucket `miradar-archivos` de Object Storage por la API S3, con el usuario `svc-miradar` (política `storage-miradar`); se copiaron desde Backblaze.
+- Despliegue: `sudo bash /data/apps/miradar/desplegar.sh` (construye desde `main` y vuelve a la versión anterior si falla). Pruebas de humo: `probar.sh`.
+- Dependencia externa: la RRCC-API (`RRCC_API_URL`) está en un túnel ngrok gratuito; conviene mudarla.
+- Pendiente: app móvil con la URL nueva (EAS) y la URL de privacidad en Play Console; cerrar Render y Backblaze; rotar claves (base `miradar`, S3 de `svc-miradar`, RRCC); repositorios privados.
+
 ## >>> ÚLTIMO (2026-10-09) — leer primero <<<
 - **Documentación completa en `docs/`:** índice, 1) Proyecto Sulotec, 2) Oracle Cloud, 3) Cloudflare, 4) Integración de proyectos.
 - **Buscador Interno separado en su propio repo privado: `Sulotec/buscador-interno`.**

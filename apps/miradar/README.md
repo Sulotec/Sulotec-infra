@@ -66,9 +66,7 @@ Si el origen es de una versión de PostgreSQL más nueva que la de la VM (16), s
 
 **6. Archivos de Backblaze:** `sudo bash /data/apps/miradar/migrar-archivos.sh` (repetible: copia solo lo que falte).
 
-**7. Publicar:** `sudo bash /data/apps/miradar/desplegar.sh`.
-Mientras los cambios de Docker no estén unidos a `main`, usar las ramas:
-`RAMA_BACKEND=feat/oracle-docker RAMA_FRONTEND=feat/oracle-docker sudo -E bash /data/apps/miradar/desplegar.sh`.
+**7. Publicar:** `sudo bash /data/apps/miradar/desplegar.sh` (construye desde `main`; para probar otra rama: `RAMA_BACKEND=mi-rama RAMA_FRONTEND=mi-rama sudo -E bash /data/apps/miradar/desplegar.sh`).
 
 **8. Cloudflare.** En DNS, **borrar el CNAME `miradar360` que apunta a Render**. Luego en Networks → Tunnels → `sulotec` → Add route,
 las dos direcciones de la tabla de arriba.

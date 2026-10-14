@@ -8,6 +8,7 @@ Documentación técnica del ecosistema Sulotec: qué hay, dónde está, cómo se
 | 2 | [Oracle Cloud](02-oracle-cloud.md) | La infraestructura: servidor, discos, buckets, respaldos, usuarios, Terraform y operación diaria |
 | 3 | [Cloudflare](03-cloudflare.md) | Dominio, HTTPS, túnel, rutas, Zero Trust y Access (quién puede entrar a qué) |
 | 4 | [Integración de proyectos](04-integracion-de-proyectos.md) | Cómo se unen las piezas: identidad, publicación, datos, y cómo sumar un producto nuevo |
+| 5 | [Inventario de claves](05-inventario-de-claves.md) | Qué secretos hay, dónde viven, cuáles guardar aparte y cómo rotarlos (sin ningún valor) |
 
 **Documentos relacionados**
 

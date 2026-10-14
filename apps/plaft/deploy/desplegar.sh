@@ -34,11 +34,35 @@ echo "== Codigo"
 cb=$(bajar "$APP/backend"  "$REPO_BACKEND"  "$RAMA_BACKEND")
 cf=$(bajar "$APP/frontend" "$REPO_FRONTEND" "$RAMA_FRONTEND")
 echo "   backend $RAMA_BACKEND @ $cb   frontend $RAMA_FRONTEND @ $cf"
-[ -f "$APP/backend/Dockerfile" ]  || { echo "El backend de esa rama no tiene Dockerfile." >&2; exit 1; }
+[ -f "$APP/backend/build.gradle.kts" ] || { echo "El backend de esa rama no parece el proyecto Gradle esperado." >&2; exit 1; }
 [ -f "$APP/frontend/Dockerfile" ] || { echo "El frontend de esa rama no tiene Dockerfile." >&2; exit 1; }
 
+# El servidor es ARM y la imagen de ejecucion del repo (eclipse-temurin alpine) no existe para ARM: se usa una propia.
+# La compilacion es la misma del repo; solo cambia la base de ejecucion (multi-arquitectura) y el usuario sin privilegios.
+cat > "$APP/Dockerfile.api" <<'DOCKERFILE'
+FROM eclipse-temurin:17-jdk AS build
+WORKDIR /app
+ENV GRADLE_OPTS="-Xmx1g"
+COPY gradlew settings.gradle.kts build.gradle.kts ./
+COPY gradle gradle
+RUN sed -i 's/\r$//' gradlew && chmod +x gradlew
+COPY src src
+RUN --mount=type=cache,target=/root/.gradle \
+    ./gradlew --no-daemon -Pkotlin.compiler.execution.strategy=in-process bootJar -x test \
+    && cp "$(ls build/libs/*.jar | grep -v -- '-plain' | head -n 1)" /app/app.jar
+
+FROM eclipse-temurin:17-jre
+RUN groupadd --system app && useradd --system --gid app --no-create-home app
+WORKDIR /app
+COPY --from=build /app/app.jar app.jar
+USER app
+EXPOSE 8081
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=60"
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/app.jar"]
+DOCKERFILE
+
 echo "== Construyendo imagenes (la primera vez tarda varios minutos)"
-docker build -q -t "plaft-api:$cb" "$APP/backend" >/dev/null
+docker build -q -f "$APP/Dockerfile.api" -t "plaft-api:$cb" "$APP/backend" >/dev/null
 docker build -q --build-arg NEXT_PUBLIC_API_URL="$URL_API_PUBLICA" -t "plaft-web:$cf" "$APP/frontend" >/dev/null
 
 anterior_api=$(docker image inspect -f '{{.Id}}' plaft-api:latest 2>/dev/null || true)

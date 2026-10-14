@@ -116,7 +116,7 @@ docker compose exec -T postgres pg_dumpall -U postgres | gzip > "$dir/postgres_$
 docker compose exec -T -e MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql \
   mysqldump -uroot --all-databases --single-transaction --routines --events --triggers \
   | gzip > "$dir/mysql_$ts.sql.gz"
-tar -czf "$dir/apps_$ts.tar.gz" -C /data apps
+tar -czf "$dir/apps_$ts.tar.gz" --exclude='apps/miradar/backend' --exclude='apps/miradar/frontend' -C /data apps
 
 find "$dir" -type f -mtime +14 -delete
 

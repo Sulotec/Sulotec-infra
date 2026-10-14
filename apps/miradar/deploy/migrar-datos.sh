@@ -14,7 +14,7 @@ STAMP="$(date +%Y%m%d-%H%M)"
 ARCHIVO="miradar-origen-$STAMP.dump"
 
 [ "$(id -u)" -eq 0 ] || [ -n "${PRUEBA:-}" ] || { echo "Correlo con sudo: sudo bash $0" >&2; exit 1; }
-[[ "$CARPETA" == /* ]] && mkdir -p "$CARPETA"
+[[ "$CARPETA" == /* ]] && { mkdir -p "$CARPETA"; chmod 700 "$CARPETA"; }
 
 # Lee un secreto mostrando un * por cada caracter: asi se ve que el pegado funciono sin mostrar el valor. Resultado en $V.
 leer_secreto() {
@@ -58,7 +58,7 @@ if [[ "$host_origen" != *.* ]]; then
   fi
 fi
 # La copia viaja por internet: siempre cifrada
-case "$ORIGEN_URI" in *sslmode=*) ;; *'?'*) ORIGEN_URI="$ORIGEN_URI&sslmode=require" ;; *) ORIGEN_URI="$ORIGEN_URI?sslmode=require" ;; esac
+case "$ORIGEN_URI" in *sslmode=*) ;; *'?'*) ORIGEN_URI="$ORIGEN_URI&sslmode=${SSLMODE_ORIGEN:-require}" ;; *) ORIGEN_URI="$ORIGEN_URI?sslmode=${SSLMODE_ORIGEN:-require}" ;; esac
 echo "   origen: $(printf '%s' "$ORIGEN_URI" | sed -E 's#(://[^:/@]+:)[^@]*@#\1***@#')"
 [[ "$DESTINO_URI" =~ ^postgres(ql)?:// ]] || { echo "El destino no es una direccion PostgreSQL valida" >&2; exit 1; }
 
@@ -95,10 +95,11 @@ VDEST=16
 num_destino="$(sql_destino 'show server_version_num')" || { echo "No pude conectar con el DESTINO." >&2; exit 1; }
 mayor_destino=$(( num_destino / 10000 )); VDEST="$mayor_destino"
 echo "   origen: PostgreSQL $mayor_origen   destino: PostgreSQL $mayor_destino"
-if [ "$mayor_origen" -gt "$mayor_destino" ] && [ -z "${FORZAR:-}" ]; then
-  echo "El origen es MAS NUEVO que el destino: un volcado de PostgreSQL $mayor_origen puede no restaurarse en $mayor_destino." >&2
-  echo "Hay que subir la version del servidor o usar un PostgreSQL propio para MiRadar. (FORZAR=1 para intentarlo igual.)" >&2
-  exit 1
+VREST="$VDEST"
+if [ "$mayor_origen" -gt "$mayor_destino" ]; then
+  VREST="$VCLI"   # un volcado de una version mas nueva solo lo lee bien el pg_restore de esa misma version
+  echo "   AVISO: el origen (PostgreSQL $mayor_origen) es mas nuevo que el destino ($mayor_destino): se restaura con las herramientas de la $VREST."
+  echo "          Si algo del esquema no existe en la $mayor_destino, la restauracion se cancela entera y el destino queda vacio (el origen no se toca)."
 fi
 
 echo "== 2. El destino debe estar vacio"
@@ -119,14 +120,34 @@ tablas="$(sql_origen "select tablename from pg_tables where schemaname='public' 
 declare -A filas_origen
 for t in $tablas; do filas_origen[$t]="$(sql_origen "select count(*) from public.\"$t\"")"; done
 echo "   $(echo "$tablas" | wc -l) tablas"
+extensiones="$(sql_origen "select extname from pg_extension where extname <> 'plpgsql' order by 1")"
+if [ -n "$extensiones" ]; then
+  echo "   extensiones: $(echo $extensiones)"
+  for e in $extensiones; do
+    sql_destino 'create extension if not exists "'"$e"'"' >/dev/null 2>&1 || { echo "No pude crear la extension '$e' en el destino: hay que instalarla con un usuario administrador." >&2; exit 1; }
+  done
+fi
 
 echo "== 4. Volcado del origen -> $CARPETA/$ARCHIVO"
 cliente "$VCLI" sh -c "pg_dump \"\$ORIGEN\" --format=custom --no-owner --no-acl --schema=public -f /backup/$ARCHIVO"
+chmod 600 "$CARPETA/$ARCHIVO" 2>/dev/null || true
 echo "   tamano: $(du -h "$CARPETA/$ARCHIVO" 2>/dev/null | cut -f1 || echo ok)"
 
 echo "== 5. Restaurando en el destino"
-# El volcado trae "CREATE SCHEMA public", que el destino ya tiene: se restaura con una lista que omite solo esa linea.
-cliente "$VDEST" sh -c "pg_restore -l /backup/$ARCHIVO | grep -v ' SCHEMA - public ' > /tmp/lista.txt; pg_restore --no-owner --no-acl --exit-on-error -L /tmp/lista.txt -d \"\$DESTINO\" /backup/$ARCHIVO"
+# La restauracion es todo o nada: pg_restore genera el SQL (sin el esquema public, las extensiones ni las estadisticas de PG18, que el destino
+# ya tiene o no entiende; ademas se quita "SET transaction_timeout", que no existe antes de PostgreSQL 17) y psql lo carga en UNA transaccion.
+RESTAURAR='set -e
+pg_restore -l "/backup/$1" | grep -v -e " SCHEMA - public " -e " EXTENSION " -e " STATISTICS DATA " > /tmp/lista.txt
+pg_restore --no-owner --no-acl -L /tmp/lista.txt -f /tmp/restore.sql "/backup/$1"
+sed -i "/^SET transaction_timeout/d" /tmp/restore.sql
+psql "$DESTINO" -X -q -1 -v ON_ERROR_STOP=1 -f /tmp/restore.sql -o /dev/null'
+if ! cliente "$VREST" sh -c "$RESTAURAR" restaurar "$ARCHIVO"; then
+  echo "La restauracion se cancelo y el destino quedo vacio (el origen no se toca). El volcado esta en $CARPETA/$ARCHIVO." >&2
+  echo "Copia las lineas de error de arriba y mandalas para ajustar." >&2
+  exit 1
+fi
+echo "   actualizando estadisticas (ANALYZE)"
+sql_destino 'analyze' >/dev/null 2>&1 || true
 
 echo "== 6. Comparacion tabla por tabla"
 mal=0
@@ -138,10 +159,10 @@ for t in $tablas; do
 done
 
 if [ "$mal" -ne 0 ]; then
-  echo; echo "HAY DIFERENCIAS: no apagues Aiven. Revisa arriba. El volcado queda en $CARPETA/$ARCHIVO." >&2
+  echo; echo "HAY DIFERENCIAS: no cierres el origen. Revisa arriba. El volcado queda en $CARPETA/$ARCHIVO." >&2
   exit 1
 fi
 echo
 echo "TODO IGUAL: $(echo "$tablas" | wc -l) tablas, mismas filas en origen y destino."
-echo "Copia del origen guardada en $CARPETA/$ARCHIVO (no la borres hasta cerrar Aiven)."
+echo "Copia del origen guardada en $CARPETA/$ARCHIVO (no la borres hasta cerrar el origen)."
 echo "Siguiente: sudo bash /data/apps/miradar/desplegar.sh"

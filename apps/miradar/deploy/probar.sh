@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# Pruebas de humo de MiRadar despues de publicar. No cambia nada ni sube datos reales.
+#   sudo bash /data/apps/miradar/probar.sh
+# Las pruebas de direcciones publicas avisan (no fallan) si el tunel de Cloudflare todavia no tiene las rutas.
+set -uo pipefail
+
+API_PUBLICA="${API_PUBLICA:-https://api-miradar360.sulotec.com}"
+WEB_PUBLICA="${WEB_PUBLICA:-https://miradar360.sulotec.com}"
+fallos=0
+avisos=0
+ok()    { echo "  OK     $*"; }
+falla() { echo "  FALLA  $*"; fallos=$((fallos+1)); }
+aviso() { echo "  AVISO  $*"; avisos=$((avisos+1)); }
+salud() { docker inspect -f '{{.State.Health.Status}}' "$1" 2>/dev/null || echo ninguno; }
+codigo() { curl -s -m 15 -o /dev/null -w '%{http_code}' "$@" 2>/dev/null || echo 000; }
+cabecera_cors() { curl -s -m 15 -D - -o /dev/null -X OPTIONS "$API_PUBLICA/api/auth/login" -H "Origin: $1" -H "Access-Control-Request-Method: POST" 2>/dev/null | tr -d '\r' | grep -i '^access-control-allow-origin:' | cut -d' ' -f2- || true; }
+
+echo "== Contenedores"
+for c in miradar-api miradar-web; do
+  if [ "$(salud "$c")" = healthy ]; then ok "$c sano"; else falla "$c no esta sano ($(salud "$c"))"; fi
+done
+
+echo "== API por dentro"
+if docker exec miradar-api node -e "fetch('http://127.0.0.1:4000/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"; then
+  ok "/health/ready: la API ve la base de datos"
+else
+  falla "/health/ready no responde bien (mira: docker logs miradar-api)"
+fi
+
+echo "== Almacenamiento de fotos y firmas (Oracle)"
+if docker exec miradar-api node scripts/probar-almacenamiento.js > /tmp/probar-almacenamiento.log 2>&1; then
+  ok "subir, verificar, descargar y borrar una foto de prueba; el bucket no es publico"
+else
+  falla "el almacenamiento no funciona. Detalle:"
+  tail -12 /tmp/probar-almacenamiento.log | sed 's/^/         /'
+fi
+
+echo "== Direcciones publicas (Cloudflare)"
+c=$(codigo "$API_PUBLICA/health/live")
+if [ "$c" = 200 ]; then ok "$API_PUBLICA/health/live"; else aviso "$API_PUBLICA/health/live responde $c (¿falta la ruta del tunel?)"; fi
+c=$(codigo "$API_PUBLICA/privacidad/radar360")
+if [ "$c" = 200 ]; then ok "politica de privacidad (la de Play Store)"; else aviso "politica de privacidad responde $c"; fi
+c=$(codigo "$WEB_PUBLICA/")
+if [ "$c" = 200 ]; then ok "$WEB_PUBLICA"; else aviso "$WEB_PUBLICA responde $c (¿falta la ruta del tunel, o queda el CNAME de Render?)"; fi
+permitido="$(cabecera_cors "$WEB_PUBLICA")"
+if [ "$permitido" = "$WEB_PUBLICA" ]; then ok "CORS: la web puede llamar a la API"; else aviso "CORS no devuelve el origen de la web (valor: '${permitido:-ninguno}')"; fi
+ajeno="$(cabecera_cors "https://sitio-ajeno.example")"
+if [ -z "$ajeno" ]; then ok "CORS: un sitio ajeno NO puede llamar a la API"; else falla "CORS permite un origen ajeno: $ajeno"; fi
+
+echo
+if [ "$fallos" -eq 0 ]; then echo "TODO BIEN ($avisos aviso(s))."; exit 0; fi
+echo "$fallos prueba(s) fallaron."
+exit 1

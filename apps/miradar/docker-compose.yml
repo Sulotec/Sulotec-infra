@@ -1,0 +1,37 @@
+# MiRadar 360 (antes AFACOP): API y web. En el servidor vive en /data/apps/miradar.
+# Cloudflare Tunnel (Public hostname):
+#   miradar360.sulotec.com      -> http://miradar-web:8080
+#   api-miradar360.sulotec.com  -> http://miradar-api:4000     (activa WebSockets: la app usa Socket.IO)
+# Configuracion y secretos (nunca en el repositorio): /opt/sulotec/miradar.env, lo crea deploy/preparar.sh.
+# La base es la PostgreSQL compartida de la VM (red sulotec_data); no publica puertos.
+name: miradar
+
+services:
+  api:
+    image: miradar-api:latest
+    container_name: miradar-api
+    restart: unless-stopped
+    env_file: /opt/sulotec/miradar.env
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    networks: [edge, data]
+    mem_limit: 768m
+
+  web:
+    image: miradar-web:latest
+    container_name: miradar-web
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    networks: [edge]
+    mem_limit: 128m
+
+networks:
+  edge:
+    external: true
+    name: sulotec_edge
+  data:
+    external: true
+    name: sulotec_data

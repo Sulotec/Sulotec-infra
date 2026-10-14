@@ -12,7 +12,7 @@ ok()    { echo "  OK     $*"; }
 falla() { echo "  FALLA  $*"; fallos=$((fallos+1)); }
 aviso() { echo "  AVISO  $*"; avisos=$((avisos+1)); }
 salud() { docker inspect -f '{{.State.Health.Status}}' "$1" 2>/dev/null || echo ninguno; }
-codigo() { curl -s -m 15 -o /dev/null -w '%{http_code}' "$@" 2>/dev/null || echo 000; }
+codigo() { curl -s -m 15 -o /dev/null -w '%{http_code}' "$@" 2>/dev/null || true; }
 cabecera_cors() { curl -s -m 15 -D - -o /dev/null -X OPTIONS "$API_PUBLICA/api/auth/login" -H "Origin: $1" -H "Access-Control-Request-Method: POST" 2>/dev/null | tr -d '\r' | grep -i '^access-control-allow-origin:' | cut -d' ' -f2- || true; }
 
 echo "== Contenedores"
@@ -41,7 +41,16 @@ if [ "$c" = 200 ]; then ok "$API_PUBLICA/health/live"; else aviso "$API_PUBLICA/
 c=$(codigo "$API_PUBLICA/privacidad/radar360")
 if [ "$c" = 200 ]; then ok "politica de privacidad (la de Play Store)"; else aviso "politica de privacidad responde $c"; fi
 c=$(codigo "$WEB_PUBLICA/")
-if [ "$c" = 200 ]; then ok "$WEB_PUBLICA"; else aviso "$WEB_PUBLICA responde $c (¿falta la ruta del tunel, o queda el CNAME de Render?)"; fi
+if [ "$c" != 200 ]; then
+  aviso "$WEB_PUBLICA responde $c (¿falta la ruta del tunel, o queda el CNAME de Render?)"
+else
+  # Que responda no basta: puede seguir siendo la web vieja de Render. Se compara con lo que sirve el contenedor de este servidor.
+  propio="$(docker exec miradar-web wget -qO- http://127.0.0.1:8080/ 2>/dev/null || true)"
+  publico="$(curl -s -m 15 "$WEB_PUBLICA/" 2>/dev/null || true)"
+  if [ -z "$propio" ]; then aviso "$WEB_PUBLICA responde, pero no pude leer la web local para compararla"
+  elif [ "$propio" = "$publico" ]; then ok "$WEB_PUBLICA sale de ESTE servidor"
+  else aviso "$WEB_PUBLICA responde, pero NO es la web de este servidor (¿sigue el CNAME de Render?)"; fi
+fi
 permitido="$(cabecera_cors "$WEB_PUBLICA")"
 if [ "$permitido" = "$WEB_PUBLICA" ]; then ok "CORS: la web puede llamar a la API"; else aviso "CORS no devuelve el origen de la web (valor: '${permitido:-ninguno}')"; fi
 ajeno="$(cabecera_cors "https://sitio-ajeno.example")"

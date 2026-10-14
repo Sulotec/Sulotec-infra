@@ -102,6 +102,23 @@ if [ "$mayor_origen" -gt "$mayor_destino" ]; then
   echo "          Si algo del esquema no existe en la $mayor_destino, la restauracion se cancela entera y el destino queda vacio (el origen no se toca)."
 fi
 
+# SOLO_COMPARAR=1: no copia nada; solo compara las filas de cada tabla entre el origen y el destino (para decidir si se puede cerrar el origen)
+if [ -n "${SOLO_COMPARAR:-}" ]; then
+  echo "== Comparacion de filas, origen contra destino (no se copia ni se cambia nada)"
+  tablas="$(sql_origen "select tablename from pg_tables where schemaname='public' order by 1")"
+  mal=0
+  printf "   %-32s %12s %12s  %s\n" tabla origen destino resultado
+  for t in $tablas; do
+    o="$(sql_origen "select count(*) from public.\"$t\"")"
+    d="$(sql_destino "select count(*) from public.\"$t\"" 2>/dev/null || echo FALTA)"
+    if [ "$o" = "$d" ]; then r="OK"; else r="DIFERENTE"; mal=1; fi
+    printf "   %-32s %12s %12s  %s\n" "$t" "$o" "$d" "$r"
+  done
+  echo
+  if [ "$mal" -eq 0 ]; then echo "IGUALES: el origen y el destino tienen las mismas filas."; else echo "HAY DIFERENCIAS: lo que tenga mas filas el origen no esta en el destino (auditoria_seguridad siempre difiere: cada inicio de sesion la aumenta)."; fi
+  exit 0
+fi
+
 echo "== 2. El destino debe estar vacio"
 tablas_destino="$(sql_destino "select count(*) from information_schema.tables where table_schema='public'")"
 if [ "$tablas_destino" != "0" ]; then

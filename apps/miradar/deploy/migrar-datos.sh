@@ -16,6 +16,21 @@ ARCHIVO="miradar-origen-$STAMP.dump"
 [ "$(id -u)" -eq 0 ] || [ -n "${PRUEBA:-}" ] || { echo "Correlo con sudo: sudo bash $0" >&2; exit 1; }
 [[ "$CARPETA" == /* ]] && mkdir -p "$CARPETA"
 
+# Lee un secreto mostrando un * por cada caracter: asi se ve que el pegado funciono sin mostrar el valor. Resultado en $V.
+leer_secreto() {
+  local c; V=""
+  printf '%s' "$1"
+  while IFS= read -rsn1 c; do
+    if [ -z "$c" ] || [ "$c" = $'\r' ]; then break; fi
+    if [ "$c" = $'\177' ] || [ "$c" = $'\b' ]; then
+      if [ -n "$V" ]; then V="${V%?}"; printf '\b \b'; fi
+    else
+      V+="$c"; printf '*'
+    fi
+  done
+  echo
+}
+
 # --- Direcciones de origen y destino (nunca se muestran en pantalla)
 if [ -z "${DESTINO_URI:-}" ]; then
   [ -r "$ENVFILE" ] || { echo "Falta $ENVFILE: primero corre preparar.sh" >&2; exit 1; }
@@ -23,10 +38,11 @@ if [ -z "${DESTINO_URI:-}" ]; then
 fi
 if [ -z "${ORIGEN_URI:-}" ]; then
   echo "Pega la 'Service URI' de Aiven (postgres://...?sslmode=require). No se muestra al escribir."
-  read -rsp "ORIGEN: " ORIGEN_URI; echo
+  leer_secreto "ORIGEN: "; ORIGEN_URI="$V"
 fi
 ORIGEN_URI="${ORIGEN_URI//[[:space:]]/}"; ORIGEN_URI="${ORIGEN_URI//$'\e'\[200~/}"; ORIGEN_URI="${ORIGEN_URI//$'\e'\[201~/}"
-[[ "$ORIGEN_URI" =~ ^postgres(ql)?:// ]]  || { echo "El origen debe empezar con postgres:// o postgresql://" >&2; exit 1; }
+[[ "$ORIGEN_URI" =~ ^postgres(ql)?:// ]]  || { echo "El origen debe empezar con postgres:// o postgresql:// (recibi ${#ORIGEN_URI} caracteres)." >&2; exit 1; }
+echo "   origen: $(printf '%s' "$ORIGEN_URI" | sed -E 's#(://[^:/@]+:)[^@]*@#***@#')"
 [[ "$DESTINO_URI" =~ ^postgres(ql)?:// ]] || { echo "El destino no es una direccion PostgreSQL valida" >&2; exit 1; }
 
 # psql/pg_dump/pg_restore corren en contenedores: $1 = version del cliente, resto = comando. Las URI viajan por entorno.

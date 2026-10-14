@@ -29,13 +29,28 @@ if [ -z "${ORIGEN_BUCKET:-}" ]; then
   read -rp "Region (ej. us-west-004): " ORIGEN_REGION
   read -rp "Bucket (ej. afacop-evidencias): " ORIGEN_BUCKET
   read -rp "keyID: " ORIGEN_KEY
-  read -rsp "applicationKey: " ORIGEN_SECRET; echo
+  leer_secreto "applicationKey: "; ORIGEN_SECRET="$V"
 fi
 ORIGEN_ENDPOINT="$(limpiar "$ORIGEN_ENDPOINT")"
 ORIGEN_REGION="$(limpiar "$ORIGEN_REGION")"
 ORIGEN_BUCKET="$(limpiar "$ORIGEN_BUCKET")"
 ORIGEN_KEY="$(limpiar "$ORIGEN_KEY")"
 ORIGEN_SECRET="$(limpiar "$ORIGEN_SECRET")"
+
+# Lee un secreto mostrando un * por cada caracter: asi se ve que el pegado funciono sin mostrar el valor. Resultado en $V.
+leer_secreto() {
+  local c; V=""
+  printf '%s' "$1"
+  while IFS= read -rsn1 c; do
+    if [ -z "$c" ] || [ "$c" = $'\r' ]; then break; fi
+    if [ "$c" = $'\177' ] || [ "$c" = $'\b' ]; then
+      if [ -n "$V" ]; then V="${V%?}"; printf '\b \b'; fi
+    else
+      V+="$c"; printf '*'
+    fi
+  done
+  echo
+}
 
 # rclone se configura por variables de entorno: nada se guarda en disco ni se muestra
 rc() {

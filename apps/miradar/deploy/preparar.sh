@@ -12,23 +12,39 @@ mkdir -p /opt/sulotec
 # Quita los caracteres que algunos terminales web agregan al pegar, y los espacios
 limpiar() { local v="$1"; v="${v//$'\e'\[200~/}"; v="${v//$'\e'\[201~/}"; v="${v//\[200~/}"; v="${v//\[201~/}"; printf '%s' "${v//[[:space:]]/}"; }
 limpiar_texto() { local v="$1"; v="${v//$'\e'\[200~/}"; v="${v//$'\e'\[201~/}"; v="${v//\[200~/}"; v="${v//\[201~/}"; v="${v#"${v%%[![:space:]]*}"}"; v="${v%"${v##*[![:space:]]}"}"; printf '%s' "$v"; }
+# Lee un secreto mostrando un * por cada caracter: asi se ve que el pegado funciono sin mostrar el valor. Resultado en $V.
+leer_secreto() {
+  local c; V=""
+  printf '%s' "$1"
+  while IFS= read -rsn1 c; do
+    if [ -z "$c" ] || [ "$c" = $'\r' ]; then break; fi
+    if [ "$c" = $'\177' ] || [ "$c" = $'\b' ]; then
+      if [ -n "$V" ]; then V="${V%?}"; printf '\b \b'; fi
+    else
+      V+="$c"; printf '*'
+    fi
+  done
+  echo
+}
 actual() { [ -f "$ENV" ] && grep -E "^$1=" "$ENV" | head -1 | cut -d= -f2- || true; }
 # pregunta VARIABLE "texto" [por_defecto] [secreto]  -> deja el resultado en $R
 pregunta() {
   local var="$1" texto="$2" def="${3:-}" secreto="${4:-}" act v
   act="$(actual "$var")"; [ -n "$act" ] && def="$act"
   if [ -n "$secreto" ]; then
-    read -rsp "$texto [Enter = $([ -n "$act" ] && echo conservar || echo vacio)]: " v; echo
+    leer_secreto "$texto [Enter = $([ -n "$act" ] && echo conservar || echo vacio)]: "; v="$V"
   else
     read -rp "$texto [Enter = ${def:-vacio}]: " v
   fi
   v="$(limpiar "${v:-}")"; R="${v:-$def}"
+  if [ -n "$secreto" ] && [ -n "$v" ]; then echo "   recibido: ${#v} caracteres"; fi
 }
 aleatorio() { openssl rand -hex 32; }
 
 echo "== Base de datos"
 echo "   Pega la cadena 'Node' que mostro new-project-db.sh (empieza con postgresql://)."
 pregunta DATABASE_URL "DATABASE_URL" "" secreto; DB="$R"
+echo "   $(printf '%s' "$DB" | sed -E 's#(://[^:/@]+:)[^@]*@#***@#')"
 [[ "$DB" =~ ^postgres(ql)?:// ]] || { echo "La cadena debe empezar con postgresql://" >&2; exit 1; }
 
 echo
@@ -40,7 +56,7 @@ read -rp "   [s/n, Enter = $migrando_def]: " migrando; migrando="${migrando:-$mi
 if [[ "$migrando" =~ ^[sS]$ ]]; then
   echo "   Pega la MISMA MFA_ENCRYPTION_KEY que tiene Render. Si es distinta, nadie podra usar su verificacion en dos pasos."
   pregunta MFA_ENCRYPTION_KEY "MFA_ENCRYPTION_KEY de Render (minimo 32 caracteres)" "" secreto; MFA="$R"
-  [ "${#MFA}" -ge 32 ] || { echo "Debe tener al menos 32 caracteres." >&2; exit 1; }
+  [ "${#MFA}" -ge 32 ] || { echo "Debe tener al menos 32 caracteres (recibi ${#MFA}). Vuelve a correr el script y pegala completa." >&2; exit 1; }
   # Con un administrador ya existente, el backend NO debe recibir clave inicial: si el administrador nunca entro,
   # el arranque le cambiaria la contrasena y le borraria la verificacion en dos pasos.
   ADMIN_PASS=""
@@ -49,7 +65,7 @@ else
   MFA="$(actual MFA_ENCRYPTION_KEY)"; [ -n "$MFA" ] || MFA="$(aleatorio)"
   pregunta INITIAL_ADMIN_USERNAME "Usuario del administrador inicial" "Afacop"; ADMIN_USER="$R"
   echo "   Clave del administrador inicial: minimo 12 caracteres con mayuscula, minuscula, numero y simbolo."
-  read -rsp "   [Enter = generar una]: " ADMIN_PASS; echo; ADMIN_PASS="$(limpiar "${ADMIN_PASS:-}")"
+  leer_secreto "   [Enter = generar una]: "; ADMIN_PASS="$(limpiar "${V:-}")"
   if [ -z "$ADMIN_PASS" ]; then ADMIN_PASS="$(openssl rand -base64 24 | tr -dc 'A-Za-z0-9' | head -c 16)Aa1!"; GENERADA=1; fi
 fi
 

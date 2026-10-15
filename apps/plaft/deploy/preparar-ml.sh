@@ -48,7 +48,7 @@ fi
 
 echo "== Indira (el agente con modelo local; necesita Ollama y unos 8 GB de RAM)"
 act_ind="$(actual INDIRA_ENABLED)"; def_ind="n"; [ "$act_ind" = "true" ] && def_ind="s"
-MODELO="$(actual OLLAMA_MODEL)"; MODELO="${MODELO:-llama3.1:8b}"      # el modelo que dejo activar-indira.sh se conserva
+MODELO="$(actual OLLAMA_MODEL)"; MODELO="${MODELO:-qwen2.5:7b}"      # el modelo que dejo activar-indira.sh se conserva
 read -rp "¿Activar Indira ahora? [s/n, Enter = $def_ind]: " ind; ind="$(limpiar "${ind:-$def_ind}")"
 if [[ "$ind" =~ ^[sS]$ ]]; then INDIRA=true; else INDIRA=false; fi
 [ "$INDIRA" = false ] && echo "   Indira apagada: responde 'servicio no disponible'; la vigilancia de prensa, las personas y el scoring funcionan igual."

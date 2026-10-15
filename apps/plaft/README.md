@@ -95,9 +95,9 @@ con sus casos a un JSON y la herramienta las registra como entidades PEP con sus
 directo de su base). Para omitirlas: `SIN_POLITICOS=1`. Los Excel y el respaldo de la IA tienen datos de personas: guárdalos solo en el bucket privado.
 
 **10. Indira (modelo de lenguaje local):** `sudo bash /data/apps/plaft/activar-indira.sh`. Revisa memoria y disco, levanta Ollama (`plaft-ollama`, red `ia`),
-descarga `llama3.1:8b` (~5 GB), enciende `INDIRA_ENABLED`, sube a 300 s la espera del backend (`ML_CHATTIMEOUTSECONDS`) y hace una pregunta real, midiendo el tiempo.
+descarga `qwen2.5:7b` (~5 GB; `llama3.1:8b` a veces devuelve la llamada a la herramienta como texto y Indira no responde), enciende `INDIRA_ENABLED`, sube a 300 s la espera del backend (`ML_CHATTIMEOUTSECONDS`) y hace una pregunta real, midiendo el tiempo.
 El modelo corre en CPU: una respuesta puede tardar de decenas de segundos a un par de minutos, y **Cloudflare corta lo que pase de 100 s**. Si la prueba pasa de 90 s, el script avisa;
-una alternativa más liviana y rápida: `MODELO=llama3.2:3b MEM_MIN=4000 sudo -E bash /data/apps/plaft/activar-indira.sh`. Apagarla: `sudo bash /data/apps/plaft/activar-indira.sh --apagar`.
+una alternativa más liviana y rápida: `MODELO=qwen2.5:3b MEM_MIN=4000 sudo -E bash /data/apps/plaft/activar-indira.sh`. El script también detecta si Indira contesta con una llamada a herramienta en bruto y avisa. Apagarla: `sudo bash /data/apps/plaft/activar-indira.sh --apagar`.
 La vigilancia diaria de prensa corre a las 6:00 (hora de Lima) y usa el modelo un buen rato; Ollama tiene `cpu_shares` bajos para no quitarle CPU a las demás aplicaciones.
 
 **11. Base de desarrollo (Aiven):** `sudo bash /data/apps/plaft/importar-dev.sh`. Restaura el respaldo más reciente de `/data/backups/externos` en bases `aiven_<nombre>` de la MySQL de la VM

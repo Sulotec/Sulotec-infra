@@ -3,7 +3,7 @@
 # Instala Ollama (el modelo de lenguaje corre en ESTE servidor: ningun dato sale a terceros), baja el modelo (unos 5 GB),
 # lo conecta con plaft-ml y hace una prueba real de Indira con datos de la base. Se puede repetir las veces que haga falta.
 #   sudo bash /data/apps/plaft/activar-indira.sh
-# Otro modelo (mas liviano y rapido, pero menos fino):  MODELO=llama3.2:3b sudo -E bash /data/apps/plaft/activar-indira.sh
+# Otro modelo (por defecto qwen2.5:7b; uno mas liviano y rapido, pero menos fino):  MODELO=qwen2.5:3b MEM_MIN=4000 sudo -E bash /data/apps/plaft/activar-indira.sh
 # Apagarla (el modelo descargado se conserva):         sudo bash /data/apps/plaft/activar-indira.sh --apagar
 # Variables solo para pruebas: APP, ENVFILE, ENVML, RED_DOCKER, MEM_MIN, TIEMPO_CHAT, MEM_DISPONIBLE_MB, DISCO_LIBRE_GB, PRUEBA, FORZAR.
 set -euo pipefail
@@ -14,7 +14,8 @@ APP="${APP:-/data/apps/plaft}"
 ENVAPI="${ENVFILE:-/opt/sulotec/plaft.env}"
 ENVML="${ENVML:-/opt/sulotec/plaft-ml.env}"
 RED="${RED_DOCKER:-sulotec_data}"
-MODELO="${MODELO:-llama3.1:8b}"
+# qwen2.5:7b maneja bien las herramientas de Indira en Ollama; llama3.1:8b a veces devuelve la llamada a la herramienta como texto
+MODELO="${MODELO:-qwen2.5:7b}"
 TIEMPO_CHAT="${TIEMPO_CHAT:-300}"         # segundos que el backend espera la respuesta de Indira (el modelo corre en CPU)
 MEM_MIN="${MEM_MIN:-8000}"                # MB de memoria disponible que hacen falta para el modelo
 USUARIO_PRUEBA="00000000-0000-4000-8000-0000000000aa"
@@ -50,7 +51,7 @@ libre="${DISCO_LIBRE_GB:-$(df -P -BG /data | awk 'NR==2 {gsub("G", "", $4); prin
 echo "   memoria disponible: ${mem} MB | disco libre en /data: ${libre} GB | nucleos: $(nproc)"
 if ! docker ps --format '{{.Names}}' | grep -x plaft-ollama >/dev/null; then
   if [ "${mem:-0}" -lt "$MEM_MIN" ] && [ -z "${FORZAR:-}" ]; then
-    echo "Hay poca memoria libre (${mem} MB; el modelo necesita unos ${MEM_MIN} MB). Con un modelo mas liviano:  MODELO=llama3.2:3b MEM_MIN=4000 sudo -E bash $0" >&2; exit 1
+    echo "Hay poca memoria libre (${mem} MB; el modelo necesita unos ${MEM_MIN} MB). Con un modelo mas liviano:  MODELO=qwen2.5:3b MEM_MIN=4000 sudo -E bash $0" >&2; exit 1
   fi
   if [ "${libre:-0}" -lt 12 ] && [ -z "${FORZAR:-}" ]; then echo "Poco disco libre en /data (${libre} GB): el modelo pesa unos 5 GB y se necesita margen." >&2; exit 1; fi
 fi
@@ -110,11 +111,20 @@ if [ -z "$texto" ]; then
 fi
 echo "   Indira respondio en ${segundos} s:"
 printf '%s\n' "$texto" | cut -c1-1500 | fold -s -w 100 | sed 's/^/      | /'
+case "$texto" in
+  "{"*|"[{"*|"<tool_call>"*)
+    echo >&2
+    echo "FALLA: Indira devolvio la llamada a la herramienta como texto en bruto en vez de una respuesta: este modelo no maneja bien las herramientas." >&2
+    echo "       Prueba con otro:  MODELO=qwen2.5:7b sudo -E bash $0" >&2
+    exit 1 ;;
+esac
 if [ "$segundos" -gt 90 ]; then
   echo
   echo "AVISO: tardo ${segundos} s. Cloudflare corta cualquier respuesta que pase de 100 s: en la web algunas preguntas podrian dar error."
-  echo "       Si pasa, usa un modelo mas liviano y rapido:  MODELO=llama3.2:3b MEM_MIN=4000 sudo -E bash $0"
+  echo "       Si pasa, usa un modelo mas liviano y rapido:  MODELO=qwen2.5:3b MEM_MIN=4000 sudo -E bash $0"
 fi
 echo
 echo "LISTO: Indira esta activa (modelo $MODELO) y la vigilancia de prensa ya puede decidir casos con el modelo."
 echo "La vigilancia diaria corre a las 6:00 (hora de Lima) y usa bastante CPU un buen rato; el chat puede ir mas lento en ese horario."
+otros="$(docker exec plaft-ollama ollama list | awk -v m="$MODELO" 'NR>1 && $1 != m {print $1}')"
+[ -z "$otros" ] || echo "Otros modelos descargados (ocupan disco; para borrar uno: docker exec plaft-ollama ollama rm <nombre>): $(echo $otros)"

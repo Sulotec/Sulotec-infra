@@ -36,6 +36,18 @@ poner() {
   cat "$tmp" > "$f"; rm -f "$tmp"
 }
 
+# Corre un comando en segundo plano mostrando un punto cada 5 s (asi se ve que sigue trabajando).
+# $1 = mensaje, $2 = archivo para la salida, $3 = archivo para los errores, el resto = comando.
+con_puntos() {
+  local msg="$1" salida="$2" errores="$3" pid; shift 3
+  printf "   %s" "$msg"
+  "$@" >"$salida" 2>"$errores" &
+  pid=$!
+  while kill -0 "$pid" 2>/dev/null; do printf "."; sleep 5; done
+  wait "$pid" || true
+  echo
+}
+
 if [ "${1:-}" = "--apagar" ]; then
   poner "$ENVML" INDIRA_ENABLED false
   compose up -d --force-recreate ml >/dev/null
@@ -70,9 +82,10 @@ else
   t=""; [ -t 1 ] && t="-t"
   docker exec $t plaft-ollama ollama pull "$MODELO" || { echo "No pude descargar el modelo $MODELO (¿el servidor tiene salida a internet?)." >&2; exit 1; }
 fi
-echo "   velocidad (una frase corta; la primera vez incluye cargar el modelo en memoria):"
-docker exec plaft-ollama ollama run "$MODELO" --verbose "Responde con una sola frase corta: ¿que es el lavado de activos?" 2>&1 >/dev/null \
-  | grep -E 'load duration|prompt eval rate|^eval rate' | sed 's/^/      /' || true
+v_out="$(mktemp)"; v_err="$(mktemp)"
+con_puntos "cargando el modelo en memoria y midiendo la velocidad (1 a 3 minutos, sin mensajes; no cierres esta ventana) " "$v_out" "$v_err" docker exec plaft-ollama ollama run "$MODELO" --verbose "Responde con una sola frase corta: ¿que es el lavado de activos?"
+grep -E 'load duration|prompt eval rate|^eval rate' "$v_err" | sed 's/^/      /' || true
+rm -f "$v_out" "$v_err"
 
 echo "== 3. Conectando la IA con el modelo"
 poner "$ENVML" INDIRA_ENABLED true
@@ -94,9 +107,11 @@ persona="$(echo "$SQL_PERSONA" | psql_ml)" || persona=""
 pregunta="¿Qué casos hay registrados de $persona?"
 cuerpo="$(python3 -c 'import json, sys; print(json.dumps({"usuario_id": sys.argv[1], "canal": "web", "mensaje": sys.argv[2]}))' "$USUARIO_PRUEBA" "$pregunta")"
 echo "   pregunta: $pregunta"
+r_out="$(mktemp)"; r_err="$(mktemp)"
 inicio="$(date +%s)"
-respuesta="$(docker exec -e BODY="$cuerpo" plaft-api sh -c 'wget -q -t 1 -T 600 --content-on-error -O - --header "Content-Type: application/json" --header "X-Internal-Key: $ML_API_KEY" --post-data "$BODY" http://plaft-ml:8000/api/v1/indira/chat' 2>/dev/null || true)"
+con_puntos "esperando la respuesta de Indira (puede tardar un par de minutos) " "$r_out" "$r_err" docker exec -e BODY="$cuerpo" plaft-api sh -c 'wget -q -t 1 -T 600 --content-on-error -O - --header "Content-Type: application/json" --header "X-Internal-Key: $ML_API_KEY" --post-data "$BODY" http://plaft-ml:8000/api/v1/indira/chat'
 segundos=$(( $(date +%s) - inicio ))
+respuesta="$(cat "$r_out")"; rm -f "$r_out" "$r_err"
 texto="$(printf '%s' "$respuesta" | PYTHONIOENCODING=utf-8 python3 -c 'import json, sys; print(json.load(sys.stdin)["respuesta"])' 2>/dev/null || true)"
 # se borra lo que dejo la prueba (solo la conversacion de este usuario de prueba)
 psql_ml >/dev/null <<SQL || true

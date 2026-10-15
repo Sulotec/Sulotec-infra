@@ -4,7 +4,8 @@
 #   sudo bash /data/apps/plaft/desplegar.sh
 # La primera vez la API tarda mas (la compilacion de Kotlin tarda unos minutos). Si la base era nueva, despues del primer
 # arranque sano se apaga sola la "semilla" (el usuario inicial) y se borra su clave del archivo de configuracion.
-# Variables opcionales: REPO_BACKEND, REPO_FRONTEND, RAMA_BACKEND, RAMA_FRONTEND, URL_API_PUBLICA.
+# Si existe /opt/sulotec/plaft-ml.env (preparar-ml.sh) tambien publica el servicio de IA (Security-MachineLearning).
+# Variables opcionales: REPO_BACKEND, REPO_FRONTEND, REPO_ML, RAMA_BACKEND, RAMA_FRONTEND, RAMA_ML, URL_API_PUBLICA.
 set -euo pipefail
 
 REPO_BACKEND="${REPO_BACKEND:-https://github.com/jeliases-informaDev/Security-Backend.git}"
@@ -14,10 +15,15 @@ RAMA_FRONTEND="${RAMA_FRONTEND:-main}"
 URL_API_PUBLICA="${URL_API_PUBLICA:-https://api-plaft.sulotec.com/api}"
 APP="${APP:-/data/apps/plaft}"
 ENVFILE="${ENVFILE:-/opt/sulotec/plaft.env}"
+REPO_ML="${REPO_ML:-https://github.com/jeliases-informaDev/Security-MachineLearning.git}"
+RAMA_ML="${RAMA_ML:-main}"
+ENVML="${ENVML:-/opt/sulotec/plaft-ml.env}"
 
 [ "$(id -u)" -eq 0 ] || { echo "Correlo con sudo: sudo bash $0" >&2; exit 1; }
 [ -r "$ENVFILE" ] || { echo "Falta $ENVFILE: primero corre preparar.sh" >&2; exit 1; }
 [ -f "$APP/docker-compose.yml" ] || { echo "Falta $APP/docker-compose.yml: primero se publica desde GitHub (apps/plaft)." >&2; exit 1; }
+ML=0; PERFIL=""
+if [ -r "$ENVML" ]; then ML=1; PERFIL="--profile ml"; fi
 
 salud() { docker inspect -f '{{.State.Health.Status}}' "$1" 2>/dev/null || echo ninguno; }
 espera_sano() { local c="$1" i; for i in $(seq 1 "${2:-120}"); do [ "$(salud "$c")" = healthy ] && return 0; sleep 3; done; return 1; }
@@ -34,6 +40,12 @@ echo "== Codigo"
 cb=$(bajar "$APP/backend"  "$REPO_BACKEND"  "$RAMA_BACKEND")
 cf=$(bajar "$APP/frontend" "$REPO_FRONTEND" "$RAMA_FRONTEND")
 echo "   backend $RAMA_BACKEND @ $cb   frontend $RAMA_FRONTEND @ $cf"
+cm=""
+if [ "$ML" = 1 ]; then
+  cm=$(bajar "$APP/ml" "$REPO_ML" "$RAMA_ML")
+  echo "   ia (ML) $RAMA_ML @ $cm"
+  [ -f "$APP/ml/requirements.txt" ] || { echo "El repositorio del ML no tiene requirements.txt." >&2; exit 1; }
+fi
 [ -f "$APP/backend/build.gradle.kts" ] || { echo "El backend de esa rama no parece el proyecto Gradle esperado." >&2; exit 1; }
 [ -f "$APP/frontend/Dockerfile" ] || { echo "El frontend de esa rama no tiene Dockerfile." >&2; exit 1; }
 
@@ -61,17 +73,36 @@ ENV JAVA_OPTS="-XX:MaxRAMPercentage=60"
 ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/app.jar"]
 DOCKERFILE
 
+# Servicio de IA: misma imagen de Python del repo, pero con usuario sin privilegios (el repo corre como root)
+if [ "$ML" = 1 ]; then
+cat > "$APP/Dockerfile.ml" <<'DOCKERFILE'
+FROM python:3.12-slim
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+RUN groupadd --system app && useradd --system --gid app --no-create-home app
+USER app
+EXPOSE 8000
+CMD ["sh", "-c", "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000"]
+DOCKERFILE
+fi
+
 echo "== Construyendo imagenes (la primera vez tarda varios minutos)"
 docker build -q -f "$APP/Dockerfile.api" -t "plaft-api:$cb" "$APP/backend" >/dev/null
 docker build -q --build-arg NEXT_PUBLIC_API_URL="$URL_API_PUBLICA" -t "plaft-web:$cf" "$APP/frontend" >/dev/null
+if [ "$ML" = 1 ]; then docker build -q -f "$APP/Dockerfile.ml" -t "plaft-ml:$cm" "$APP/ml" >/dev/null; fi
 
 anterior_api=$(docker image inspect -f '{{.Id}}' plaft-api:latest 2>/dev/null || true)
 anterior_web=$(docker image inspect -f '{{.Id}}' plaft-web:latest 2>/dev/null || true)
 docker tag "plaft-api:$cb" plaft-api:latest
 docker tag "plaft-web:$cf" plaft-web:latest
+anterior_ml=""
+if [ "$ML" = 1 ]; then anterior_ml=$(docker image inspect -f '{{.Id}}' plaft-ml:latest 2>/dev/null || true); docker tag "plaft-ml:$cm" plaft-ml:latest; fi
 
 echo "== Levantando"
-(cd "$APP" && docker compose up -d --force-recreate)
+(cd "$APP" && docker compose $PERFIL up -d --force-recreate)
 
 ok=1
 for contenedor in plaft-api plaft-web; do
@@ -85,9 +116,31 @@ if [ "$ok" -eq 0 ]; then
     echo "== Volviendo a la version anterior" >&2
     [ -n "$anterior_api" ] && docker tag "$anterior_api" plaft-api:latest
     [ -n "$anterior_web" ] && docker tag "$anterior_web" plaft-web:latest
-    (cd "$APP" && docker compose up -d --force-recreate)
+    [ -n "$anterior_ml" ] && docker tag "$anterior_ml" plaft-ml:latest
+    (cd "$APP" && docker compose $PERFIL up -d --force-recreate)
   fi
   exit 1
+fi
+
+# El servicio de IA es opcional: si falla, la API y la web (que ya estan sanas) se quedan como estan
+final=0
+if [ "$ML" = 1 ]; then
+  echo "== Servicio de IA"
+  if espera_sano plaft-ml 120; then
+    echo "   plaft-ml: sano"
+  else
+    final=1
+    echo "   plaft-ml: NO arranco bien. Ultimas lineas:" >&2
+    docker logs --tail 30 plaft-ml >&2 || true
+    if [ -n "$anterior_ml" ]; then
+      echo "   Volviendo el servicio de IA a su version anterior (la API y la web quedan como estan)" >&2
+      docker tag "$anterior_ml" plaft-ml:latest
+      (cd "$APP" && docker compose $PERFIL up -d --force-recreate ml >/dev/null 2>&1) || true
+    else
+      echo "   No habia version anterior: se apaga el servicio de IA. PLAFT sigue funcionando sin el (esas pantallas dicen 'servicio no disponible')." >&2
+      (cd "$APP" && docker compose $PERFIL rm -sf ml >/dev/null 2>&1) || true
+    fi
+  fi
 fi
 
 # Primer arranque con base nueva: la semilla ya se aplico; se apaga y se borra la clave inicial del archivo
@@ -102,7 +155,7 @@ if grep -q '^APP_SEED_ENABLED=true' "$ENVFILE"; then
   done
   if ! [ "${usuarios:-0}" -ge 1 ] 2>/dev/null; then
     echo "AVISO: no vi usuarios en la base despues de esperar: dejo la semilla encendida. Revisa: docker logs plaft-api" >&2
-    echo "Listo (con aviso): PLAFT publicado (backend $cb, frontend $cf)."; exit 0
+    echo "Listo (con aviso): PLAFT publicado (backend $cb, frontend $cf)."; exit "$final"
   fi
   echo "   usuarios creados: $usuarios. Apagando la semilla"
   poner APP_SEED_ENABLED false
@@ -113,8 +166,12 @@ if grep -q '^APP_SEED_ENABLED=true' "$ENVFILE"; then
 fi
 
 # Conserva las 3 ultimas versiones de cada imagen por si hay que volver atras a mano
-for img in plaft-api plaft-web; do
+for img in plaft-api plaft-web plaft-ml; do
   docker images "$img" --format '{{.Tag}}' | grep -v '^latest$' | tail -n +4 | xargs -r -I{} docker rmi -f "$img:{}" >/dev/null 2>&1 || true
 done
-echo "Listo: PLAFT publicado (backend $cb, frontend $cf)."
+if [ "$final" -ne 0 ]; then
+  echo "PLAFT quedo publicado (backend $cb, frontend $cf) pero SIN el servicio de IA: revisa las lineas de arriba." >&2
+  exit 1
+fi
+echo "Listo: PLAFT publicado (backend $cb, frontend $cf${cm:+, IA $cm})."
 echo "Siguiente: en Cloudflare crea las dos rutas del tunel (ver README) y corre: sudo bash /data/apps/plaft/probar.sh"

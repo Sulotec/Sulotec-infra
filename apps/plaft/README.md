@@ -7,7 +7,9 @@
 Navegador ──▶ Cloudflare Tunnel ──▶ plaft-web  (Next.js, puerto 3000)
                                 └──▶ plaft-api  (Spring Boot, puerto 8081)
                                          ├──▶ MySQL de la VM (base "plaft", red sulotec_data)
-                                         └──▶ Bucket plaft-archivos (Object Storage; llave de svc-plaft)
+                                         ├──▶ Bucket plaft-archivos (Object Storage; llave de svc-plaft)
+                                         └──▶ plaft-ml  (IA: personas, prensa, Indira; opcional, solo red interna)
+                                                  └──▶ PostgreSQL de la VM (base "plaft_ml")
 ```
 
 | Dirección | Va a |
@@ -15,8 +17,8 @@ Navegador ──▶ Cloudflare Tunnel ──▶ plaft-web  (Next.js, puerto 3000
 | `https://plaft.sulotec.com` | `http://plaft-web:3000` |
 | `https://api-plaft.sulotec.com` | `http://plaft-api:8081` |
 
-**Todavía no incluye** el servicio de IA (`Security-MachineLearning`: Indira, casos en prensa y scoring). El backend funciona sin él; esas pantallas
-responden "servicio no disponible". Se agrega en una segunda etapa.
+El servicio de IA (`Security-MachineLearning`: casos en prensa, scoring de personas e Indira) es **opcional**: el backend funciona sin él y esas
+pantallas responden "servicio no disponible". Se instala con el paso 8 y `desplegar.sh` lo publica solo si existe su configuración.
 
 ## Archivos
 
@@ -26,7 +28,9 @@ responden "servicio no disponible". Se agrega en una segunda etapa.
 | `deploy/crear-llave-oci.sh` | Crea en el servidor la llave de API de `svc-plaft` (la privada no sale de aquí) y prueba el bucket |
 | `deploy/preparar.sh` | Crea `/opt/sulotec/plaft.env` (claves; solo root y docker lo leen) |
 | `deploy/desplegar.sh` | Baja el código, construye, levanta y vuelve a la versión anterior si algo falla |
-| `deploy/probar.sh` | Pruebas de humo: salud, rutas cerradas, base, almacenamiento, direcciones públicas y CORS |
+| `deploy/probar.sh` | Pruebas de humo: salud, rutas cerradas, base, IA (si está instalada), almacenamiento, direcciones públicas y CORS |
+| `deploy/preparar-ml.sh` | Crea `/opt/sulotec/plaft-ml.env` de la IA (usa la misma clave interna que ya tiene `plaft.env`) |
+| `deploy/restaurar-ml.sh` | Carga en la base `plaft_ml` un respaldo `pg_dump -Fc` de `security_ml` (todo o nada) |
 
 ## Puesta en marcha (en este orden)
 
@@ -58,11 +62,27 @@ tipo HTTP y la URL con `http://` (`http://plaft-web:3000` y `http://plaft-api:80
 **7. Comprobar:** `sudo bash /data/apps/plaft/probar.sh`, y entrar a `https://plaft.sulotec.com` con `superadmin`.
 **Cambia la clave del administrador en el primer ingreso.**
 
+**8. Servicio de IA (opcional, cuando lo anterior ya funciona):**
+
+```bash
+sudo /opt/sulotec/scripts/new-project-db.sh postgres plaft_ml     # crea la base y el usuario; guarda la clave que muestra
+sudo bash /data/apps/plaft/preparar-ml.sh                          # pide esa clave y pregunta si se activa Indira (por defecto no)
+sudo bash /data/apps/plaft/restaurar-ml.sh                         # carga el respaldo security_ml (ver abajo)
+sudo bash /data/apps/plaft/desplegar.sh                            # construye plaft-ml y lo levanta junto con lo demás
+sudo bash /data/apps/plaft/probar.sh                               # ahora también prueba la IA
+```
+
+`restaurar-ml.sh` toma `externos/plaft/security_ml.dump` del bucket `sulotec-backups` (con la identidad del servidor) o un archivo local:
+`sudo bash /data/apps/plaft/restaurar-ml.sh /ruta/security_ml.dump`. Si la base `plaft_ml` ya tiene tablas se niega a seguir; para reemplazarlas:
+`BORRAR_DESTINO=si sudo -E bash /data/apps/plaft/restaurar-ml.sh`. Sin respaldo no hace falta: la IA crea sus tablas vacías al arrancar (migraciones).
+Si la IA no arranca, `desplegar.sh` deja la API y la web como estaban y muestra los registros de `plaft-ml`.
+**Indira** necesita Ollama con el modelo `llama3.1:8b` (unos 8 GB de RAM): no está incluido; mientras `INDIRA_ENABLED=false` ese chat responde "no disponible".
+
 ## Operación
 
 | Qué | Cómo |
 |---|---|
-| Ver registros | `docker logs -f plaft-api` |
+| Ver registros | `docker logs -f plaft-api` (y `docker logs -f plaft-ml` para la IA) |
 | Versión publicada | `docker images plaft-api` (la etiqueta es el commit) |
 | Cambiar una clave | `sudo bash /data/apps/plaft/preparar.sh` (Enter conserva) y luego `desplegar.sh` |
 | Rotar la clave de la base | `sudo /opt/sulotec/scripts/rotar-claves.sh` rota `postgres` y `mysql`; para el usuario `plaft` de MySQL: `ALTER USER` y `preparar.sh` |
@@ -74,6 +94,8 @@ tipo HTTP y la URL con `http://` (`http://plaft-web:3000` y `http://plaft-api:80
 - La documentación de la API (`/swagger-ui`, `/v3/api-docs`) y los endpoints de `/actuator` salvo `health` quedan **cerrados** (el código los deja públicos por defecto).
 - La llave de `svc-plaft` solo la ve el contenedor `plaft-api` (montada en lectura). No se usa la identidad de todo el servidor, para que otro contenedor
   comprometido no llegue a las denuncias.
+- La IA (`plaft-ml`) no tiene ruta en Cloudflare ni puertos publicados: solo `plaft-api` le habla, por la red interna y con la clave `X-Internal-Key`
+  (`ENTORNO=prod` la exige). Corre sin privilegios, en solo lectura y con memoria limitada. Su base (`plaft_ml`) es un usuario aparte en PostgreSQL.
 - El sembrado inicial (`superadmin` con clave conocida de desarrollo) **nunca** se deja encendido: `desplegar.sh` lo apaga tras el primer arranque.
 
 ## Hallazgos del código a corregir con el equipo (no son de infraestructura)

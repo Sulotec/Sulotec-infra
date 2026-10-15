@@ -2,12 +2,14 @@
 # Pruebas de humo de PLAFT despues de publicar. No cambia nada ni sube datos reales (el archivo de prueba se borra).
 #   sudo bash /data/apps/plaft/probar.sh
 # Las pruebas de direcciones publicas avisan (no fallan) si el tunel de Cloudflare todavia no tiene las rutas.
+# Si el servicio de IA esta instalado (existe /opt/sulotec/plaft-ml.env) tambien se prueba; si no, se omite.
 set -uo pipefail
 export OCI_CLI_SUPPRESS_FILE_PERMISSIONS_WARNING=True
 
 API_PUBLICA="${API_PUBLICA:-https://api-plaft.sulotec.com}"
 WEB_PUBLICA="${WEB_PUBLICA:-https://plaft.sulotec.com}"
 OCI_DIR="${OCI_DIR:-/opt/sulotec/plaft-oci}"
+ENVML="${ENVML:-/opt/sulotec/plaft-ml.env}"
 NS="${OCI_NAMESPACE:-axkjo5bh8iys}"; BUCKET="${OCI_BUCKET:-plaft-archivos}"; REGION="${OCI_REGION:-sa-santiago-1}"
 fallos=0; avisos=0
 ok()    { echo "  OK     $*"; }
@@ -16,6 +18,13 @@ aviso() { echo "  AVISO  $*"; avisos=$((avisos+1)); }
 salud() { docker inspect -f '{{.State.Health.Status}}' "$1" 2>/dev/null || echo ninguno; }
 codigo() { curl -s -m 15 -o /dev/null -w '%{http_code}' "$@" 2>/dev/null || true; }
 interno() { docker exec plaft-api wget -q -S -O /dev/null "http://127.0.0.1:8081$1" 2>&1 | awk '/HTTP\//{c=$2} END{print c+0}'; }
+# Codigo HTTP que obtiene plaft-api al llamar a una direccion interna (la IA solo se ve desde la red interna).
+# $1 = URL; con $2 = clave tambien envia la clave interna (ML_API_KEY, que ya vive en el entorno del contenedor).
+desde_api() {
+  local cmd='wget -q -S -O /dev/null "$URL"'
+  [ "${2:-}" = clave ] && cmd='wget -q -S -O /dev/null --header "X-Internal-Key: $ML_API_KEY" "$URL"'
+  docker exec -e URL="$1" plaft-api sh -c "$cmd" 2>&1 | awk '$1 ~ /^HTTP/ {c=$2} END{print c+0}'
+}
 TMP="$(mktemp -d)"; trap '[ -n "${TMP:-}" ] && [ -d "$TMP" ] && rm -rf "$TMP"' EXIT
 
 echo "== Contenedores"
@@ -36,6 +45,21 @@ echo "== Base de datos"
 dbpass="$(grep -E '^DB_PASSWORD=' /opt/sulotec/plaft.env 2>/dev/null | head -1 | cut -d= -f2- || true)"
 n="$(docker run --rm --network sulotec_data -e MYSQL_PWD="$dbpass" mysql:8.4 mysql -h mysql -uplaft -N -e "select count(*) from information_schema.tables where table_schema='plaft'" plaft 2>/dev/null || true)"
 if [ "${n:-0}" -ge 10 ] 2>/dev/null; then ok "la base 'plaft' tiene $n tablas"; else falla "la base 'plaft' tiene ${n:-0} tablas (se esperaban muchas mas)"; fi
+
+echo "== Servicio de IA"
+if [ -r "$ENVML" ]; then
+  if [ "$(salud plaft-ml)" = healthy ]; then ok "plaft-ml sano"; else falla "plaft-ml no esta sano ($(salud plaft-ml)); mira: docker logs plaft-ml"; fi
+  ruta="http://plaft-ml:8000/api/v1/vigilancia/estado"
+  c="$(desde_api "$ruta")"
+  case "$c" in 401|403) ok "la IA rechaza llamadas sin la clave interna (HTTP $c)";; *) falla "la IA respondio HTTP $c a una llamada sin clave (se esperaba 401)";; esac
+  c="$(desde_api "$ruta" clave)"
+  if [ "$c" = 200 ]; then ok "plaft-api le habla a la IA con la clave interna y la IA lee su base (HTTP 200)"; else falla "plaft-api no logra hablar con la IA (HTTP $c): revisa que ML_API_KEY de plaft.env sea la misma INTERNAL_API_KEY de plaft-ml.env"; fi
+  url="$(grep -E '^DATABASE_URL=' "$ENVML" | head -1 | cut -d= -f2- || true)"; clave="${url#*plaft_ml:}"; clave="${clave%%@*}"
+  n="$(docker run --rm --network sulotec_data -e PGPASSWORD="$clave" postgres:16 psql -h postgres -U plaft_ml -d plaft_ml -At -c "select count(*) from information_schema.tables where table_schema='public'" 2>/dev/null || true)"
+  if [ "${n:-0}" -ge 5 ] 2>/dev/null; then ok "la base 'plaft_ml' tiene $n tablas"; else falla "la base 'plaft_ml' tiene ${n:-0} tablas (¿falta restaurar-ml.sh?)"; fi
+else
+  echo "  (no instalado: PLAFT funciona sin IA. Para instalarla: preparar-ml.sh, restaurar-ml.sh y desplegar.sh)"
+fi
 
 echo "== Almacenamiento de denuncias (Oracle, bucket $BUCKET)"
 if [ -f "$OCI_DIR/config" ]; then

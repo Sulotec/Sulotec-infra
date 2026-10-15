@@ -1,10 +1,12 @@
-# PLAFT (Prevención de Lavado de Activos, repos Security-*): API y web. En el servidor vive en /data/apps/plaft.
+# PLAFT (Prevención de Lavado de Activos, repos Security-*): API, web y, opcional, el servicio de IA. En el servidor vive en /data/apps/plaft.
 # Cloudflare Tunnel (Public hostname):
 #   plaft.sulotec.com      -> http://plaft-web:3000
 #   api-plaft.sulotec.com  -> http://plaft-api:8081
 # Configuración y secretos (nunca en el repositorio): /opt/sulotec/plaft.env, lo crea deploy/preparar.sh.
 # La base es la MySQL compartida de la VM (red sulotec_data); no publica puertos.
 # La llave de Oracle Object Storage (svc-plaft) está en /opt/sulotec/plaft-oci y entra solo a plaft-api, en modo lectura.
+# El servicio de IA (ml) es opcional: solo se levanta con el perfil "ml" (desplegar.sh lo activa si existe /opt/sulotec/plaft-ml.env).
+# No tiene ruta en Cloudflare ni puertos publicados: solo plaft-api lo llama, con la clave interna, por la red sulotec_data.
 name: plaft
 
 services:
@@ -27,6 +29,24 @@ services:
       timeout: 5s
       retries: 10
       start_period: 90s
+
+  ml:
+    profiles: ["ml"]
+    image: plaft-ml:latest
+    container_name: plaft-ml
+    restart: unless-stopped
+    env_file: /opt/sulotec/plaft-ml.env
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    networks: [data]
+    mem_limit: 1g
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
 
   web:
     image: plaft-web:latest

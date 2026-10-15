@@ -31,6 +31,7 @@ pantallas responden "servicio no disponible". Se instala con el paso 8 y `desple
 | `deploy/probar.sh` | Pruebas de humo: salud, rutas cerradas, base, IA (si está instalada), almacenamiento, direcciones públicas y CORS |
 | `deploy/preparar-ml.sh` | Crea `/opt/sulotec/plaft-ml.env` de la IA (usa la misma clave interna que ya tiene `plaft.env`) |
 | `deploy/restaurar-ml.sh` | Carga en la base `plaft_ml` un respaldo `pg_dump -Fc` de `security_ml` (todo o nada) |
+| `deploy/cargar-datos.sh` | Carga las listas (colorimetría) y las sancionadas de la SBS desde los Excel; simula por defecto y respalda antes de escribir |
 
 ## Puesta en marcha (en este orden)
 
@@ -77,6 +78,18 @@ sudo bash /data/apps/plaft/probar.sh                               # ahora tambi
 `BORRAR_DESTINO=si sudo -E bash /data/apps/plaft/restaurar-ml.sh`. Sin respaldo no hace falta: la IA crea sus tablas vacías al arrancar (migraciones).
 Si la IA no arranca, `desplegar.sh` deja la API y la web como estaban y muestra los registros de `plaft-ml`.
 **Indira** necesita Ollama con el modelo `llama3.1:8b` (unos 8 GB de RAM): no está incluido; mientras `INDIRA_ENABLED=false` ese chat responde "no disponible".
+
+**9. Datos de listas (los Excel):** sube `Listas y Colorimetría.xlsx` y `Lista de empresas sancionadas.xlsx` al bucket `sulotec-backups`, carpeta `externos/plaft/`
+(consola de Oracle → Object Storage), y corre primero la simulación y, si el resumen se ve bien, la carga:
+
+```bash
+sudo bash /data/apps/plaft/cargar-datos.sh              # simula: no escribe nada
+sudo bash /data/apps/plaft/cargar-datos.sh --aplicar    # respalda la base (en /var/backups/sulotec) y escribe
+```
+
+Usa `tools/cargar_datos.py` del backend (se puede repetir: no duplica y nunca borra). Los Excel y el respaldo de la IA tienen datos de personas: **bórralos del bucket al terminar**.
+Pendiente: las figuras políticas (PEP) del servicio de IA. Esa parte de la herramienta (`politicos`) lee `GET /api/v1/personas?con_casos=true`, que el ML todavía no tiene;
+falta ese endpoint (o un exportador a JSON) en `Security-MachineLearning`.
 
 ## Operación
 

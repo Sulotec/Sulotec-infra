@@ -2,7 +2,8 @@
 # Restaura en la PostgreSQL de la VM el respaldo de la base del servicio de IA de PLAFT ("security_ml", hecho con pg_dump -Fc,
 # aunque venga de una PostgreSQL mas nueva que la del servidor). Es todo o nada: si algo falla, la base queda como estaba.
 #   sudo bash /data/apps/plaft/restaurar-ml.sh [archivo.dump]
-# Sin argumento descarga  externos/plaft/security_ml.dump  del bucket sulotec-backups (con la identidad de la VM).
+# Sin argumento descarga  externos/plaft/security_ml.dump  (o  security_ml.dump.sql: es el mismo formato)  del bucket sulotec-backups
+# con la identidad de la VM.
 # Antes: 1) sudo /opt/sulotec/scripts/new-project-db.sh postgres plaft_ml   2) sudo bash /data/apps/plaft/preparar-ml.sh
 # La base debe estar vacia; para reemplazar su contenido:  BORRAR_DESTINO=si sudo -E bash /data/apps/plaft/restaurar-ml.sh
 # Variables solo para pruebas: ENVFILE_ML, RED_DOCKER, PRUEBA.
@@ -13,7 +14,7 @@ set -euo pipefail
 ENVML="${ENVFILE_ML:-/opt/sulotec/plaft-ml.env}"
 RED="${RED_DOCKER:-sulotec_data}"
 BUCKET="${BACKUP_BUCKET:-sulotec-backups}"
-OBJETO="${OBJETO:-externos/plaft/security_ml.dump}"
+OBJETOS="${OBJETO:-externos/plaft/security_ml.dump externos/plaft/security_ml.dump.sql}"
 [ -r "$ENVML" ] || { echo "Falta $ENVML: primero corre preparar-ml.sh" >&2; exit 1; }
 TMP="$(mktemp -d)"; chmod 700 "$TMP"
 trap '[ -n "${TMP:-}" ] && [ -d "$TMP" ] && rm -rf "$TMP"' EXIT
@@ -26,12 +27,14 @@ echo "   destino: $(printf '%s' "$DESTINO" | sed -E 's#(://[^:]+:)[^@]*@#\1***@#
 
 archivo="${1:-}"
 if [ -z "$archivo" ]; then
-  echo "== Descargando $OBJETO del bucket $BUCKET"
-  oci os object get --auth instance_principal --bucket-name "$BUCKET" --name "$OBJETO" --file "$TMP/security_ml.dump" >/dev/null \
-    || { echo "No pude descargar $OBJETO. ¿Lo subiste al bucket con el prefijo externos/plaft/ ?" >&2; exit 1; }
-  archivo="$TMP/security_ml.dump"
+  echo "== Descargando el respaldo del bucket $BUCKET"
+  for obj in $OBJETOS; do
+    if oci os object get --auth instance_principal --bucket-name "$BUCKET" --name "$obj" --file "$TMP/security_ml.dump" >/dev/null 2>&1; then archivo="$TMP/security_ml.dump"; echo "   $obj"; break; fi
+  done
+  [ -n "$archivo" ] || { echo "No encontre el respaldo. Subelo al bucket $BUCKET con el prefijo externos/plaft/ (security_ml.dump o security_ml.dump.sql)." >&2; exit 1; }
 fi
 [ -f "$archivo" ] || { echo "No existe $archivo" >&2; exit 1; }
+[ "$(head -c 5 "$archivo")" = PGDMP ] || { echo "$archivo no es un respaldo de pg_dump -Fc (formato personalizado). Hazlo con: pg_dump -Fc -f security_ml.dump ..." >&2; exit 1; }
 echo "   respaldo: $(basename "$archivo") ($(du -h "$archivo" | cut -f1))"
 carpeta="$(cd "$(dirname "$archivo")" && pwd)"; nombre="$(basename "$archivo")"
 

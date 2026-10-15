@@ -57,6 +57,13 @@ if [ -r "$ENVML" ]; then
   url="$(grep -E '^DATABASE_URL=' "$ENVML" | head -1 | cut -d= -f2- || true)"; clave="${url#*plaft_ml:}"; clave="${clave%%@*}"
   n="$(docker run --rm --network sulotec_data -e PGPASSWORD="$clave" postgres:16 psql -h postgres -U plaft_ml -d plaft_ml -At -c "select count(*) from information_schema.tables where table_schema='public'" 2>/dev/null || true)"
   if [ "${n:-0}" -ge 5 ] 2>/dev/null; then ok "la base 'plaft_ml' tiene $n tablas"; else falla "la base 'plaft_ml' tiene ${n:-0} tablas (¿falta restaurar-ml.sh?)"; fi
+  if [ "$(grep -E '^INDIRA_ENABLED=' "$ENVML" | head -1 | cut -d= -f2- || true)" = true ]; then
+    if [ "$(salud plaft-ollama)" = healthy ]; then ok "plaft-ollama sano (Indira activa)"; else falla "plaft-ollama no esta sano ($(salud plaft-ollama)); mira: docker logs plaft-ollama"; fi
+    modelo="$(grep -E '^OLLAMA_MODEL=' "$ENVML" | head -1 | cut -d= -f2- || true)"
+    if docker exec plaft-ollama ollama list 2>/dev/null | awk 'NR>1 {print $1}' | grep -x "$modelo" >/dev/null; then ok "el modelo $modelo esta descargado"; else falla "falta el modelo $modelo (corre activar-indira.sh)"; fi
+  else
+    echo "  (Indira apagada. Para activarla: sudo bash /data/apps/plaft/activar-indira.sh)"
+  fi
 else
   echo "  (no instalado: PLAFT funciona sin IA. Para instalarla: preparar-ml.sh, restaurar-ml.sh y desplegar.sh)"
 fi

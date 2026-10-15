@@ -78,6 +78,7 @@ fi
 
 JWT="$(actual JWT_SECRET)"; [ -n "$JWT" ] || JWT="$(aleatorio 32)"
 MLKEY="$(actual ML_API_KEY)"; [ -n "$MLKEY" ] || MLKEY="$(aleatorio 24)"
+MLT="$(actual ML_CHATTIMEOUTSECONDS)"      # lo pone activar-indira.sh (cuanto espera el backend a Indira); se conserva
 
 install -m 640 -o root -g docker /dev/null "$ENV" 2>/dev/null || install -m 640 /dev/null "$ENV"
 {
@@ -90,6 +91,7 @@ install -m 640 -o root -g docker /dev/null "$ENV" 2>/dev/null || install -m 640 
   echo "WEB_URL=$WEB"
   echo "ML_BASE_URL=http://plaft-ml:8000"
   echo "ML_API_KEY=$MLKEY"
+  [ -z "$MLT" ] || echo "ML_CHATTIMEOUTSECONDS=$MLT"
   echo "STORAGE_PROVIDER=oracle"
   echo "OCI_REGION=sa-santiago-1"
   echo "OCI_NAMESPACE=axkjo5bh8iys"

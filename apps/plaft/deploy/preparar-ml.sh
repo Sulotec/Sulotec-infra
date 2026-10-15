@@ -48,6 +48,7 @@ fi
 
 echo "== Indira (el agente con modelo local; necesita Ollama y unos 8 GB de RAM)"
 act_ind="$(actual INDIRA_ENABLED)"; def_ind="n"; [ "$act_ind" = "true" ] && def_ind="s"
+MODELO="$(actual OLLAMA_MODEL)"; MODELO="${MODELO:-llama3.1:8b}"      # el modelo que dejo activar-indira.sh se conserva
 read -rp "¿Activar Indira ahora? [s/n, Enter = $def_ind]: " ind; ind="$(limpiar "${ind:-$def_ind}")"
 if [[ "$ind" =~ ^[sS]$ ]]; then INDIRA=true; else INDIRA=false; fi
 [ "$INDIRA" = false ] && echo "   Indira apagada: responde 'servicio no disponible'; la vigilancia de prensa, las personas y el scoring funcionan igual."
@@ -61,7 +62,7 @@ install -m 640 -o root -g docker /dev/null "$ENVML" 2>/dev/null || install -m 64
   echo "ALLOWED_ORIGINS=http://plaft-api:8081"
   echo "INDIRA_ENABLED=$INDIRA"
   echo "OLLAMA_BASE_URL=http://ollama:11434"
-  echo "OLLAMA_MODEL=llama3.1:8b"
+  echo "OLLAMA_MODEL=$MODELO"
   echo "SCRAPING_AL_ARRANCAR=false"
   echo "ZONA_HORARIA=America/Lima"
   echo "SCRAPING_HORA=6"

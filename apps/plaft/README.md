@@ -9,7 +9,8 @@ Navegador ──▶ Cloudflare Tunnel ──▶ plaft-web  (Next.js, puerto 3000
                                          ├──▶ MySQL de la VM (base "plaft", red sulotec_data)
                                          ├──▶ Bucket plaft-archivos (Object Storage; llave de svc-plaft)
                                          └──▶ plaft-ml  (IA: personas, prensa, Indira; opcional, solo red interna)
-                                                  └──▶ PostgreSQL de la VM (base "plaft_ml")
+                                                  ├──▶ PostgreSQL de la VM (base "plaft_ml")
+                                                  └──▶ plaft-ollama (modelo de lenguaje local; red "ia", solo lo ve plaft-ml)
 ```
 
 | Dirección | Va a |
@@ -31,7 +32,9 @@ pantallas responden "servicio no disponible". Se instala con el paso 8 y `desple
 | `deploy/probar.sh` | Pruebas de humo: salud, rutas cerradas, base, IA (si está instalada), almacenamiento, direcciones públicas y CORS |
 | `deploy/preparar-ml.sh` | Crea `/opt/sulotec/plaft-ml.env` de la IA (usa la misma clave interna que ya tiene `plaft.env`) |
 | `deploy/restaurar-ml.sh` | Carga en la base `plaft_ml` un respaldo `pg_dump -Fc` de `security_ml` (todo o nada) |
-| `deploy/cargar-datos.sh` | Carga las listas (colorimetría) y las sancionadas de la SBS desde los Excel; simula por defecto y respalda antes de escribir |
+| `deploy/cargar-datos.sh` | Carga las listas (colorimetría), las sancionadas de la SBS (Excel) y las figuras políticas con sus casos en prensa (base de la IA); simula por defecto y respalda antes de escribir |
+| `deploy/activar-indira.sh` | Instala Ollama (modelo local), baja el modelo, enciende a Indira y la deteccion de casos en prensa, y prueba una conversación real |
+| `deploy/importar-dev.sh` | Trae a este servidor la base de desarrollo de Aiven (el respaldo) en bases `aiven_*` y la compara con producción, sin tocarla |
 
 ## Puesta en marcha (en este orden)
 
@@ -77,7 +80,7 @@ sudo bash /data/apps/plaft/probar.sh                               # ahora tambi
 `sudo bash /data/apps/plaft/restaurar-ml.sh /ruta/security_ml.dump`. Si la base `plaft_ml` ya tiene tablas se niega a seguir; para reemplazarlas:
 `BORRAR_DESTINO=si sudo -E bash /data/apps/plaft/restaurar-ml.sh`. Sin respaldo no hace falta: la IA crea sus tablas vacías al arrancar (migraciones).
 Si la IA no arranca, `desplegar.sh` deja la API y la web como estaban y muestra los registros de `plaft-ml`.
-**Indira** necesita Ollama con el modelo `llama3.1:8b` (unos 8 GB de RAM): no está incluido; mientras `INDIRA_ENABLED=false` ese chat responde "no disponible".
+**Indira** y la detección de casos en prensa necesitan un modelo de lenguaje local: se instala con el paso 10; mientras `INDIRA_ENABLED=false` el chat responde "no disponible".
 
 **9. Datos de listas (los Excel):** sube `Listas y Colorimetría.xlsx` y `Lista de empresas sancionadas.xlsx` al bucket `sulotec-backups`, carpeta `externos/plaft/`
 (consola de Oracle → Object Storage), y corre primero la simulación y, si el resumen se ve bien, la carga:
@@ -87,9 +90,18 @@ sudo bash /data/apps/plaft/cargar-datos.sh              # simula: no escribe nad
 sudo bash /data/apps/plaft/cargar-datos.sh --aplicar    # respalda la base (en /var/backups/sulotec) y escribe
 ```
 
-Usa `tools/cargar_datos.py` del backend (se puede repetir: no duplica y nunca borra). Los Excel y el respaldo de la IA tienen datos de personas: **bórralos del bucket al terminar**.
-Pendiente: las figuras políticas (PEP) del servicio de IA. Esa parte de la herramienta (`politicos`) lee `GET /api/v1/personas?con_casos=true`, que el ML todavía no tiene;
-falta ese endpoint (o un exportador a JSON) en `Security-MachineLearning`.
+Usa `tools/cargar_datos.py` del backend (se puede repetir: no duplica y nunca borra). Si existe la IA, también exporta de `plaft_ml` las personas (menos las descartadas)
+con sus casos a un JSON y la herramienta las registra como entidades PEP con sus noticias "pendientes de revisión" (el ML no tiene un endpoint de listado, por eso se leen
+directo de su base). Para omitirlas: `SIN_POLITICOS=1`. Los Excel y el respaldo de la IA tienen datos de personas: guárdalos solo en el bucket privado.
+
+**10. Indira (modelo de lenguaje local):** `sudo bash /data/apps/plaft/activar-indira.sh`. Revisa memoria y disco, levanta Ollama (`plaft-ollama`, red `ia`),
+descarga `llama3.1:8b` (~5 GB), enciende `INDIRA_ENABLED`, sube a 300 s la espera del backend (`ML_CHATTIMEOUTSECONDS`) y hace una pregunta real, midiendo el tiempo.
+El modelo corre en CPU: una respuesta puede tardar de decenas de segundos a un par de minutos, y **Cloudflare corta lo que pase de 100 s**. Si la prueba pasa de 90 s, el script avisa;
+una alternativa más liviana y rápida: `MODELO=llama3.2:3b MEM_MIN=4000 sudo -E bash /data/apps/plaft/activar-indira.sh`. Apagarla: `sudo bash /data/apps/plaft/activar-indira.sh --apagar`.
+La vigilancia diaria de prensa corre a las 6:00 (hora de Lima) y usa el modelo un buen rato; Ollama tiene `cpu_shares` bajos para no quitarle CPU a las demás aplicaciones.
+
+**11. Base de desarrollo (Aiven):** `sudo bash /data/apps/plaft/importar-dev.sh`. Restaura el respaldo más reciente de `/data/backups/externos` en bases `aiven_<nombre>` de la MySQL de la VM
+(entran en el respaldo nocturno) y muestra, tabla por tabla, las filas de desarrollo contra las de `plaft`. No toca producción; con esa tabla se decide qué pasa a producción.
 
 ## Operación
 

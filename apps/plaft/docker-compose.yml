@@ -7,6 +7,8 @@
 # La llave de Oracle Object Storage (svc-plaft) está en /opt/sulotec/plaft-oci y entra solo a plaft-api, en modo lectura.
 # El servicio de IA (ml) es opcional: solo se levanta con el perfil "ml" (desplegar.sh lo activa si existe /opt/sulotec/plaft-ml.env).
 # No tiene ruta en Cloudflare ni puertos publicados: solo plaft-api lo llama, con la clave interna, por la red sulotec_data.
+# Indira y la deteccion de casos en prensa usan un modelo de lenguaje local (Ollama, perfil "ia"): corre en este servidor, ningun dato sale a terceros.
+# Ollama solo comparte la red "ia" con plaft-ml (ninguna otra aplicacion puede usarlo). Se instala con deploy/activar-indira.sh.
 name: plaft
 
 services:
@@ -39,7 +41,7 @@ services:
     read_only: true
     tmpfs: [/tmp]
     security_opt: ["no-new-privileges:true"]
-    networks: [data]
+    networks: [data, ia]
     mem_limit: 1g
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=3)"]
@@ -47,6 +49,33 @@ services:
       timeout: 5s
       retries: 10
       start_period: 40s
+
+  ollama:
+    profiles: ["ia"]
+    image: ollama/ollama:0.40.2
+    container_name: plaft-ollama
+    restart: unless-stopped
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+      OLLAMA_KEEP_ALIVE: "-1"
+      OLLAMA_NUM_PARALLEL: "1"
+      OLLAMA_MAX_LOADED_MODELS: "1"
+    volumes:
+      - /data/apps/plaft/ollama:/root/.ollama
+    read_only: true
+    tmpfs: ["/tmp:exec,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    networks: [ia]
+    mem_limit: 9g
+    memswap_limit: 9g
+    cpu_shares: 256
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
 
   web:
     image: plaft-web:latest
@@ -75,3 +104,4 @@ networks:
   data:
     external: true
     name: sulotec_data
+  ia: {}

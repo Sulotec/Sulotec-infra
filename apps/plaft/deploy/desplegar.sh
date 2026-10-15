@@ -22,8 +22,11 @@ ENVML="${ENVML:-/opt/sulotec/plaft-ml.env}"
 [ "$(id -u)" -eq 0 ] || { echo "Correlo con sudo: sudo bash $0" >&2; exit 1; }
 [ -r "$ENVFILE" ] || { echo "Falta $ENVFILE: primero corre preparar.sh" >&2; exit 1; }
 [ -f "$APP/docker-compose.yml" ] || { echo "Falta $APP/docker-compose.yml: primero se publica desde GitHub (apps/plaft)." >&2; exit 1; }
-ML=0; PERFIL=""
+ML=0; IA=0; PERFIL=""
 if [ -r "$ENVML" ]; then ML=1; PERFIL="--profile ml"; fi
+# Con Indira activa (activar-indira.sh) tambien corre Ollama, el modelo de lenguaje local
+if [ "$ML" = 1 ] && grep -q '^INDIRA_ENABLED=true' "$ENVML"; then IA=1; PERFIL="$PERFIL --profile ia"; fi
+servicios="api web"; [ "$ML" = 1 ] && servicios="$servicios ml"
 
 salud() { docker inspect -f '{{.State.Health.Status}}' "$1" 2>/dev/null || echo ninguno; }
 espera_sano() { local c="$1" i; for i in $(seq 1 "${2:-120}"); do [ "$(salud "$c")" = healthy ] && return 0; sleep 3; done; return 1; }
@@ -102,7 +105,9 @@ anterior_ml=""
 if [ "$ML" = 1 ]; then anterior_ml=$(docker image inspect -f '{{.Id}}' plaft-ml:latest 2>/dev/null || true); docker tag "plaft-ml:$cm" plaft-ml:latest; fi
 
 echo "== Levantando"
-(cd "$APP" && docker compose $PERFIL up -d --force-recreate)
+(cd "$APP" && docker compose $PERFIL up -d --force-recreate $servicios)
+# Ollama se levanta sin recrearlo: asi no se descarga de memoria el modelo en cada despliegue
+if [ "$IA" = 1 ]; then (cd "$APP" && docker compose $PERFIL up -d ollama); fi
 
 ok=1
 for contenedor in plaft-api plaft-web; do
@@ -117,7 +122,7 @@ if [ "$ok" -eq 0 ]; then
     [ -n "$anterior_api" ] && docker tag "$anterior_api" plaft-api:latest
     [ -n "$anterior_web" ] && docker tag "$anterior_web" plaft-web:latest
     [ -n "$anterior_ml" ] && docker tag "$anterior_ml" plaft-ml:latest
-    (cd "$APP" && docker compose $PERFIL up -d --force-recreate)
+    (cd "$APP" && docker compose $PERFIL up -d --force-recreate $servicios)
   fi
   exit 1
 fi
@@ -141,6 +146,10 @@ if [ "$ML" = 1 ]; then
       (cd "$APP" && docker compose $PERFIL rm -sf ml >/dev/null 2>&1) || true
     fi
   fi
+fi
+
+if [ "$IA" = 1 ]; then
+  if espera_sano plaft-ollama 60; then echo "   plaft-ollama: sano (Indira activa)"; else final=1; echo "   plaft-ollama: NO esta sano: Indira no respondera. Revisa: docker logs plaft-ollama" >&2; fi
 fi
 
 # Primer arranque con base nueva: la semilla ya se aplico; se apaga y se borra la clave inicial del archivo

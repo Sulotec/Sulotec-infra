@@ -35,6 +35,7 @@ pantallas responden "servicio no disponible". Se instala con el paso 8 y `desple
 | `deploy/cargar-datos.sh` | Carga las listas (colorimetría), las sancionadas de la SBS (Excel) y las figuras políticas con sus casos en prensa (base de la IA); simula por defecto y respalda antes de escribir |
 | `deploy/activar-indira.sh` | Instala Ollama (modelo local), baja el modelo, enciende a Indira y la deteccion de casos en prensa, y prueba una conversación real |
 | `deploy/pasar-dev-a-produccion.sh` | Pasa a `plaft` lo valioso de la copia de desarrollo (cuentas con sus roles, personas, listas, consultas, matrices); simula por defecto y respalda antes de escribir |
+| `deploy/cargar-operaciones-demo.sh` | Carga 10 registros ficticios en Operaciones (el script de demostración del backend) para probar ese módulo |
 | `deploy/importar-dev.sh` | Trae a este servidor la base de desarrollo de Aiven (el respaldo) en bases `aiven_*` y la compara con producción, sin tocarla |
 
 ## Puesta en marcha (en este orden)
@@ -107,6 +108,10 @@ La vigilancia diaria de prensa corre a las 6:00 (hora de Lima) y usa el modelo u
 **12. De la copia de desarrollo a producción:** `sudo bash /data/apps/plaft/pasar-dev-a-produccion.sh` (simula y muestra qué entraría, incluidas las cuentas con su rol) y, si se ve bien,
 con `--aplicar` (respalda `plaft` antes). Reconoce lo que ya existe por su clave natural (usuario o correo, tipo + número de documento, nombre de la lista) y agrega solo lo que falta, reconectando
 las relaciones con identificadores nuevos. **No pasa** las cuentas que usan una clave pública conocida (la de la semilla `Admin12345!`) ni, salvo `CON_DENUNCIAS=1`, las denuncias de prueba.
+
+**13. Datos de prueba para todos los módulos:** además de lo anterior, `sudo bash /data/apps/plaft/cargar-operaciones-demo.sh` carga los datos ficticios de Operaciones
+(`docs/operaciones-demo.sql` del backend; no se repite si ya hay). Para pasar **toda** la base de desarrollo (incluidas las personas y listas de demostración, las cuentas de prueba y las
+denuncias de prueba): `sudo env CON_DENUNCIAS=1 bash /data/apps/plaft/pasar-dev-a-produccion.sh --aplicar`. Antes de salir con clientes reales hay que desactivar las cuentas de prueba.
 
 ## Operación
 

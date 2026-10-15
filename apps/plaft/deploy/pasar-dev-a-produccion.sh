@@ -10,6 +10,9 @@
 #   CON_DENUNCIAS=1       tambien pasa las denuncias de prueba (apareceran como denuncias reales y sus archivos no estan en el bucket de produccion)
 #   SIN_USUARIOS=1        no pasa cuentas de usuario
 #   SIN_LISTAS_NUEVAS=1   no crea listas de desarrollo que no existan en produccion (sus apariciones se omiten)
+#   SIN_PERSONAS=1        no pasa las personas/empresas, las listas ni el historial de consultas de desarrollo (solo cuentas, matrices, etc.)
+#   OMITIR_USUARIOS=a,b   no pasa esas cuentas (por nombre de usuario, separadas por coma)
+# Para pasar opciones sin depender de la configuracion de sudo:  sudo env SIN_PERSONAS=1 OMITIR_USUARIOS=admin001 bash <este script> [--aplicar]
 # Las cuentas que usan una clave publica conocida (la de la semilla del repositorio, Admin12345!) NO se pasan: serian una puerta abierta.
 # Variables solo para pruebas: SULOTEC_DIR, RESPALDOS, BASE_PROD, BASE_DEV, RED_DOCKER, PRUEBA.
 set -euo pipefail
@@ -63,7 +66,7 @@ docker run --rm -v "$TMP/pkgs:/pkgs" python:3.12-slim \
 
 if [ "$APLICAR" = 1 ]; then echo "== Pasando datos (ESCRIBE en $PROD)"; else echo "== Simulacion (no escribe nada)"; fi
 docker run --rm -i --network "$RED" -v "$TMP/pkgs:/pkgs:ro" -e PYTHONPATH=/pkgs -e PYTHONDONTWRITEBYTECODE=1 \
-  -e MYSQL_ROOT_PASSWORD -e DEV -e PROD -e APLICAR -e CON_DENUNCIAS -e SIN_USUARIOS -e SIN_LISTAS_NUEVAS \
+  -e MYSQL_ROOT_PASSWORD -e DEV -e PROD -e APLICAR -e CON_DENUNCIAS -e SIN_USUARIOS -e SIN_LISTAS_NUEVAS -e SIN_PERSONAS -e OMITIR_USUARIOS \
   python:3.12-slim python - <<'PYEOF' || { echo "La herramienta fallo (arriba esta el detalle). Todo va en una sola transaccion: no se guardo nada." >&2; exit 1; }
 import os
 import re
@@ -79,6 +82,8 @@ APLICAR = os.environ.get("APLICAR") == "1"
 CON_DENUNCIAS = bool(os.environ.get("CON_DENUNCIAS"))
 SIN_USUARIOS = bool(os.environ.get("SIN_USUARIOS"))
 SIN_LISTAS_NUEVAS = bool(os.environ.get("SIN_LISTAS_NUEVAS"))
+SIN_PERSONAS = bool(os.environ.get("SIN_PERSONAS"))
+OMITIR_USUARIOS = {u.strip() for u in os.environ.get("OMITIR_USUARIOS", "").split(",") if u.strip()}
 CLAVES_PUBLICAS = ["Admin12345!", "Admin12345", "admin", "admin123", "12345678", "password"]
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -156,6 +161,8 @@ if SIN_USUARIOS:
     GRUPOS = [g for g in GRUPOS if g[0] != "usuarios"]
 if not CON_DENUNCIAS:
     GRUPOS = [g for g in GRUPOS if g[0] != "denuncias"]
+if SIN_PERSONAS:
+    GRUPOS = [g for g in GRUPOS if g[0] not in ("listas", "personas")]
 
 # tablas que se reconocen por su nombre sin importar tildes ni mayusculas
 POR_NOMBRE = {"pais", "tipo_documento", "lista_grupo", "tipo_lista", "scoring_ocupacion"}
@@ -241,7 +248,11 @@ for grupo, tablas in GRUPOS:
                 if PK[tabla] and id_dev is not None:
                     mapas[tabla][id_dev] = existente
                 continue
-            # 3) cuentas con una clave publica conocida no se pasan
+            # 3) cuentas omitidas a pedido, o con una clave publica conocida, no se pasan
+            if tabla == "usuarios" and d["usuario"] in OMITIR_USUARIOS:
+                omitidas += 1
+                usuarios_omitidos.append((d["usuario"], "omitida a pedido (OMITIR_USUARIOS)"))
+                continue
             if tabla == "usuarios":
                 debil = clave_debil(d.get("clave"))
                 if debil:

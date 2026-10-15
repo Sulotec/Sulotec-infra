@@ -79,8 +79,17 @@ if docker exec plaft-ollama ollama list | awk 'NR>1 {print $1}' | grep -x "$MODE
   echo "   ya esta descargado"
 else
   echo "   descargando (unos 5 GB; tarda varios minutos)"
-  t=""; [ -t 1 ] && t="-t"
-  docker exec $t plaft-ollama ollama pull "$MODELO" || { echo "No pude descargar el modelo $MODELO (¿el servidor tiene salida a internet?)." >&2; exit 1; }
+  # sin terminal interactiva: la barra de progreso de Ollama redibuja cientos de veces por segundo y congelaba la ventana web
+  p_out="$(mktemp)"
+  docker exec plaft-ollama ollama pull "$MODELO" >"$p_out" 2>&1 &
+  pid=$!
+  while kill -0 "$pid" 2>/dev/null; do
+    sleep 15
+    avance="$(grep -aoE 'pulling [0-9a-f]{12}: *[0-9]+%' "$p_out" | tail -1 || true)"
+    echo "   ... ${avance:-iniciando}"
+  done
+  if wait "$pid"; then echo "   descargado y verificado"; else echo "No pude descargar el modelo $MODELO (¿el servidor tiene salida a internet?). Detalle:" >&2; tail -c 400 "$p_out" >&2; rm -f "$p_out"; exit 1; fi
+  rm -f "$p_out"
 fi
 v_out="$(mktemp)"; v_err="$(mktemp)"
 con_puntos "cargando el modelo en memoria y midiendo la velocidad (1 a 3 minutos, sin mensajes; no cierres esta ventana) " "$v_out" "$v_err" docker exec plaft-ollama ollama run "$MODELO" --verbose "Responde con una sola frase corta: ¿que es el lavado de activos?"

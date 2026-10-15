@@ -34,6 +34,7 @@ pantallas responden "servicio no disponible". Se instala con el paso 8 y `desple
 | `deploy/restaurar-ml.sh` | Carga en la base `plaft_ml` un respaldo `pg_dump -Fc` de `security_ml` (todo o nada) |
 | `deploy/cargar-datos.sh` | Carga las listas (colorimetría), las sancionadas de la SBS (Excel) y las figuras políticas con sus casos en prensa (base de la IA); simula por defecto y respalda antes de escribir |
 | `deploy/activar-indira.sh` | Instala Ollama (modelo local), baja el modelo, enciende a Indira y la deteccion de casos en prensa, y prueba una conversación real |
+| `deploy/pasar-dev-a-produccion.sh` | Pasa a `plaft` lo valioso de la copia de desarrollo (cuentas con sus roles, personas, listas, consultas, matrices); simula por defecto y respalda antes de escribir |
 | `deploy/importar-dev.sh` | Trae a este servidor la base de desarrollo de Aiven (el respaldo) en bases `aiven_*` y la compara con producción, sin tocarla |
 
 ## Puesta en marcha (en este orden)
@@ -102,6 +103,10 @@ La vigilancia diaria de prensa corre a las 6:00 (hora de Lima) y usa el modelo u
 
 **11. Base de desarrollo (Aiven):** `sudo bash /data/apps/plaft/importar-dev.sh`. Restaura el respaldo más reciente de `/data/backups/externos` en bases `aiven_<nombre>` de la MySQL de la VM
 (entran en el respaldo nocturno) y muestra, tabla por tabla, las filas de desarrollo contra las de `plaft`. No toca producción; con esa tabla se decide qué pasa a producción.
+
+**12. De la copia de desarrollo a producción:** `sudo bash /data/apps/plaft/pasar-dev-a-produccion.sh` (simula y muestra qué entraría, incluidas las cuentas con su rol) y, si se ve bien,
+con `--aplicar` (respalda `plaft` antes). Reconoce lo que ya existe por su clave natural (usuario o correo, tipo + número de documento, nombre de la lista) y agrega solo lo que falta, reconectando
+las relaciones con identificadores nuevos. **No pasa** las cuentas que usan una clave pública conocida (la de la semilla `Admin12345!`) ni, salvo `CON_DENUNCIAS=1`, las denuncias de prueba.
 
 ## Operación
 

@@ -36,6 +36,7 @@ pantallas responden "servicio no disponible". Se instala con el paso 8 y `desple
 | `deploy/activar-indira.sh` | Instala Ollama (modelo local), baja el modelo, enciende a Indira y la deteccion de casos en prensa, y prueba una conversación real |
 | `deploy/pasar-dev-a-produccion.sh` | Pasa a `plaft` lo valioso de la copia de desarrollo (cuentas con sus roles, personas, listas, consultas, matrices); simula por defecto y respalda antes de escribir |
 | `deploy/cargar-operaciones-demo.sh` | Carga 10 registros ficticios en Operaciones (el script de demostración del backend) para probar ese módulo |
+| `deploy/asignar-empresa.sh` | Pone empresa a los usuarios que no tienen (o a los que se le indiquen): Operaciones filtra por la empresa del usuario y sin empresa no deja entrar; es solo para pruebas |
 | `deploy/ejemplos-para-probar.sh` | Muestra ejemplos reales de lo cargado (qué buscar, qué cuentas, denuncias, operaciones, matrices) para probar cada módulo de la web |
 | `deploy/importar-dev.sh` | Trae a este servidor la base de desarrollo de Aiven (el respaldo) en bases `aiven_*` y la compara con producción, sin tocarla |
 
@@ -111,7 +112,7 @@ con `--aplicar` (respalda `plaft` antes). Reconoce lo que ya existe por su clave
 las relaciones con identificadores nuevos. **No pasa** las cuentas que usan una clave pública conocida (la de la semilla `Admin12345!`) ni, salvo `CON_DENUNCIAS=1`, las denuncias de prueba.
 
 **13. Datos de prueba para todos los módulos:** además de lo anterior, `sudo bash /data/apps/plaft/cargar-operaciones-demo.sh` carga los datos ficticios de Operaciones
-(`docs/operaciones-demo.sql` del backend; no se repite si ya hay). Para pasar **toda** la base de desarrollo (incluidas las personas y listas de demostración, las cuentas de prueba y las
+(`docs/operaciones-demo.sql` del backend; no se repite si ya hay). Operaciones muestra solo los registros de la **empresa del usuario** que entró, y los de demostración quedan a nombre del usuario de menor id: si al abrir el módulo dice que no tienes empresa, o sale vacío, `sudo bash /data/apps/plaft/asignar-empresa.sh` (o con los nombres: `... asignar-empresa.sh admin001 lavado_pru`) les asigna la misma empresa. Para pasar **toda** la base de desarrollo (incluidas las personas y listas de demostración, las cuentas de prueba y las
 denuncias de prueba): `sudo env CON_DENUNCIAS=1 bash /data/apps/plaft/pasar-dev-a-produccion.sh --aplicar`. Antes de salir con clientes reales hay que desactivar las cuentas de prueba.
 
 ## Operación

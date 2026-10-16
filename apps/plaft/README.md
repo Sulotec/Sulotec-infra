@@ -37,6 +37,7 @@ pantallas responden "servicio no disponible". Se instala con el paso 8 y `desple
 | `deploy/pasar-dev-a-produccion.sh` | Pasa a `plaft` lo valioso de la copia de desarrollo (cuentas con sus roles, personas, listas, consultas, matrices); simula por defecto y respalda antes de escribir |
 | `deploy/cargar-operaciones-demo.sh` | Carga 10 registros ficticios en Operaciones (el script de demostración del backend) para probar ese módulo |
 | `deploy/asignar-empresa.sh` | Pone empresa a los usuarios que no tienen (o a los que se le indiquen): Operaciones filtra por la empresa del usuario y sin empresa no deja entrar; es solo para pruebas. Desde que la web tiene la pantalla **Administración** (lista de empresas y cuentas), cada cuenta nueva se crea ya con su empresa; este script queda para dejar de una vez a las cuentas viejas |
+| `deploy/resetear-clave.sh` | Pone una clave nueva a una cuenta (por ejemplo la del administrador inicial `superadmin` si no se guardó): `sudo bash /data/apps/plaft/resetear-clave.sh superadmin`. La genera en el servidor, la canjea contra la propia API (que la guarda cifrada) y la muestra **una sola vez** en pantalla; no pasa por el correo ni queda en archivos |
 | `deploy/ejemplos-para-probar.sh` | Muestra ejemplos reales de lo cargado (qué buscar, qué cuentas, denuncias, operaciones, matrices) para probar cada módulo de la web |
 | `deploy/importar-dev.sh` | Trae a este servidor la base de desarrollo de Aiven (el respaldo) en bases `aiven_*` y la compara con producción, sin tocarla |
 

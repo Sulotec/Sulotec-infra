@@ -3,7 +3,9 @@
 // y marca <html class="es-admin"> si la persona esta en el grupo "Administradores Generales" de Keycloak:
 // - Administradores Generales: ven todos los productos (incluido el Buscador Interno, que ademas
 //   esta protegido por Cloudflare Access y por la regla de sedes).
-// - Los demas: ven las demos y la invitacion a agendar una consulta.
+// - Los demas: ven sus productos contratados (rol `producto-<clave>` de Keycloak) con el boton "Abrir",
+//   los no contratados en gris, y las demos. "Abrir" lleva a la entrada con la cuenta Sulotec (`acceso`),
+//   asi el producto los reconoce sin pedir otro inicio de sesion.
 import Base from '../layouts/Base.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
@@ -12,6 +14,8 @@ import { soluciones, solucionesPublicas, estados } from '../data/soluciones';
 import { sitio } from '../data/sitio';
 
 const abrirDe = (s: (typeof soluciones)[number]) => s.url ?? (s.publicado ? `https://${s.subdominio}` : null);
+// Entrada del producto: con inicio unico (`acceso`) si lo tiene; si no, su direccion normal.
+const entrarDe = (s: (typeof soluciones)[number]) => s.acceso ?? abrirDe(s);
 const demos = solucionesPublicas.filter((s) => s.demo);
 const buscador = soluciones.find((s) => !s.publico);
 const asunto = encodeURIComponent('Quiero agendar una consulta con Sulotec');
@@ -28,7 +32,7 @@ const asunto = encodeURIComponent('Quiero agendar una consulta con Sulotec');
           <span class="rol solo-no-admin"><Icon name="users" size={16} />Cuenta Sulotec</span>
           <h1>Hola, <span data-cuenta-nombre></span></h1>
           <p class="solo-admin">Tienes acceso a todo el ecosistema Sulotec. Los productos privados te pedirán confirmar tu identidad antes de abrirse.</p>
-          <p class="solo-no-admin">Recorre las demos completas con datos de ejemplo. Cuando quieras usar un producto en tu empresa, agenda una consulta.</p>
+          <p class="solo-no-admin">Entra a los productos que tu empresa tiene contratados con esta misma cuenta y recorre las demos de los demás. Cuando quieras uno más, agenda una consulta.</p>
           <div class="acciones">
             {buscador && abrirDe(buscador) && (
               <a class="boton boton-blanco solo-admin" href={abrirDe(buscador)!} target="_blank" rel="noopener"><Icon name="search" size={18} />Abrir Buscador Interno</a>
@@ -82,7 +86,7 @@ const asunto = encodeURIComponent('Quiero agendar una consulta con Sulotec');
               <p>{s.descripcion}</p>
               <ul class="plataformas">{s.plataformas.map((p) => <li>{p}</li>)}</ul>
               <div class="pie">
-                {abrir && <a class="boton boton-azul" href={abrir} target="_blank" rel="noopener">Abrir<Icon name="arrow" size={18} /></a>}
+                {abrir && <a class="boton boton-azul" href={entrarDe(s)!} target="_blank" rel="noopener">Abrir<Icon name="arrow" size={18} /></a>}
                 {s.demo && <a class:list={['boton', abrir ? 'secundario' : 'boton-azul']} href={s.demo}>Ver demo</a>}
                 {!abrir && <span class="nota">Acceso directo muy pronto en {s.subdominio}</span>}
               </div>
@@ -94,16 +98,20 @@ const asunto = encodeURIComponent('Quiero agendar una consulta con Sulotec');
 
     <section class="contenedor bloque solo-no-admin" id="productos-demo" aria-labelledby="titulo-demos">
       <div class="titulo-bloque">
-        <h2 id="titulo-demos">Demos disponibles</h2>
-        <p>Con tu cuenta las recorres completas, sin límite de tiempo</p>
+        <h2 id="titulo-demos">Tus productos</h2>
+        <p>Los contratados se abren con esta misma cuenta; los demás, en demo</p>
       </div>
       <div class="productos tres">
         {demos.map((s, i) => (
-          <article class="producto revelar" style={`--i:${i}`}>
+          <article class="producto revelar" style={`--i:${i}`} data-producto={s.clave}>
             <div class="arriba"><span class="icono"><Icon name={s.icono} size={26} /></span><span class:list={['chip', s.estado]}>{estados[s.estado]}</span></div>
             <h3>{s.nombre}</h3>
             <p>{s.descripcion}</p>
-            <div class="pie"><a class="boton boton-azul" href={s.demo}>Abrir demo<Icon name="arrow" size={18} /></a></div>
+            <div class="pie">
+              {entrarDe(s) && <a class="boton boton-azul" data-abrir hidden href={entrarDe(s)!} target="_blank" rel="noopener">Abrir<Icon name="arrow" size={18} /></a>}
+              <a class="boton secundario" href={s.demo}>Ver demo</a>
+              <span class="nota" data-no-contratado>No contratado</span>
+            </div>
           </article>
         ))}
       </div>
@@ -125,7 +133,27 @@ const asunto = encodeURIComponent('Quiero agendar una consulta con Sulotec');
   <Footer />
 </Base>
 
+<script is:inline>
+  // Productos contratados: la cuenta Sulotec trae en su token el rol `producto-<clave>` por cada producto;
+  // los demas quedan en gris con su demo. Los administradores generales tienen todo (lo marca cuenta.js).
+  document.addEventListener('DOMContentLoaded', () => {
+    const s = window.sulotecCuenta?.sesion();
+    const roles = Array.isArray(s?.roles) ? s.roles : [];
+    const todo = roles.includes('administrador-general');
+    document.querySelectorAll('[data-producto]').forEach((el) => {
+      const contratado = todo || roles.includes(`producto-${el.dataset.producto}`);
+      el.classList.toggle('bloqueado', !contratado);
+      el.querySelectorAll('[data-abrir]').forEach((a) => { a.hidden = !contratado; });
+      el.querySelectorAll('[data-no-contratado]').forEach((n) => { n.hidden = contratado; });
+    });
+  });
+</script>
+
 <style>
+  .producto.bloqueado { opacity: .62; }
+  .producto.bloqueado .icono { background: var(--gris); }
+  .producto.bloqueado:hover { translate: none; box-shadow: var(--sombra); }
+  .producto.bloqueado:hover::before { transform: scaleX(0); }
   /* Bienvenida */
   .bienvenida { position: relative; overflow: hidden; background: radial-gradient(circle at 85% 20%, #2a5cab 0, transparent 45%), linear-gradient(135deg, var(--azul) 0%, var(--azul-oscuro) 100%); color: #fff; padding: 56px 0 120px; }
   .anillos { position: absolute; right: -140px; top: -160px; width: 560px; height: 560px; pointer-events: none; }

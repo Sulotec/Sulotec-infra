@@ -9,6 +9,7 @@ import type { IconName } from '../components/Icon.astro';
 export type Estado = 'produccion' | 'implementacion' | 'interno';
 
 export interface Solucion {
+  clave: string;      // identificador corto; el rol de Keycloak `producto-<clave>` dice quien tiene contratado el producto
   nombre: string;
   descripcion: string;
   estado: Estado;
@@ -19,10 +20,12 @@ export interface Solucion {
   publicado: boolean;
   url?: string;       // opcional: direccion actual del producto mientras se muda a su subdominio
   demo?: string;      // pagina de demo publica con datos de ejemplo (ej. '/demo/miradar360')
+  acceso?: string;    // entrada con la cuenta Sulotec (inicio unico): el boton "Abrir" de Mis productos lleva aqui
 }
 
 export const soluciones: Solucion[] = [
   {
+    clave: 'miradar360',
     nombre: 'MiRadar360',
     descripcion:
       'Torre de control para tus equipos en campo: rutas del día, estado de cada visita y monitoreo en tiempo real, con evidencias GPS y fotos desde el celular.',
@@ -35,6 +38,7 @@ export const soluciones: Solucion[] = [
     publicado: true,
   },
   {
+    clave: 'auditoria',
     nombre: 'Auditoría de Visitas',
     descripcion:
       'Comprueba que cada visita ocurrió de verdad: geocerca antifraude, fotos, firma digital y trabajo sin conexión, con un panel web para el seguimiento.',
@@ -45,8 +49,10 @@ export const soluciones: Solucion[] = [
     subdominio: 'auditoria.sulotec.com',
     demo: '/demo/auditoria',
     publicado: true, // en Oracle desde 2026-10-18 (kit apps/auditoria)
+    acceso: 'https://auditoria.sulotec.com/sso', // entra con la cuenta Sulotec, ya identificado con su empresa
   },
   {
+    clave: 'plaft',
     nombre: 'Prevención de Lavado de Activos',
     descripcion:
       'Plataforma de cumplimiento para apoyar la prevención del lavado de activos y del financiamiento del terrorismo (PLAFT), con trazabilidad y seguridad.',
@@ -59,6 +65,7 @@ export const soluciones: Solucion[] = [
     publicado: false,
   },
   {
+    clave: 'buscador',
     nombre: 'Buscador Interno',
     descripcion:
       'Encuentra en segundos la información de tu organización, con búsqueda centralizada y acceso solo para personal autorizado.',

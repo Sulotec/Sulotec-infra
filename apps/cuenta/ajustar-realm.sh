@@ -35,4 +35,41 @@ for alias in google microsoft; do
     echo "Ajuste: proveedor $alias de reserva eliminado"
   fi
 done
-echo "Ajustes aplicados. Registro libre: apagado. Recuperar contrasena: encendido."
+# 5) Inicio unico en los productos. Un rol `producto-<clave>` por producto (dice quien lo tiene contratado) y un grupo
+#    "Clientes - <producto>" que lo da: para dar acceso a una persona basta con ponerla en el grupo.
+rol_producto() {
+  local rol="$1" grupo="$2" desc="$3" id
+  if ! kc get "roles/$rol" -r sulotec >/dev/null 2>&1; then
+    kc create roles -r sulotec -s "name=$rol" -s "description=$desc" >/dev/null
+    echo "Ajuste: rol $rol creado"
+  fi
+  if ! kc get groups -r sulotec -q "search=$grupo" --fields name --format csv --noquotes | grep -qx "$grupo"; then
+    kc create groups -r sulotec -s "name=$grupo" >/dev/null
+    kc add-roles -r sulotec --gname "$grupo" --rolename "$rol" >/dev/null
+    echo "Ajuste: grupo '$grupo' creado con el rol $rol"
+  fi
+  # El portal debe ver el rol en el id_token (claim "roles") para habilitar el boton "Abrir"
+  id=$(kc get "roles/$rol" -r sulotec --fields id --format csv --noquotes)
+  kc create "clients/$cid/scope-mappings/realm" -r sulotec -b "[{\"id\":\"$id\",\"name\":\"$rol\"}]" >/dev/null 2>&1 || true
+}
+rol_producto producto-auditoria "Clientes - Auditoria de Visitas" "Tiene contratado Auditoria de Visitas (auditoria.sulotec.com)"
+rol_producto producto-miradar360 "Clientes - MiRadar 360" "Tiene contratado MiRadar 360"
+rol_producto producto-plaft "Clientes - PLAFT" "Tiene contratado PLAFT"
+
+# 6) Cliente "auditoria": el panel de Auditoria de Visitas entra con la cuenta Sulotec (OpenID Connect + PKCE, cliente publico).
+#    Su id_token lleva el correo (con el que el panel ubica al usuario) y los roles de producto/administrador general.
+if ! kc get clients -r sulotec -q clientId=auditoria --fields id --format csv --noquotes | grep -q .; then
+  kc create clients -r sulotec -b '{"clientId":"auditoria","name":"Auditoria de Visitas","description":"Panel web de Auditoria de Visitas (inicio unico con la cuenta Sulotec)","enabled":true,"publicClient":true,"standardFlowEnabled":true,"implicitFlowEnabled":false,"directAccessGrantsEnabled":false,"serviceAccountsEnabled":false,"fullScopeAllowed":false,"rootUrl":"https://auditoria.sulotec.com","baseUrl":"https://auditoria.sulotec.com","redirectUris":["https://auditoria.sulotec.com/sso","http://localhost:5173/sso"],"webOrigins":["https://auditoria.sulotec.com","http://localhost:5173"],"attributes":{"pkce.code.challenge.method":"S256","post.logout.redirect.uris":"https://auditoria.sulotec.com/*"}}' >/dev/null
+  echo "Ajuste: cliente auditoria creado"
+fi
+aid=$(kc get clients -r sulotec -q clientId=auditoria --fields id --format csv --noquotes)
+if ! kc get "clients/$aid/protocol-mappers/models" -r sulotec --fields name --format csv --noquotes | grep -qx roles; then
+  kc create "clients/$aid/protocol-mappers/models" -r sulotec -b '{"name":"roles","protocol":"openid-connect","protocolMapper":"oidc-usermodel-realm-role-mapper","config":{"claim.name":"roles","jsonType.label":"String","multivalued":"true","id.token.claim":"true","access.token.claim":"false","userinfo.token.claim":"false","introspection.token.claim":"false"}}' >/dev/null
+  echo "Ajuste: roles en el token de auditoria"
+fi
+for rol in administrador-general producto-auditoria; do
+  id=$(kc get "roles/$rol" -r sulotec --fields id --format csv --noquotes)
+  kc create "clients/$aid/scope-mappings/realm" -r sulotec -b "[{\"id\":\"$id\",\"name\":\"$rol\"}]" >/dev/null 2>&1 || true
+done
+
+echo "Ajustes aplicados. Registro libre: apagado. Recuperar contrasena: encendido. Inicio unico: cliente auditoria y roles producto-*."

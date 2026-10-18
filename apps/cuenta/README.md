@@ -130,3 +130,16 @@ Para apagar el inicio de sesión en todo el portal en una emergencia: en GitHub,
 - `realm/sulotec-realm.json` solo se importa la primera vez que arranca Keycloak. Los cambios posteriores se hacen en la consola maestra. Copia también el cambio al JSON para que el repositorio refleje la configuración real.
 - Los cambios del tema (`themes/sulotec`) se aplican solos: el workflow reinicia Keycloak.
 - Pendiente ISO 27001: crear un administrador maestro con nombre propio y OTP, y dejar `admin-temporal` solo para emergencias.
+
+---
+
+## Inicio único en los productos (desde 2026-10-18)
+
+`ajustar-realm.sh` crea, además, lo necesario para que los productos acepten la cuenta Sulotec:
+- Un rol `producto-<clave>` por producto (`producto-auditoria`, `producto-miradar360`, `producto-plaft`) y un grupo **Clientes - <producto>** que lo
+  otorga. El portal (`/mis-productos`) habilita el botón «Abrir» solo a quien tiene el rol; los demás ven el producto en gris con su demo.
+- El cliente público `auditoria` (PKCE, redirect `https://auditoria.sulotec.com/sso`), con el correo y los roles en su id_token.
+
+**Para dar acceso a Auditoría de Visitas a una persona:** en la consola, abre (o crea) su cuenta con el **mismo correo** que tiene su usuario en el
+panel de Auditoría, y agrégala al grupo **Clientes - Auditoria de Visitas**. Desde ese momento entra desde sulotec.com → Mis productos → Abrir, sin
+otra contraseña. Si su cuenta no está vinculada, el panel se lo dice y le ofrece entrar con usuario y contraseña.

@@ -133,3 +133,17 @@ que borrar: Render usaba `onrender.com`).
 - `ENFORCE_DEVICE_BINDING=true` (un celular por cuenta de campo) no se puede apagar en producción.
 - El ajuste de checksums del cliente S3 (`requestChecksumCalculation: WHEN_REQUIRED`) y `S3_FORCE_PATH_STYLE=true` son necesarios para Oracle; no quitarlos.
 - La geocodificación externa (`GEOCODING_WORKER_ENABLED`) queda apagada salvo autorización del banco: manda direcciones de clientes a un proveedor externo.
+
+## Inicio único con la cuenta Sulotec
+
+El panel acepta la cuenta de sulotec.com (Keycloak, `cuenta.sulotec.com`): desde **Mis productos**, el botón «Abrir» de Auditoría lleva a
+`https://auditoria.sulotec.com/sso`, el panel canjea el código con Keycloak y emite su propia sesión. **La cuenta Sulotec solo identifica a la
+persona**: el rol y la empresa salen siempre del usuario local de Auditoría que tenga **el mismo correo** (con el correo confirmado en Keycloak).
+Un universal local además necesita que la cuenta Sulotec sea de *Administrador General*. Los auditores de campo siguen entrando solo por la app.
+
+| Qué | Dónde |
+|---|---|
+| Variables | `/opt/sulotec/auditoria.env`: `SSO_ISSUER=https://cuenta.sulotec.com/realms/sulotec` y `SSO_CLIENT_ID=auditoria` (vacías = solo usuario y contraseña). `preparar.sh` las pregunta; si ya existía el archivo, agrégalas y corre `desplegar.sh` |
+| Cliente y roles en Keycloak | Los crea `apps/cuenta/ajustar-realm.sh` (workflow *Publicar cuenta*): cliente público `auditoria` (PKCE, redirect `https://auditoria.sulotec.com/sso`), rol `producto-auditoria` y grupo **Clientes - Auditoria de Visitas** |
+| Dar acceso a una persona | 1) En el panel de Auditoría, su usuario debe tener su **correo**. 2) En la consola de cuentas (`cuenta.sulotec.com/admin`), crear o abrir su cuenta con **ese mismo correo** y ponerla en el grupo **Clientes - Auditoria de Visitas** (así el portal le muestra «Abrir»). |
+| Comprobar | `curl -s https://api-auditoria.sulotec.com/api/auth/sso/config` debe responder `{"activo":true,...}`; en sulotec.com → Mis productos → Abrir Auditoría de Visitas entra sin pedir otra contraseña |

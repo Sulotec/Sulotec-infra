@@ -113,6 +113,11 @@ pregunta FRONTEND_URL "Direccion del panel web (sin barra final; varias separada
 pregunta EVIDENCIAS_BASE_URL "Direccion publica de la API (la app sube las fotos ahi)" "https://api-auditoria.sulotec.com"; API_URL="$R"
 
 echo
+echo "== Inicio unico con la cuenta Sulotec (cuenta.sulotec.com). Enter = valores de Sulotec; vacio = solo usuario y contrasena"
+pregunta SSO_ISSUER "SSO_ISSUER (emisor del realm)" "https://cuenta.sulotec.com/realms/sulotec"; SSO_ISSUER="$R"
+pregunta SSO_CLIENT_ID "SSO_CLIENT_ID (cliente de Keycloak)" "auditoria"; SSO_CLIENT_ID="$R"
+
+echo
 echo "== Almacenamiento de fotos (Oracle Object Storage, API compatible con S3)"
 pregunta S3_ENDPOINT "Endpoint" "https://axkjo5bh8iys.compat.objectstorage.sa-santiago-1.oraclecloud.com"; S3E="$R"
 pregunta S3_REGION "Region" "sa-santiago-1"; S3R="$R"
@@ -154,6 +159,8 @@ install -m 640 -o root -g docker /dev/null "$ENV" 2>/dev/null || install -m 640 
   echo "LOG_LEVEL=info"
   echo "EVIDENCIAS_BACKEND=s3"
   echo "EVIDENCIAS_BASE_URL=$API_URL"
+  echo "SSO_ISSUER=$SSO_ISSUER"
+  echo "SSO_CLIENT_ID=$SSO_CLIENT_ID"
   echo "S3_ENDPOINT=$S3E"
   echo "S3_REGION=$S3R"
   echo "S3_BUCKET=$S3B"

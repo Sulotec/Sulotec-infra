@@ -43,14 +43,14 @@ cd ~ && cat > pol-auditoria.json <<'EOF'
  "Allow group grp-storage-auditoria to read buckets in tenancy where target.bucket.name = 'huancayo-archivos'"]
 EOF
 GRP=$(oci iam group create --compartment-id "$OCI_TENANCY" --name grp-storage-auditoria --description "Fotos de Auditoria de Visitas: solo el bucket huancayo-archivos" --query data.id --raw-output)
-USR=$(oci iam user create --compartment-id "$OCI_TENANCY" --name svc-auditoria --description "Usuario de servicio de Auditoria de Visitas (auditoria-api)" --query data.id --raw-output)
+USR=$(oci iam user create --compartment-id "$OCI_TENANCY" --name svc-auditoria --email svc-auditoria@sulotec.com --description "Usuario de servicio de Auditoria de Visitas (auditoria-api)" --query data.id --raw-output)
 oci iam group add-user --group-id "$GRP" --user-id "$USR" >/dev/null
 oci iam policy create --compartment-id "$OCI_TENANCY" --name pol-storage-auditoria --description "svc-auditoria solo toca el bucket huancayo-archivos" --statements file://pol-auditoria.json >/dev/null
 rm -f pol-auditoria.json
 oci iam group list-users --group-id "$GRP" --query 'data[].name'
 ```
 
-Debe terminar mostrando `svc-auditoria`. Luego la clave S3 (el SECRETO se ve **una sola vez**: guárdalo en el gestor, nunca en un chat):
+Debe terminar mostrando `svc-auditoria` (Identity Domains exige un correo al crear el usuario; uno del dominio propio basta, no necesita buzón). Luego la clave S3 (el SECRETO se ve **una sola vez**: guárdalo en el gestor, nunca en un chat):
 
 ```
 USR=$(oci iam user list --all --query "data[?name=='svc-auditoria'].id | [0]" --raw-output); oci iam customer-secret-key create --user-id "$USR" --display-name auditoria-api-1 --query 'data.{ACCESO:id,SECRETO:key}' --output table

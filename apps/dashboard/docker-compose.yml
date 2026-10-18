@@ -1,0 +1,49 @@
+# Dashboard Empresarial (Informa Peru): API y web. En el servidor vive en /data/apps/dashboard.
+# Cloudflare Tunnel (Public hostname):
+#   dashboards.sulotec.com       -> http://dashboard-web:3000
+#   api-dashboards.sulotec.com   -> http://dashboard-api:3100
+# Configuracion y secretos (nunca en el repositorio): /opt/sulotec/dashboard.env, lo crea deploy/preparar.sh.
+# La base es la PostgreSQL 16 compartida de la VM (red sulotec_data); no publica puertos.
+name: dashboard
+
+services:
+  api:
+    image: dashboard-api:latest
+    container_name: dashboard-api
+    restart: unless-stopped
+    env_file: /opt/sulotec/dashboard.env
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    networks: [edge, data]
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3100/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  web:
+    image: dashboard-web:latest
+    container_name: dashboard-web
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    networks: [edge]
+    mem_limit: 384m
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+networks:
+  edge:
+    external: true
+    name: sulotec_edge
+  data:
+    external: true
+    name: sulotec_data

@@ -41,6 +41,8 @@ Para sacar todo lo del servidor en una sola pantalla: `sudo /opt/sulotec/scripts
 | | `JWT_SECRET` | Firma las sesiones del panel y de la app | Cambiar en el archivo y `desplegar.sh`; cierra todas las sesiones abiertas |
 | | `MFA_ENCRYPTION_KEY` | Ver arriba (la misma que tenía Render) | **No rotar** |
 | | `INITIAL_ADMIN_PASSWORD`, `INITIAL_UNIVERSAL_PASSWORD` | Solo el primer arranque con base vacía (crean al administrador de la empresa y al universal de Sulotec); con datos migrados la del administrador va vacía | Se pueden vaciar después del primer arranque; cada uno cambia su clave desde el panel |
+| `/opt/sulotec/dashboard.env` | `DB_PASSWORD` (clave del usuario `dashboard` de PostgreSQL) | Dashboard Empresarial → su base | Manual: ver «Rotar claves» en `apps/dashboard/README.md` |
+| | `JWT_SECRET` | Firma las sesiones | Cambiar en el archivo y `desplegar.sh`; cierra todas las sesiones abiertas |
 | `/opt/sulotec/cuenta.env` | `KC_DB_PASSWORD` (rol `keycloak`) | Keycloak → su base | `ALTER ROLE keycloak PASSWORD …` y cambiarla en el archivo; recrear el contenedor `cuenta` |
 | | `KC_BOOTSTRAP_ADMIN_USERNAME` / `KC_BOOTSTRAP_ADMIN_PASSWORD` | Administrador temporal de Keycloak (pendiente reemplazarlo por uno con nombre propio) | Desde la consola de Keycloak |
 | `/opt/sulotec/buscador.env` | `CF_ACCESS_CLIENT_ID` / `CF_ACCESS_CLIENT_SECRET` | Token de servicio de Cloudflare Access para llegar a la API de la oficina | Cloudflare One → Access → Service Auth → regenerar; `apps/buscador/deploy/preparar.sh` |

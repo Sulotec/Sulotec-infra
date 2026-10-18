@@ -14,7 +14,7 @@
 
 - **Sulotec** es el ecosistema SaaS de soluciones digitales de Informa Perú, en `sulotec.com`: un **portal** público (demos + cuentas) y **productos** en subdominios propios.
 - Todo corre en **una VM de Oracle Cloud** (ARM, Santiago de Chile) detrás de **Cloudflare** (túnel; la VM no abre ningún puerto). Nada depende de una PC.
-- **Productos hoy:** MiRadar 360 (en producción, ya en Oracle), PLAFT (prevención de lavado de activos; corre en Oracle con datos de prueba, sin clientes reales todavía), Buscador Interno (privado; la web está en Oracle y la API en la oficina) y Auditoría de Visitas / Caja Huancayo (plantilla multiempresa «Authentication Work»; **en Oracle desde el 2026-10-18** en `auditoria.sulotec.com` y `api-auditoria.sulotec.com`, kit `apps/auditoria/`; falta apagar Render y Aiven).
+- **Productos hoy:** MiRadar 360 (en producción, ya en Oracle), PLAFT (prevención de lavado de activos; corre en Oracle con datos de prueba, sin clientes reales todavía), Buscador Interno (privado; la web está en Oracle y la API en la oficina) y Auditoría de Visitas / Caja Huancayo (plantilla multiempresa «Authentication Work»; **en Oracle desde el 2026-10-18** en `auditoria.sulotec.com` y `api-auditoria.sulotec.com`, kit `apps/auditoria/`; falta apagar Render y Aiven) y Dashboard Empresarial (dashboards de Power BI por empresa de Informa Perú; **kit `apps/dashboard/` listo, falta correrlo en el servidor**, §4.6).
 - **Cada producto = un kit en `apps/<producto>/`** de este repositorio (compose + scripts) **+ su código en repositorios de GitHub.** MiRadar, PLAFT y Auditoría se publican con `desplegar.sh` en el servidor (construye desde `main` y vuelve a la versión anterior si algo falla); el portal, las cuentas y el Buscador, por workflow o por *pull* (§5).
 - **Seguridad:** buena base (túnel sin puertos, Access, respaldos con restauración probada, claves de bases rotadas el 2026-10-14), pero con **brechas conocidas** (§9): repositorios públicos, 2FA pendiente y, en PLAFT, la separación entre empresas aún no la hace cumplir el backend.
 - **El usuario no es especialista en infraestructura:** pasos cortos, comandos completos y listos para copiar, español simple (§2).
@@ -145,6 +145,7 @@ Personas ─HTTPS──▶ │ DNS · HTTPS · WAF · Access (quién entra) · T
 | `buscador` | Web del Buscador Interno (Next.js) | solo lectura, 512 MB |
 | `miradar-api` · `miradar-web` | MiRadar 360 (Node 24 + Socket.IO · nginx) | |
 | `auditoria-api` · `auditoria-web` | Auditoría de Visitas (Node 24 + Socket.IO · nginx) | plantilla multiempresa; en producción desde el 2026-10-18 (§4.5) |
+| `dashboard-api` · `dashboard-web` | Dashboard Empresarial (NestJS · Next.js) | kit listo, pendiente de correr en el servidor (§4.6) |
 | `plaft-api` · `plaft-web` | PLAFT (Spring Boot · Next.js) | memoria limitada, solo lectura, sin privilegios |
 | `plaft-ml` · `plaft-ollama` | IA de PLAFT (FastAPI · Ollama con `qwen2.5:7b`) | opcionales, red `ia`, sin ruta pública |
 
@@ -152,7 +153,7 @@ Personas ─HTTPS──▶ │ DNS · HTTPS · WAF · Access (quién entra) · T
 
 | Motor | Base | De quién |
 |---|---|---|
-| PostgreSQL 16 | `keycloak` · `miradar` · `plaft_ml` | cuentas del portal · MiRadar · IA de PLAFT |
+| PostgreSQL 16 | `keycloak` · `miradar` · `plaft_ml` · `dashboard` | cuentas del portal · MiRadar · IA de PLAFT · Dashboard Empresarial (por crear) |
 | MySQL 8.4 | `plaft` · `aiven_*` · `auditoria` | PLAFT · copias **temporales** de la base de desarrollo de PLAFT (restauradas el 2026-10-15) · Auditoría de Visitas |
 | SQL Server | (en la oficina) | Buscador Interno; **no corre en ARM** |
 
@@ -169,6 +170,7 @@ Personas ─HTTPS──▶ │ DNS · HTTPS · WAF · Access (quién entra) · T
 | `miradar360.sulotec.com` · `api-miradar360.sulotec.com` | `miradar-web:8080` · `miradar-api:4000` | público (cuentas propias de MiRadar) |
 | `plaft.sulotec.com` · `api-plaft.sulotec.com` | `plaft-web:3000` · `plaft-api:8081` | público (cuentas propias de PLAFT) |
 | `auditoria.sulotec.com` · `api-auditoria.sulotec.com` | `auditoria-web:8080` · `auditoria-api:4100` | público (cuentas propias de Auditoría; cada una pertenece a una empresa) |
+| `dashboards.sulotec.com` · `api-dashboards.sulotec.com` | `dashboard-web:3000` · `dashboard-api:3100` | público (cuentas propias de Dashboard Empresarial; por agregar al túnel) |
 
 ### 3.5 Identidad: quién es quién
 
@@ -239,6 +241,15 @@ Personas ─HTTPS──▶ │ DNS · HTTPS · WAF · Access (quién entra) · T
 - **Compartamos:** repo `AppCompartamos`; estado **(por confirmar)**.
 - **Fuera del ecosistema por ahora** (no tocar sin que el usuario lo pida): `Sistema-Tickets-TI`, `PlanillaFrontEd` y otros proyectos de Informa Perú de su PC.
 
+### 4.6 Dashboard Empresarial (Informa Perú) (`apps/dashboard`)
+- **Qué es:** portal donde las empresas clientes de Informa Perú ven sus dashboards de **Power BI** (y un enlace MEGA) por periodo (mes). Un administrador de Informa crea usuarios, asigna dashboards a cada empresa y agrega periodos; cada usuario de empresa ve solo los dashboards **asignados y activos** de **su** empresa (empresa tomada del token firmado en el servidor). Roles: `1` = administrador, `2` = cliente (con empresa).
+- **Código:** `Henry-InformaPeru/dashboard-empresarial-backend` (NestJS 12, TypeORM, arquitectura hexagonal) y `dashboard-empresarial-frontend` (Next.js 16, React 19, Tailwind 4). La web llama a la API con `NEXT_PUBLIC_API_URL`, que se fija **al compilar**.
+- **Cambio de base (decisión del usuario, 2026-10-18):** la base original es **SQL Server en el servidor de la oficina** y SQL Server no corre en ARM, así que el backend se pasó a **PostgreSQL 16** de la VM (base `dashboard`, esquemas `seguridad`, `reportes` y `comercial`, mismos nombres y ids; `db/schema.sql` en el repo del backend). Las claves de los usuarios (bcrypt) pasan tal cual: entran con las de siempre. El nombre de usuario sigue sin distinguir mayúsculas.
+- **Kit (listo, probado en local con datos ficticios):** [`apps/dashboard/`](apps/dashboard/README.md) con `docker-compose.yml` (`dashboard-api` :3100 y `dashboard-web` :3000), `preparar.sh`, `desplegar.sh`, `importar-datos.sh`, `crear-admin.sh`, `probar.sh` y `herramientas/exportar-sqlserver.ps1`. Direcciones: `dashboards.sulotec.com` y `api-dashboards.sulotec.com`.
+- **Migración de datos:** un script de PowerShell (solo `SELECT`, sin dependencias) se corre en la oficina, genera un `.sql` con todo y su huella SHA256; se sube a `sulotec-backups/externos/dashboard/` y `importar-datos.sh` lo carga en una sola transacción comprobando los totales fila por fila. El `.sql` tiene datos personales: se borra del bucket y de la PC al terminar.
+- **Probado (2026-10-18, en la laptop, base y datos ficticios, contra SQL Server Express real):** exportador, carga, 29 comprobaciones de la API (login sin distinguir mayúsculas, usuario inactivo, un cliente no ve lo de otra empresa, escrituras, CORS) y la web en modo solo lectura. **No probado:** el servidor de Oracle (ARM), el bucket, Cloudflare ni el SQL Server real de la oficina.
+- **Pendiente:** unir los PR (`feature/oracle-postgres` y `feature/oracle-docker`), correr el kit (README) y revisar con el administrador creado por `crear-admin.sh`; regla de límite de velocidad en Cloudflare para `/auth/login`; `rotar-claves.sh` aún no conoce este proyecto; los datos son reales: validar con legal el flujo transfronterizo (Santiago de Chile, §1.2).
+
 ## 5. Repositorios y cómo se publica cada cosa
 
 > **Hoy todos los repositorios son PÚBLICOS** (los documentos antiguos decían que `Sulotec-infra` era privado; ya no lo es). El servidor clona por HTTPS sin credenciales: pasarlos a privados exige antes **llaves de despliegue de solo lectura** en el servidor (§9).
@@ -250,6 +261,7 @@ Personas ─HTTPS──▶ │ DNS · HTTPS · WAF · Access (quién entra) · T
 | `jeliases-informaDev/Afacop-*`, `App-Afacop` | MiRadar 360 | `desplegar.sh` construye desde `main`; la app se compila con EAS |
 | `jeliases-informaDev/Security-*` | PLAFT | `desplegar.sh` construye desde `main` |
 | `jeliases-informaDev/Huancayo-Backend`, `CajaHuancayo-*` | Auditoría de Visitas | Kit `apps/auditoria`: `desplegar.sh` construye desde `main` (Dockerfiles en los repos); Render hasta el corte. La app Android con el workflow `apk.yml` (o EAS) |
+| `Henry-InformaPeru/dashboard-empresarial-backend`, `dashboard-empresarial-frontend` | Dashboard Empresarial | Kit `apps/dashboard`: `desplegar.sh` construye desde `main` (Dockerfiles en los repos); cambios por rama + Pull Request |
 | `jeliases-informaDev/InternalBuscador`, `internal-search-frontend` | Buscador anterior | Se retiran al mover el actualizador y apagar Vercel |
 
 **Cuentas de GitHub:** `jeliases-informaDev` (cuenta de desarrollo del usuario; es solo lectura en `buscador-interno`), `informaperu2-cmyk` (cuenta de la empresa, dueña de la organización `Sulotec`) y `irubio06dev` (compañero de desarrollo). Los programadores del Buscador tienen rol *Write* en su repositorio; los programadores externos **no** tienen acceso a `Sulotec-infra` (quien escribe ahí controla el servidor).
@@ -294,6 +306,8 @@ sudo rm -rf /tmp/sulotec-infra && sudo git clone --depth 1 https://github.com/Su
 | 2026-10-16 | PLAFT: raíz directo al login, rediseño, módulo de Operaciones, lista de empresas y pantalla de Administración; prueba de punta a punta con MySQL real y hallazgo de aislamiento entre empresas; `resetear-clave.sh`. Se une el arreglo del límite de largo del login (PR #24). MiRadar: selector de ubicación con mapa (PR #22). |
 | 2026-10-17/18 | Caja Huancayo: seguimiento tipo Life360, mapas y listas a escala, **modelo multiempresa** (plantilla «Authentication Work»: empresas con UUID, filtro central en el servidor, administrador universal, pruebas de acceso cruzado), fotos a bucket S3 y **kit `apps/auditoria`** con Dockerfiles. **Auditoría de Visitas migrada a Oracle** (datos de Aiven, bucket `huancayo-archivos`, `auditoria.sulotec.com`), portal publicado, APK v8. |
 
+| 2026-10-18 | **Dashboard Empresarial:** backend pasado de SQL Server a PostgreSQL (SQL Server no corre en ARM), Dockerfiles de API y web, kit `apps/dashboard` con exportador de SQL Server (PowerShell) e importador transaccional; probado en local con datos ficticios. Falta correrlo en Oracle con los datos reales. |
+
 ## 8. Decisiones tomadas (y por qué)
 
 1. **Oracle con Pay As You Go dentro de Always Free:** el upgrade era necesario para conseguir capacidad ARM; el costo real es US$ 0 y se fija un tope de US$ 260/mes.
@@ -320,6 +334,7 @@ sudo rm -rf /tmp/sulotec-infra && sudo git clone --depth 1 https://github.com/Su
 | **Alta** | **Rotar** lo que pasó por chats: SMTP, `Jwt:Key` y clave `irubio` del Buscador, tokens de RENIEC y de Vercel, `RRCC_API_KEY`; revisar el resto cada 90 días | Varios |
 | **Alta** | Antes de clientes: **desactivar cuentas de prueba** (`admin001`, `lavado_pru*`…), regla de **límite de velocidad** en Cloudflare para el login, política de privacidad y términos, ficha de datos personales (Ley 29733), validar con legal/SBS | PLAFT |
 | **Alta** | Indira **asíncrona** (Cloudflare corta a 100 s) | PLAFT |
+| **Alta** | **Correr el kit `apps/dashboard`** con los datos reales (exportar el SQL Server de la oficina, subir al bucket, importar, rutas del túnel), unir los PR `feature/oracle-postgres` y `feature/oracle-docker`, regla de límite de velocidad al login y añadir el proyecto a `rotar-claves.sh` | Dashboard Empresarial |
 | Media | La prueba gratis de **Aiven vence ~2026-10-18**: ya hay copia como `aiven_*`; apagar y borrar sus claves | PLAFT / MiRadar |
 | Media | MiRadar: confirmar el despliegue del selector de mapa; publicar la app 1.0.6; apagar Render y Backblaze; sacar la RRCC-API de ngrok | MiRadar |
 | Media | Buscador: túnel de Cloudflare en la oficina (apagar Funnel y Vercel), API desde el repo nuevo, IPv6 de sedes | Buscador |

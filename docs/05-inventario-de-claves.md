@@ -14,12 +14,13 @@ Qué secretos tiene la plataforma, dónde viven, cómo recuperarlos y cómo rota
 | Qué | Por qué | Dónde está hoy |
 |---|---|---|
 | `MFA_ENCRYPTION_KEY` de MiRadar | Cifra la verificación en dos pasos de cada usuario. Si cambia o se pierde, nadie puede usar su código. **No se rota.** | `/opt/sulotec/miradar.env` |
+| `MFA_ENCRYPTION_KEY` de Auditoría de Visitas | Lo mismo que la de MiRadar. Al migrar debe ser **la misma que tenía Render**. **No se rota.** | `/opt/sulotec/auditoria.env` |
 | Contraseñas de las cuentas de personas | Oracle (administradores), Cloudflare, GitHub (`jeliases-informaDev` y la organización `Sulotec`), Expo (`jeliasesinformaperu`), Google Play Console, los correos de los administradores y la cuenta de administrador de Keycloak | gestor de contraseñas |
 | Códigos de recuperación de esas cuentas | Para recuperarlas si se pierde el celular. Hoy la verificación en dos pasos **no está activada** en ellas (pendiente en `SEGURIDAD-ISO27001.md`) | gestor de contraseñas |
 | Clave de la RRCC-API (`RRCC_API_KEY`) | La custodia el dueño de esa API; si se pierde hay que pedir una nueva | `/opt/sulotec/miradar.env` |
 
-**Recuperable (se vuelve a generar rotando; conviene tenerla igual en el gestor):** claves de las bases, `JWT_SECRET`, clave S3 de
-`svc-miradar`, token del túnel de Cloudflare, token de servicio de Cloudflare Access del Buscador.
+**Recuperable (se vuelve a generar rotando; conviene tenerla igual en el gestor):** claves de las bases, `JWT_SECRET`, claves S3 de
+`svc-miradar` y `svc-auditoria`, token del túnel de Cloudflare, token de servicio de Cloudflare Access del Buscador.
 
 Para sacar todo lo del servidor en una sola pantalla: `sudo /opt/sulotec/scripts/mostrar-claves.sh` (pide confirmación, no escribe archivos).
 
@@ -35,6 +36,11 @@ Para sacar todo lo del servidor en una sola pantalla: `sudo /opt/sulotec/scripts
 | | `MFA_ENCRYPTION_KEY` | Ver arriba | **No rotar** |
 | | `RRCC_API_KEY` (y `MAPBOX_ACCESS_TOKEN` si se usa) | Servicios externos | Los entrega el dueño del servicio; `preparar.sh` los cambia |
 | | `INITIAL_ADMIN_PASSWORD` | Vacía a propósito: con datos migrados, rellenarla cambiaría la clave del administrador al arrancar | — |
+| `/opt/sulotec/auditoria.env` | `DATABASE_URL` (lleva la clave del usuario `auditoria` de MySQL) | Auditoría de Visitas → su base | `sudo /opt/sulotec/scripts/rotar-claves.sh auditoria` |
+| | `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` (clave S3 de `svc-auditoria`) | Fotos en el bucket `huancayo-archivos` | `apps/auditoria/deploy/rotar-s3.sh` (ver el README de Auditoría) |
+| | `JWT_SECRET` | Firma las sesiones del panel y de la app | Cambiar en el archivo y `desplegar.sh`; cierra todas las sesiones abiertas |
+| | `MFA_ENCRYPTION_KEY` | Ver arriba (la misma que tenía Render) | **No rotar** |
+| | `INITIAL_ADMIN_PASSWORD`, `INITIAL_UNIVERSAL_PASSWORD` | Solo el primer arranque con base vacía (crean al administrador de la empresa y al universal de Sulotec); con datos migrados la del administrador va vacía | Se pueden vaciar después del primer arranque; cada uno cambia su clave desde el panel |
 | `/opt/sulotec/cuenta.env` | `KC_DB_PASSWORD` (rol `keycloak`) | Keycloak → su base | `ALTER ROLE keycloak PASSWORD …` y cambiarla en el archivo; recrear el contenedor `cuenta` |
 | | `KC_BOOTSTRAP_ADMIN_USERNAME` / `KC_BOOTSTRAP_ADMIN_PASSWORD` | Administrador temporal de Keycloak (pendiente reemplazarlo por uno con nombre propio) | Desde la consola de Keycloak |
 | `/opt/sulotec/buscador.env` | `CF_ACCESS_CLIENT_ID` / `CF_ACCESS_CLIENT_SECRET` | Token de servicio de Cloudflare Access para llegar a la API de la oficina | Cloudflare One → Access → Service Auth → regenerar; `apps/buscador/deploy/preparar.sh` |
@@ -46,7 +52,7 @@ Para sacar todo lo del servidor en una sola pantalla: `sudo /opt/sulotec/scripts
 
 | Sistema | Qué secretos hay | Dónde |
 |---|---|---|
-| **Oracle Cloud** | Usuarios y administradores; usuario de servicio `svc-miradar` con su clave S3 (`miradar-api-2`); claves de API del CLI y de Terraform (`~/.oci`, `terraform.tfvars`); credenciales SMTP (Mi perfil → Tokens y claves) | Consola de Oracle / Cloud Shell |
+| **Oracle Cloud** | Usuarios y administradores; usuarios de servicio `svc-miradar` (clave S3 `miradar-api-2`) y `svc-auditoria` (clave S3 para `huancayo-archivos`); claves de API del CLI y de Terraform (`~/.oci`, `terraform.tfvars`); credenciales SMTP (Mi perfil → Tokens y claves) | Consola de Oracle / Cloud Shell |
 | **Cloudflare** | Cuenta, políticas de Access, tokens de servicio | Cloudflare One |
 | **GitHub** | Cuentas, secretos de Actions (token de Vercel para el front del Buscador), llaves de despliegue | GitHub → Settings |
 | **Expo (EAS)** y **Google Play** | Cuenta Expo; la llave de subida de Android la administra EAS | expo.dev / Play Console |
@@ -63,6 +69,8 @@ Para sacar todo lo del servidor en una sola pantalla: `sudo /opt/sulotec/scripts
 | `JWT_SECRET`, `MFA_ENCRYPTION_KEY` de MiRadar | Generadas en el servidor, nunca salieron de él | `MFA_ENCRYPTION_KEY` no se rota |
 | `RRCC_API_KEY` | — | Pasó por un chat; pedir una nueva al dueño de la API |
 | Claves de Render y Backblaze | — | Se anulan al borrar esos servicios |
+| Usuario `auditoria` de MySQL y clave S3 de `svc-auditoria` | Se crean en el corte de Auditoría de Visitas (octubre 2026) | Rotar a los 90 días con `rotar-claves.sh auditoria` y `apps/auditoria/deploy/rotar-s3.sh` |
+| Claves de Aiven (MySQL de la demo de Auditoría) | — | Se anulan al apagar Aiven tras el corte |
 | SMTP, `Jwt:Key`, `irubio`, token de RENIEC, token de Vercel, administrador temporal de Keycloak | — | Pasaron por chats; rotar |
 
 Política: rotar de inmediato cualquier secreto que se haya compartido por un chat o un correo, y revisar el resto cada 90 días.

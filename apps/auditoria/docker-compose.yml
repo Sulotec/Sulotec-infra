@@ -1,0 +1,39 @@
+# Auditoria de Visitas (plantilla "Authentication Work" de Sulotec; primer cliente: Caja Huancayo): API y panel web.
+# En el servidor vive en /data/apps/auditoria.
+# Cloudflare Tunnel (Public hostname):
+#   auditoria.sulotec.com      -> http://auditoria-web:8080
+#   api-auditoria.sulotec.com  -> http://auditoria-api:4100     (activa WebSockets: la app y el panel usan Socket.IO)
+# Configuracion y secretos (nunca en el repositorio): /opt/sulotec/auditoria.env, lo crea deploy/preparar.sh.
+# La base es la MySQL compartida de la VM (red sulotec_data); no publica puertos.
+# Las fotos van al bucket huancayo-archivos (Object Storage, API compatible con S3, llave de svc-auditoria), con prefijo por empresa.
+name: auditoria
+
+services:
+  api:
+    image: auditoria-api:latest
+    container_name: auditoria-api
+    restart: unless-stopped
+    env_file: /opt/sulotec/auditoria.env
+    read_only: true
+    tmpfs: [/tmp]        # los Excel que se cargan pasan un momento por /tmp
+    security_opt: ["no-new-privileges:true"]
+    networks: [edge, data]
+    mem_limit: 768m
+
+  web:
+    image: auditoria-web:latest
+    container_name: auditoria-web
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    networks: [edge]
+    mem_limit: 128m
+
+networks:
+  edge:
+    external: true
+    name: sulotec_edge
+  data:
+    external: true
+    name: sulotec_data

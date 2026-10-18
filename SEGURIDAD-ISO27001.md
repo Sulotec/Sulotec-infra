@@ -11,8 +11,8 @@ Usuarios → Cloudflare (DNS, SSL, WAF, Access) → Cloudflare Tunnel "sulotec" 
                                                                               ├─ cloudflared
                                                                               ├─ PostgreSQL 16  (/data/postgres)
                                                                               ├─ MySQL 8.4      (/data/mysql)
-                                                                              └─ apps (un compose por proyecto: portal, cuenta, buscador, miradar, plaft)
-Object Storage: sulotec-backups (copias diarias) · sulotec-archivos (archivos de las apps)
+                                                                              └─ apps (un compose por proyecto: portal, cuenta, buscador, miradar, plaft, auditoria)
+Object Storage: sulotec-backups (copias diarias) · sulotec-archivos (archivos de las apps) · miradar-archivos · plaft-archivos · huancayo-archivos (uno por producto, con usuario de servicio propio)
 ```
 
 ## Controles

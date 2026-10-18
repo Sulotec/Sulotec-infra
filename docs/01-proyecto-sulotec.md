@@ -13,7 +13,7 @@ Sulotec es el ecosistema SaaS de soluciones digitales de la empresa (sitio: **ht
 | Producto | Qué hace | Estado | Visibilidad | Dirección prevista |
 |---|---|---|---|---|
 | **MiRadar360** (antes AFACOP) | Torre de control de equipos en campo: rutas, visitas y evidencias GPS y fotos | En producción, **en Oracle desde 2026-10-14** | Público | `miradar360.sulotec.com` ✅ |
-| **Auditoría de Visitas** (Caja Huancayo) | Verifica visitas con geocerca, fotos, firma y trabajo sin conexión | En producción (Render) | Público | `auditoria.sulotec.com` |
+| **Auditoría de Visitas** (Caja Huancayo; plantilla multiempresa «Authentication Work») | Verifica visitas con geocerca, fotos, firma y trabajo sin conexión; cada empresa ve solo lo suyo | En producción (Render); **kit para Oracle listo** (`apps/auditoria`), corte pendiente | Público | `auditoria.sulotec.com` |
 | **Prevención de Lavado de Activos** | Cumplimiento PLAFT con trazabilidad | **En Oracle** con datos de prueba (aún sin clientes reales) | Público | `plaft.sulotec.com` ✅ |
 | **Buscador Interno** | Consultas internas de personas y empresas | **Nuevo front en Sulotec** | **Privado** (solo personal y sedes) | **`buscadorinterno.sulotec.com`** ✅ |
 
@@ -128,5 +128,5 @@ docs/          esta documentación
 | Media | 2FA en Gmail, Cloudflare, Oracle y GitHub; MFA en Access | [`SEGURIDAD-ISO27001.md`](../SEGURIDAD-ISO27001.md) |
 | Media | Reemplazar `admin-temporal` de Keycloak por un administrador con nombre propio y OTP | [`apps/cuenta/README.md`](../apps/cuenta/README.md) |
 | Baja | Fase 2 del Buscador: API en TypeScript | [buscador-interno](https://github.com/Sulotec/buscador-interno) |
-| Baja | Migrar MiRadar360 y Auditoría de Render/Vercel a sus subdominios | [4. Integración](04-integracion-de-proyectos.md) |
+| Media | Correr el corte de Auditoría de Visitas a Oracle con el kit (11 pasos) y apagar Render y Aiven | [`apps/auditoria/README.md`](../apps/auditoria/README.md) |
 | Baja | Prueba de restauración de respaldos; revisión legal Ley 29733 / SBS | [`SEGURIDAD-ISO27001.md`](../SEGURIDAD-ISO27001.md) |

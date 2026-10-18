@@ -28,6 +28,8 @@ Cuenta: `informaperu2@gmail.com` (pendiente: 2FA). Plan **Free**; Zero Trust Fre
 | `api-miradar360.sulotec.com` | `http://miradar-api:4000` | MiRadar 360 (API, con WebSockets) |
 | `plaft.sulotec.com` | `http://plaft-web:3000` | PLAFT (web) |
 | `api-plaft.sulotec.com` | `http://plaft-api:8081` | PLAFT (API) |
+| `auditoria.sulotec.com` | `http://auditoria-web:8080` | Auditoría de Visitas (web) — **agregar en el corte desde Render** |
+| `api-auditoria.sulotec.com` | `http://auditoria-api:4100` | Auditoría de Visitas (API, con WebSockets) — **agregar en el corte** |
 
 **Agregar una aplicación nueva:**
 1. Su contenedor debe estar en la red `sulotec_edge`, con un `container_name`.

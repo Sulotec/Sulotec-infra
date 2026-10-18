@@ -76,6 +76,9 @@ Además, **MiRadar** (PostgreSQL) y **PLAFT** (MySQL) tienen **cuentas propias**
 
 Ejemplo: mudar **Auditoría de Visitas** de Render a `auditoria.sulotec.com`.
 
+> **Hecho (2026-10-18):** el kit real de Auditoría está en [`apps/auditoria/`](../apps/auditoria/README.md) (compose, `preparar.sh`,
+> `migrar-datos.sh` para MySQL, `desplegar.sh`, `probar.sh`, `rotar-s3.sh`) y su README trae los 11 pasos del corte. Lo de abajo es la receta general.
+
 1. **Código:** repositorio privado en la organización (`Sulotec/auditoria`), sin secretos ni datos reales.
 2. **Base de datos:**
    ```bash

@@ -1,6 +1,6 @@
 # Sulotec — contexto del ecosistema (para continuar en otro chat)
 
-> **Actualizado: 2026-10-17.** Léelo completo antes de actuar. Si algo de aquí contradice lo que ves en el servidor o en el código, **manda lo que ves**: corrige este archivo en el mismo commit.
+> **Actualizado: 2026-10-18.** Léelo completo antes de actuar. Si algo de aquí contradice lo que ves en el servidor o en el código, **manda lo que ves**: corrige este archivo en el mismo commit.
 >
 > **Para un chat nuevo:** pega o adjunta este archivo y di *"Continúa desde donde quedamos"*. Para bajarlo:
 > `gh api repos/Sulotec/Sulotec-infra/contents/CONTEXTO-PARA-OTRO-CHAT.md -H "Accept: application/vnd.github.raw"`
@@ -14,8 +14,8 @@
 
 - **Sulotec** es el ecosistema SaaS de soluciones digitales de Informa Perú, en `sulotec.com`: un **portal** público (demos + cuentas) y **productos** en subdominios propios.
 - Todo corre en **una VM de Oracle Cloud** (ARM, Santiago de Chile) detrás de **Cloudflare** (túnel; la VM no abre ningún puerto). Nada depende de una PC.
-- **Productos hoy:** MiRadar 360 (en producción, ya en Oracle), PLAFT (prevención de lavado de activos; corre en Oracle con datos de prueba, sin clientes reales todavía), Buscador Interno (privado; la web está en Oracle y la API en la oficina) y Auditoría de Visitas / Caja Huancayo (aún en Render, por migrar).
-- **Cada producto = un kit en `apps/<producto>/`** de este repositorio (compose + scripts) **+ su código en repositorios de GitHub.** MiRadar y PLAFT se publican con `desplegar.sh` en el servidor (construye desde `main` y vuelve a la versión anterior si algo falla); el portal, las cuentas y el Buscador, por workflow o por *pull* (§5).
+- **Productos hoy:** MiRadar 360 (en producción, ya en Oracle), PLAFT (prevención de lavado de activos; corre en Oracle con datos de prueba, sin clientes reales todavía), Buscador Interno (privado; la web está en Oracle y la API en la oficina) y Auditoría de Visitas / Caja Huancayo (plantilla multiempresa «Authentication Work», ya con empresas y aislamiento en el servidor; **kit `apps/auditoria/` listo, corte a Oracle pendiente**: sigue en Render hasta correr los pasos del README).
+- **Cada producto = un kit en `apps/<producto>/`** de este repositorio (compose + scripts) **+ su código en repositorios de GitHub.** MiRadar, PLAFT y Auditoría se publican con `desplegar.sh` en el servidor (construye desde `main` y vuelve a la versión anterior si algo falla); el portal, las cuentas y el Buscador, por workflow o por *pull* (§5).
 - **Seguridad:** buena base (túnel sin puertos, Access, respaldos con restauración probada, claves de bases rotadas el 2026-10-14), pero con **brechas conocidas** (§9): repositorios públicos, 2FA pendiente y, en PLAFT, la separación entre empresas aún no la hace cumplir el backend.
 - **El usuario no es especialista en infraestructura:** pasos cortos, comandos completos y listos para copiar, español simple (§2).
 
@@ -53,7 +53,7 @@ Un **SaaS propio con marca Sulotec**, para ofrecer a empresas —en especial del
   7. **Los clientes no saben unos de otros.** Nadie elige ni ve "qué caja es": **iniciar sesión ya identifica a la empresa** (el usuario pertenece a una sola). Sin selector de empresa para los clientes, sin listas ni nombres de otros clientes en pantallas, API, correos ni errores (solo el Administrador Universal cambia de cliente). Motivo: conflictos de interés entre empresas y reglas de negocio distintas (por ejemplo, proveedores que no comparten).
   8. **Reglas de negocio y personalización por cliente, sin bifurcar el código:** cada empresa tiene sus reglas (flujos, validaciones, catálogos, proveedores, textos, marca). Se modelan como **configuración y extensiones por cliente** (parámetros, catálogos propios, reglas activables, integraciones por cliente) sobre una sola base de código; lo que de verdad sea distinto se aísla en módulos por cliente. Meta: ser SaaS y a la vez adaptarse a cada empresa.
 - **Propuesta de implementación (por confirmar con el usuario):** una **instalación compartida por producto** con `tenant_id` (UUID) en cada tabla, y la opción de una **instalación dedicada** (misma plantilla, otra base y otro subdominio) para clientes que la exijan (por ejemplo por la SBS); **Keycloak** como identidad única, con el `tenant_id` y los roles (`administrador-universal`, `administrador-cliente`…) dentro del token; y un **registro central de clientes** (UUID, nombre, productos contratados, configuración).
-- **Estado a 2026-10-18:** ningún producto lo cumple del todo. PLAFT: la separación por empresa pasó a aplicarse en el backend (PR del 2026-10-17, ver §4.3) pero usa id numérico, no UUID; Caja Huancayo: diagnóstico hecho (§4.5), **adaptación en pausa hasta entregar a Huancayo**; MiRadar y el Buscador se usan hoy con un solo cliente. Es el rumbo de todos los proyectos; el orden de adaptación se decide con el usuario.
+- **Estado a 2026-10-18:** ningún producto lo cumple del todo. PLAFT: la separación por empresa pasó a aplicarse en el backend (PR del 2026-10-17, ver §4.3) pero usa id numérico, no UUID; Caja Huancayo: **lo cumple desde el 2026-10-18** (tabla `empresas` con UUID, `empresa_id` en todas las tablas, filtro central en Prisma, rol UNIVERSAL con cambio de empresa auditado, pruebas de acceso cruzado, marca y reglas por empresa como datos; §4.5); MiRadar y el Buscador se usan hoy con un solo cliente. Es el rumbo de todos los proyectos; el orden de adaptación se decide con el usuario.
 
 ### 1.4 Cómo se ve "terminado" (camino propuesto; no todo está decidido por el usuario)
 
@@ -95,7 +95,7 @@ Personas ─HTTPS──▶ │ DNS · HTTPS · WAF · Access (quién entra) · T
                                    │ conexión SALIENTE desde la VM (sin puertos abiertos)
         ┌────────────── VM Oracle "sulotec-main" (ARM · Ubuntu · Docker) ───────────────┐
         │ red sulotec_edge:  cloudflared · portal · cuenta(Keycloak) · buscador          │
-        │                    miradar-web/api · plaft-web/api                             │
+        │                    miradar-web/api · plaft-web/api · auditoria-web/api         │
         │ red sulotec_data:  postgres 16 · mysql 8.4   (sin puertos publicados)          │
         │ red ia (PLAFT):    plaft-ml ◀──▶ plaft-ollama   (sin ruta pública)             │
         └──────────────┬───────────────────────────────────────────────┬────────────────┘
@@ -144,6 +144,7 @@ Personas ─HTTPS──▶ │ DNS · HTTPS · WAF · Access (quién entra) · T
 | `cuenta` | Keycloak 26.8 (cuenta.sulotec.com) | 1,5 GB |
 | `buscador` | Web del Buscador Interno (Next.js) | solo lectura, 512 MB |
 | `miradar-api` · `miradar-web` | MiRadar 360 (Node 24 + Socket.IO · nginx) | |
+| `auditoria-api` · `auditoria-web` | Auditoría de Visitas (Node 24 + Socket.IO · nginx) | plantilla multiempresa; **se levantan en el corte** (kit listo, §4.5) |
 | `plaft-api` · `plaft-web` | PLAFT (Spring Boot · Next.js) | memoria limitada, solo lectura, sin privilegios |
 | `plaft-ml` · `plaft-ollama` | IA de PLAFT (FastAPI · Ollama con `qwen2.5:7b`) | opcionales, red `ia`, sin ruta pública |
 
@@ -152,10 +153,10 @@ Personas ─HTTPS──▶ │ DNS · HTTPS · WAF · Access (quién entra) · T
 | Motor | Base | De quién |
 |---|---|---|
 | PostgreSQL 16 | `keycloak` · `miradar` · `plaft_ml` | cuentas del portal · MiRadar · IA de PLAFT |
-| MySQL 8.4 | `plaft` · `aiven_*` | PLAFT · copias **temporales** de la base de desarrollo de PLAFT (restauradas el 2026-10-15) |
+| MySQL 8.4 | `plaft` · `aiven_*` · `auditoria` (se crea en el corte) | PLAFT · copias **temporales** de la base de desarrollo de PLAFT (restauradas el 2026-10-15) · Auditoría de Visitas |
 | SQL Server | (en la oficina) | Buscador Interno; **no corre en ARM** |
 
-**Buckets de Object Storage** (privados, con versionado; los de producto con llave propia en el Vault): `sulotec-backups` (respaldos diarios y `externos/…`), `sulotec-archivos`, `miradar-archivos`, `plaft-archivos` y `huancayo-archivos`. Cada servicio usa **su propia identidad** (p. ej. `svc-miradar`, `svc-plaft`) con permiso solo sobre su bucket.
+**Buckets de Object Storage** (privados, con versionado; los de producto con llave propia en el Vault): `sulotec-backups` (respaldos diarios y `externos/…`), `sulotec-archivos`, `miradar-archivos`, `plaft-archivos` y `huancayo-archivos`. Cada servicio usa **su propia identidad** (p. ej. `svc-miradar`, `svc-plaft`, `svc-auditoria`) con permiso solo sobre su bucket.
 
 ### 3.4 Dominios y rutas del túnel
 
@@ -167,7 +168,7 @@ Personas ─HTTPS──▶ │ DNS · HTTPS · WAF · Access (quién entra) · T
 | `buscadorinterno.sulotec.com` | `buscador:3000` | Access + regla de sedes |
 | `miradar360.sulotec.com` · `api-miradar360.sulotec.com` | `miradar-web:8080` · `miradar-api:4000` | público (cuentas propias de MiRadar) |
 | `plaft.sulotec.com` · `api-plaft.sulotec.com` | `plaft-web:3000` · `plaft-api:8081` | público (cuentas propias de PLAFT) |
-| `auditoria` · `api-auditoria` | **(previsto)** Auditoría de Visitas | — |
+| `auditoria.sulotec.com` · `api-auditoria.sulotec.com` | `auditoria-web:8080` · `auditoria-api:4100` (**rutas por agregar en el corte**) | público (cuentas propias de Auditoría; cada una pertenece a una empresa) |
 
 ### 3.5 Identidad: quién es quién
 
@@ -224,12 +225,11 @@ Personas ─HTTPS──▶ │ DNS · HTTPS · WAF · Access (quién entra) · T
 - **Pendiente:** hoy la política temporal `Presentación` de Access deja pasar a todos → cambiarla a las sedes; túnel de Cloudflare en la oficina para la API (y apagar Tailscale Funnel y Vercel); mover el actualizador de la API a `Sulotec/buscador-interno` y replicar allí el MailKit; prefijos IPv6 de las sedes; script `004_menu_operador.sql`; fase 2 (API en TypeScript).
 
 ### 4.5 Auditoría de Visitas / Caja Huancayo, Compartamos y otros
-- **Auditoría de Visitas** (Caja Huancayo): verifica visitas con geocerca, fotos, firma y trabajo sin conexión. **Requisito (2026-10-17):** diseñarla desde el inicio como **plantilla multiempresa** (§1.3), para entregarla a otras cajas. Lo que sigue lo reportó el chat que trabaja ese código (2026-10-18), por encargo del usuario:
-  - **Decisiones del usuario (2026-10-18):** base **compartida** con `empresa_id`; el modelo de empresas va **antes** de migrar a Oracle; la plantilla se llamará por ahora **"Authentication Work"** (nombre provisional del producto/subdominio); **lo multiempresa queda en pausa hasta terminar la entrega a Huancayo.**
-  - **Diagnóstico:** hoy no existe el concepto de empresa (ni tabla ni `empresa_id`; ids consecutivos en expedientes, asignaciones y visitas), el token no lleva empresa, no hay rol universal, configuración/sockets/cachés son globales, las evidencias van a disco local sin prefijo, la marca "Caja Huancayo" y el formato de importación están en el código y no hay pruebas de acceso cruzado. Sí cumple: UUID en usuarios y evidencias, autenticación/roles/validación centralizados, auditoría, fotos nunca públicas y un solo punto de acceso a datos (Prisma) donde cabe el filtro central. Orden propuesto: modelo de aislamiento → tabla de empresas + `empresa_id` + empresa en el token + filtro central + pruebas cruzadas → bucket con prefijo por empresa y migración a la VM → marca y reglas por empresa como datos → administrador universal con cambio auditado → formatos de importación por empresa.
-  - **Código:** Node 24 (`engines` 24.19.x), Express + Prisma 7 + Socket.IO sobre **MySQL 8** (sirve la 8.4 de la VM); `npm start` corre `deploy:prepare` (`prisma migrate deploy` + alta del administrador) y luego `node src/server.js`; migraciones versionadas en `prisma/migrations`; hay `docker-compose.yml` y `render.yaml` de referencia; puerto por `PORT` (4100 en local). Panel web: Vite/React (la URL de la API se fija al compilar, `VITE_*`). App Android: Expo; la URL va incrustada (`EXPO_PUBLIC_API_URL`, hoy Render) y se compila con GitHub Actions (`.github/workflows/apk.yml`, firmada con clave de depuración; la de producción está en EAS): al migrar hay que recompilar apuntando a `api-auditoria.sulotec.com`. Tiempo real por Socket.IO (WebSockets por el túnel; con varios procesos hace falta un adaptador compartido). Geocodificación externa apagada por defecto (requiere autorización del banco).
-  - **Para el kit en Oracle:** evidencias (fotos/firmas) hoy en disco local (`EVIDENCIAS_DIR`, servidas por el backend con `EVIDENCIAS_BASE_URL`): **falta el adaptador S3** para `huancayo-archivos` antes de migrar (`storage.service.js` está aislado para eso). Variables de entorno (solo nombres): `NODE_ENV PORT DATABASE_URL JWT_SECRET MFA_ENCRYPTION_KEY INITIAL_ADMIN_USERNAME INITIAL_ADMIN_PASSWORD RESET_INITIAL_ADMIN REQUIRE_MFA MFA_EXEMPT_USERNAMES JWT_EXPIRES_IN JWT_FIELD_EXPIRES_IN JWT_ISSUER JWT_AUDIENCE MAX_LOGIN_FAILURES ACCOUNT_LOCK_MINUTES ENFORCE_DEVICE_BINDING` (no puede ser `false` en producción) `FRONTEND_URL CORS_ALLOW_ALL TRUST_PROXY LOG_LEVEL EVIDENCIAS_DIR EVIDENCIAS_BASE_URL GEOFENCE_RADIO_METROS GEOFENCE_PRECISION_MAXIMA_METROS PERMITIR_AUTOASIGNACION TRACKING_RETENCION_DIAS GEOCODING_WORKER_ENABLED GEOCODING_PROVIDER` (+ `MAPBOX_ACCESS_TOKEN` opcional, `DATABASE_SSL_CA` si la base exige TLS, `DATABASE_CONNECT_TIMEOUT_MS`). Misma trampa que MiRadar: `MFA_ENCRYPTION_KEY` debe conservarse.
-  - **Ojo:** la demo actual usa Render + una MySQL de **Aiven**; si es la misma cuenta cuya prueba vence ~2026-10-18, la demo de Huancayo se cae: **confirmar**. Repos `jeliases-informaDev/Huancayo-Backend`, `CajaHuancayo-App` y `CajaHuancayo-Web`. **Aún en Render; por migrar** siguiendo la receta de `docs/04` §4.5. El bucket `huancayo-archivos` ya existe.
+- **Auditoría de Visitas** (Caja Huancayo): verifica visitas con geocerca, fotos, firma y trabajo sin conexión. Es la **plantilla multiempresa «Authentication Work»** de Sulotec (§1.3), para entregarla a otras cajas y negocios. Repos `jeliases-informaDev/Huancayo-Backend` (Node 24 `engines` 24.19.x, Express + Prisma 7 + Socket.IO sobre **MySQL 8**; `npm start` = `prisma migrate deploy` + alta de empresa/administrador + servidor; puerto `PORT`, 4100), `CajaHuancayo-Web` (Vite/React; la URL de la API se fija al compilar con `VITE_API_URL`) y `CajaHuancayo-App` (Expo; URL incrustada con `EXPO_PUBLIC_API_URL`; APK con GitHub Actions `apk.yml`, firma de depuración; la de producción en EAS). Tiempo real por Socket.IO (WebSockets por el túnel; con varios procesos haría falta un adaptador compartido). Geocodificación externa apagada por defecto (requiere autorización del banco).
+  - **Hecho (2026-10-18, PRs unidos en `main`):** tabla `empresas` (UUID, slug, estado, reglas y marca como datos), `empresa_id` en todas las tablas de datos, filtro central en Prisma (sin contexto de empresa la consulta **falla**, no devuelve todo), empresa tomada del usuario verificado en la base (nunca de la petición), rol `UNIVERSAL` de Sulotec (sin empresa; elige con la cabecera `X-Empresa-Id`, validada y auditada), pruebas automáticas de acceso cruzado (15/15), fotos con prefijo `empresa/<id>/` y **adaptador S3 para Oracle** (`EVIDENCIAS_BACKEND=s3`, `forcePathStyle`, checksums `WHEN_REQUIRED`; probado de punta a punta contra un S3 local con autenticación, no todavía contra el bucket real), ficha Word y política de privacidad por empresa, formatos de importación por empresa (CORE_262 de Caja Huancayo / SIMPLE). Panel: página `/empresas` para el universal, marca por empresa, login genérico «Sulotec · Authentication Work». Además: seguimiento tipo Life360 (llegadas/salidas, batería, movimiento, recorrido), mapas rediseñados y listas paginadas (preparado para escalar).
+  - **Kit en Oracle (listo, 2026-10-18):** [`apps/auditoria/`](apps/auditoria/README.md): `docker-compose.yml` (`auditoria-api` :4100 + `auditoria-web` :8080, solo lectura, redes `sulotec_edge`/`sulotec_data`), `preparar.sh` (crea `/opt/sulotec/auditoria.env` y comprueba que entra a la base; variables solo por nombre: `DATABASE_URL JWT_SECRET MFA_ENCRYPTION_KEY INITIAL_ADMIN_USERNAME INITIAL_ADMIN_PASSWORD RESET_INITIAL_ADMIN EMPRESA_INICIAL_NOMBRE INITIAL_UNIVERSAL_USERNAME INITIAL_UNIVERSAL_PASSWORD REQUIRE_MFA MFA_EXEMPT_USERNAMES JWT_* MAX_LOGIN_FAILURES ACCOUNT_LOCK_MINUTES ENFORCE_DEVICE_BINDING FRONTEND_URL CORS_ALLOW_ALL TRUST_PROXY LOG_LEVEL EVIDENCIAS_BACKEND=s3 EVIDENCIAS_BASE_URL S3_ENDPOINT S3_REGION S3_BUCKET S3_ACCESS_KEY_ID S3_SECRET_ACCESS_KEY S3_FORCE_PATH_STYLE GEOFENCE_RADIO_METROS GEOFENCE_PRECISION_MAXIMA_METROS PERMITIR_AUTOASIGNACION TRACKING_RETENCION_DIAS GEOCODING_WORKER_ENABLED GEOCODING_PROVIDER` + `MAPBOX_ACCESS_TOKEN` opcional), `migrar-datos.sh` (Aiven → MySQL de la VM con `mysqldump`, compara tabla por tabla; `SOLO_COMPARAR=1`), `desplegar.sh` (construye desde `main` con los `Dockerfile` de los repos; el panel con `VITE_API_URL=https://api-auditoria.sulotec.com`; vuelve atrás si falla), `probar.sh` (salud, bucket con `scripts/probar-almacenamiento.js`, rutas públicas, CORS) y `rotar-s3.sh`. Imágenes probadas en la laptop (x64): la API arranca en modo solo lectura y aplica migraciones; el panel lleva la URL nueva.
+  - **Corte pendiente (lo corre el usuario; 11 pasos en el README del kit):** usuario `svc-auditoria` + llave S3 para `huancayo-archivos` (el bucket ya existe) → copiar el kit → `new-project-db.sh mysql auditoria` → `preparar.sh` (misma `MFA_ENCRYPTION_KEY` de Render; clave del administrador vacía con datos migrados) → `migrar-datos.sh` → `desplegar.sh` → rutas del túnel `auditoria` y `api-auditoria` → `probar.sh` → APK nuevo (el workflow ya apunta a `api-auditoria.sulotec.com`; también `eas.json`) → apagar Render y Aiven, `publicado: true` en `soluciones.ts`. Las fotos de Render no se copian: el plan gratis no tenía disco y se perdían en cada reinicio. Pendiente de probar: bucket real de Oracle (lo hace `probar.sh`) y la app en un celular real.
+  - **Trampas:** `MFA_ENCRYPTION_KEY` debe ser la de Render; con datos migrados `INITIAL_ADMIN_PASSWORD` va vacía (si no, el arranque cambia la clave del administrador que nunca entró y le borra el MFA); `ENFORCE_DEVICE_BINDING` no puede ser `false` en producción; `EVIDENCIAS_BACKEND=s3` exige las cinco `S3_*`; Cloudflare corta a los 100 s (la importación de Excel ya corre en segundo plano). `render.yaml` queda en los repos solo como referencia hasta apagar Render.
 - **Compartamos:** repo `AppCompartamos`; estado **(por confirmar)**.
 - **Fuera del ecosistema por ahora** (no tocar sin que el usuario lo pida): `Sistema-Tickets-TI`, `PlanillaFrontEd` y otros proyectos de Informa Perú de su PC.
 
@@ -243,7 +243,7 @@ Personas ─HTTPS──▶ │ DNS · HTTPS · WAF · Access (quién entra) · T
 | `Sulotec/buscador-interno` | Buscador: `web/` y `api/` | El servidor lo **lee** cada 2 min (web). La API de la oficina aún se actualiza desde `jeliases-informaDev/InternalBuscador` |
 | `jeliases-informaDev/Afacop-*`, `App-Afacop` | MiRadar 360 | `desplegar.sh` construye desde `main`; la app se compila con EAS |
 | `jeliases-informaDev/Security-*` | PLAFT | `desplegar.sh` construye desde `main` |
-| `jeliases-informaDev/Huancayo-Backend`, `CajaHuancayo-*` | Auditoría de Visitas | Render (por ahora) |
+| `jeliases-informaDev/Huancayo-Backend`, `CajaHuancayo-*` | Auditoría de Visitas | Kit `apps/auditoria`: `desplegar.sh` construye desde `main` (Dockerfiles en los repos); Render hasta el corte. La app Android con el workflow `apk.yml` (o EAS) |
 | `jeliases-informaDev/InternalBuscador`, `internal-search-frontend` | Buscador anterior | Se retiran al mover el actualizador y apagar Vercel |
 
 **Cuentas de GitHub:** `jeliases-informaDev` (cuenta de desarrollo del usuario; es solo lectura en `buscador-interno`), `informaperu2-cmyk` (cuenta de la empresa, dueña de la organización `Sulotec`) y `irubio06dev` (compañero de desarrollo). Los programadores del Buscador tienen rol *Write* en su repositorio; los programadores externos **no** tienen acceso a `Sulotec-infra` (quien escribe ahí controla el servidor).
@@ -260,7 +260,7 @@ sudo rm -rf /tmp/sulotec-infra && sudo git clone --depth 1 https://github.com/Su
 
 | Quiero… | Comando (en el servidor) |
 |---|---|
-| Publicar PLAFT / MiRadar | `sudo bash /data/apps/plaft/desplegar.sh` · `sudo bash /data/apps/miradar/desplegar.sh` |
+| Publicar PLAFT / MiRadar / Auditoría | `sudo bash /data/apps/plaft/desplegar.sh` · `sudo bash /data/apps/miradar/desplegar.sh` · `sudo bash /data/apps/auditoria/desplegar.sh` |
 | Probar un producto | `sudo bash /data/apps/<producto>/probar.sh` |
 | Ver registros | `docker logs --tail 50 <contenedor>` (p. ej. `plaft-api`, `miradar-api`) |
 | Qué hay corriendo y su salud | `docker ps` |
@@ -286,6 +286,7 @@ sudo rm -rf /tmp/sulotec-infra && sudo git clone --depth 1 https://github.com/Su
 | 2026-10-14 | **MiRadar migrado a Oracle** (datos de Render, archivos de Backblaze). Ronda de seguridad: claves de bases y S3 rotadas, restauración probada, inventario de claves. **Primer despliegue de PLAFT.** |
 | 2026-10-15 | PLAFT: servicio de IA (ML + Ollama/Indira), carga de listas y sancionadas, importación de la base de desarrollo (Aiven) y paso a producción para pruebas. MiRadar: arreglo de asesores y ubicación. |
 | 2026-10-16 | PLAFT: raíz directo al login, rediseño, módulo de Operaciones, lista de empresas y pantalla de Administración; prueba de punta a punta con MySQL real y hallazgo de aislamiento entre empresas; `resetear-clave.sh`. Se une el arreglo del límite de largo del login (PR #24). MiRadar: selector de ubicación con mapa (PR #22). |
+| 2026-10-17/18 | Caja Huancayo: seguimiento tipo Life360, mapas y listas a escala, **modelo multiempresa** (plantilla «Authentication Work»: empresas con UUID, filtro central en el servidor, administrador universal, pruebas de acceso cruzado), fotos a bucket S3 y **kit `apps/auditoria`** con Dockerfiles para migrar de Render/Aiven a Oracle (corte pendiente, lo corre el usuario). |
 
 ## 8. Decisiones tomadas (y por qué)
 
@@ -305,7 +306,8 @@ sudo rm -rf /tmp/sulotec-infra && sudo git clone --depth 1 https://github.com/Su
 
 | Prioridad | Pendiente | Producto |
 |---|---|---|
-| **Alta** | **Definir y aplicar el modelo multiempresa de §1.3** (clientes con UUID, Administrador Universal, instalación compartida o dedicada, Keycloak con `tenant_id`): empezar por la plantilla de Caja Huancayo y reforzar PLAFT; luego MiRadar y el Buscador | Todos |
+| **Alta** | **Aplicar el modelo multiempresa de §1.3** al resto de productos: Caja Huancayo ya lo cumple (2026-10-18); reforzar PLAFT (ids UUID), luego MiRadar y el Buscador; Keycloak con `tenant_id` sigue como objetivo | Todos |
+| **Alta** | **Correr el corte de Auditoría de Visitas a Oracle** con [`apps/auditoria/README.md`](apps/auditoria/README.md) (11 pasos; la prueba de Aiven vence ~2026-10-18), APK nuevo en los celulares y apagar Render y Aiven | Caja Huancayo |
 | **Alta** | Unir y desplegar el PR de **aislamiento por empresa** (`fix/aislamiento-por-empresa`, hecho y verificado el 2026-10-17); después, ids UUID | PLAFT |
 | **Alta** | Pasar los repositorios a **privados** (requiere llaves de despliegue de solo lectura en el servidor) | Todos |
 | **Alta** | **2FA** en Gmail, Cloudflare, Oracle y GitHub; **MFA** en las políticas de Access; cambiar la política temporal `Presentación` del Buscador a solo sedes | Plataforma |
@@ -315,7 +317,7 @@ sudo rm -rf /tmp/sulotec-infra && sudo git clone --depth 1 https://github.com/Su
 | Media | La prueba gratis de **Aiven vence ~2026-10-18**: ya hay copia como `aiven_*`; apagar y borrar sus claves | PLAFT / MiRadar |
 | Media | MiRadar: confirmar el despliegue del selector de mapa; publicar la app 1.0.6; apagar Render y Backblaze; sacar la RRCC-API de ngrok | MiRadar |
 | Media | Buscador: túnel de Cloudflare en la oficina (apagar Funnel y Vercel), API desde el repo nuevo, IPv6 de sedes | Buscador |
-| Media | Migrar **Auditoría de Visitas** (Caja Huancayo) de Render a Oracle; confirmar Compartamos | Caja Huancayo |
+| Media | Auditoría de Visitas: probar la app en un celular real (ubicación en segundo plano) y el bucket real de Oracle (`probar.sh`); confirmar Compartamos | Caja Huancayo |
 | Media | Keycloak: administrador con nombre propio + OTP; correo de invitaciones; `contacto@sulotec.com` | Cuentas |
 | Media | Operación: monitoreo externo y alertas; Flyway/Liquibase; CI con pruebas en los repos de aplicaciones; separar pruebas de producción; VM de pago (SLA) con clientes reales | Plataforma |
 | Baja | Inicio único (Keycloak) dentro de los productos; Buscador fase 2 (API en TypeScript); prueba de restauración trimestral | Varios |
@@ -329,6 +331,7 @@ sudo rm -rf /tmp/sulotec-infra && sudo git clone --depth 1 https://github.com/Su
 - **Oracle S3:** cada usuario admite 2 llaves "customer secret"; tardan en activarse (`rotar-s3.sh` reintenta). El cliente necesita `forcePathStyle` y checksums `WHEN_REQUIRED`.
 - **OCI Email Delivery** solo ofrece `AUTH PLAIN`: en .NET usar MailKit.
 - **MiRadar:** ver §4.2 (clave del administrador inicial vacía y `MFA_ENCRYPTION_KEY` intocable).
+- **Auditoría de Visitas:** las mismas dos trampas de MiRadar (§4.5); `EVIDENCIAS_BACKEND=s3` exige las cinco `S3_*`; en la laptop, `MSYS_NO_PATHCONV=1` también para `--tmpfs /tmp` de Docker.
 - **Spring (PLAFT):** `ddl-auto: update` crea tablas nuevas al arrancar; las pruebas de PDF del backend reescriben archivos versionados (`git checkout -- output tmp` antes de commitear); `contextLoads` necesita una MySQL y falla sin ella.
 - **En la laptop de trabajo (Windows):** `MSYS_NO_PATHCONV=1` con Docker y rutas en Git Bash; usar `./node_modules/.bin/tsc` y no `npx`; Java directo falla en el entorno de Claude Code (usar Docker).
 - **Cloudflare corta a los 100 s:** cualquier endpoint más lento (chat de IA) necesita ser asíncrono.

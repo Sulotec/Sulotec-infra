@@ -324,3 +324,5 @@ sudo rm -rf /tmp/sulotec-infra && sudo git clone --depth 1 https://github.com/Su
 | [`docs/historico/`](docs/historico/bitacora-2026-10-06-al-14.md) | Bitácora original (puede estar desactualizada) |
 
 **Mantenimiento:** cuando cambie la infraestructura o un producto, actualiza **este archivo y el documento correspondiente en el mismo commit**. Lo que se resuelva sale de §9; lo nuevo entra con su fecha. Este archivo es la **fuente de verdad** para retomar trabajo; no guardes aquí valores secretos.
+
+**Resumen global en la laptop de trabajo:** en la carpeta `.claude` del usuario de Windows hay un `CLAUDE.md` corto (reglas de trabajo, resumen del ecosistema y el comando para bajar este documento) que **todos los chats de Claude Code de esa PC cargan al empezar**, sea cual sea la carpeta. Si cambia algo grande (productos, dominios, reglas o infraestructura), actualiza también ese resumen. Los chats de claude.ai en el navegador no lo ven: ahí se sube este documento a un Proyecto.

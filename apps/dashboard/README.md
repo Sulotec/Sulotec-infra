@@ -29,6 +29,7 @@ Una diferencia a propósito: SQL Server no distinguía mayúsculas en el nombre 
 |---|---|
 | `docker-compose.yml` | API y web: solo lectura, sin privilegios, sin puertos publicados |
 | `herramientas/exportar-sqlserver.ps1` | **Se corre en Windows (la oficina).** Lee SQL Server (solo `SELECT`) y genera un `.sql` con todos los datos para PostgreSQL |
+| `deploy/instalar.sh` | Atajo: revisa el servidor y hace de una vez copiar kit, crear base, configurar, publicar y crear tablas vacías (`revisar` solo mira) |
 | `deploy/preparar.sh` | Crea `/opt/sulotec/dashboard.env` (base, clave de sesiones, web permitida) |
 | `deploy/desplegar.sh` | Baja el código, construye, levanta y vuelve a la versión anterior si algo falla |
 | `deploy/importar-datos.sh` | Crea las tablas y carga el `.sql` en **una sola transacción**; comprueba fila por fila los totales |
@@ -56,7 +57,13 @@ Al terminar deja `dashboard-datos-AAAAMMDD-HHMM.sql` y su huella **SHA256**. Ese
 
 **2. Subir el archivo al bucket privado de Oracle.** Consola de Oracle → *Storage → Buckets → `sulotec-backups` → Upload* y, en **Prefix**, escribe `externos/dashboard/`. Sube el `.sql`. Después bórralo de la PC.
 
-**3. En el servidor** (https://ssh.sulotec.com). Copiar el kit:
+**3. En el servidor** (https://ssh.sulotec.com). **Atajo:** `instalar.sh` hace todo el resto de este paso (copiar el kit, crear la base, configurar, publicar y crear las tablas vacías) sin preguntas y sin mostrar ninguna clave. Primero solo mira el servidor:
+
+```
+cd /tmp && sudo rm -rf si && git clone -q --depth 1 https://github.com/Sulotec/Sulotec-infra.git si && sudo bash si/apps/dashboard/deploy/instalar.sh revisar
+```
+
+y luego instala con `sudo bash si/apps/dashboard/deploy/instalar.sh`. Lo que sigue es lo mismo, paso a paso y a mano. Copiar el kit:
 
 ```
 sudo mkdir -p /data/apps/dashboard && sudo rm -rf /tmp/sulotec-infra && sudo git clone --depth 1 https://github.com/Sulotec/Sulotec-infra.git /tmp/sulotec-infra && sudo cp /tmp/sulotec-infra/apps/dashboard/docker-compose.yml /tmp/sulotec-infra/apps/dashboard/deploy/*.sh /data/apps/dashboard/ && sudo rm -rf /tmp/sulotec-infra && ls /data/apps/dashboard

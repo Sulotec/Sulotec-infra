@@ -44,7 +44,7 @@ export const soluciones: Solucion[] = [
     publico: true,
     subdominio: 'auditoria.sulotec.com',
     demo: '/demo/auditoria',
-    publicado: false,
+    publicado: true, // en Oracle desde 2026-10-18 (kit apps/auditoria)
   },
   {
     nombre: 'Prevención de Lavado de Activos',

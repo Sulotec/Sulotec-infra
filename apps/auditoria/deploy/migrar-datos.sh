@@ -21,7 +21,7 @@ ARCHIVO="auditoria-origen-$STAMP.sql.gz"
 [ "$(id -u)" -eq 0 ] || [ -n "${PRUEBA:-}" ] || { echo "Correlo con sudo: sudo bash $0" >&2; exit 1; }
 mkdir -p "$CARPETA"; chmod 700 "$CARPETA"
 
-limpiar() { local v="$1"; v="${v//$'\e'\[200~/}"; v="${v//$'\e'\[201~/}"; v="${v//\[200~/}"; v="${v//\[201~/}"; printf '%s' "${v//[[:space:]]/}"; }
+limpiar() { local v="$1"; v="$(printf '%s' "$v" | sed -E $'s/\e\[[0-9;]*[A-Za-z~]//g')"; v="${v//\[200~/}"; v="${v//\[201~/}"; printf '%s' "${v//[[:space:]]/}"; }
 # Lee un secreto mostrando un * por cada caracter: asi se ve que el pegado funciono sin mostrar el valor. Resultado en $V.
 leer_secreto() {
   local c; V=""

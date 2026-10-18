@@ -11,9 +11,9 @@ ENV="${ENVFILE:-/opt/sulotec/auditoria.env}"
 RED_DOCKER="${RED_DOCKER:-sulotec_data}"
 mkdir -p "$(dirname "$ENV")"
 
-# Quita los caracteres que algunos terminales web agregan al pegar, y los espacios
-limpiar() { local v="$1"; v="${v//$'\e'\[200~/}"; v="${v//$'\e'\[201~/}"; v="${v//\[200~/}"; v="${v//\[201~/}"; printf '%s' "${v//[[:space:]]/}"; }
-limpiar_texto() { local v="$1"; v="${v//$'\e'\[200~/}"; v="${v//$'\e'\[201~/}"; v="${v//\[200~/}"; v="${v//\[201~/}"; v="${v#"${v%%[![:space:]]*}"}"; v="${v%"${v##*[![:space:]]}"}"; printf '%s' "$v"; }
+# Quita los caracteres que algunos terminales web agregan al pegar, las flechas del teclado y los espacios
+limpiar() { local v="$1"; v="$(printf '%s' "$v" | sed -E $'s/\e\[[0-9;]*[A-Za-z~]//g')"; v="${v//\[200~/}"; v="${v//\[201~/}"; printf '%s' "${v//[[:space:]]/}"; }
+limpiar_texto() { local v="$1"; v="$(printf '%s' "$v" | sed -E $'s/\e\[[0-9;]*[A-Za-z~]//g')"; v="${v//\[200~/}"; v="${v//\[201~/}"; v="${v#"${v%%[![:space:]]*}"}"; v="${v%"${v##*[![:space:]]}"}"; printf '%s' "$v"; }
 # Lee un secreto mostrando un * por cada caracter: asi se ve que el pegado funciono sin mostrar el valor. Resultado en $V.
 leer_secreto() {
   local c; V=""

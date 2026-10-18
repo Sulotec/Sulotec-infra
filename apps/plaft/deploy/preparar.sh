@@ -58,6 +58,19 @@ fi
 
 echo "== Direcciones"
 pregunta WEB_URL "Direccion de la web (sin barra final)" "https://plaft.sulotec.com"; WEB="$R"
+echo "== Correo de salida (opcional: invitaciones a cuentas nuevas y recuperacion de clave; Enter para omitir)"
+echo "   Con OCI Email Delivery: servidor smtp.email.sa-santiago-1.oci.oraclecloud.com, puerto 587, y las credenciales SMTP del usuario de correo."
+pregunta SPRING_MAIL_HOST "Servidor SMTP (vacio = sin correo: los enlaces salen en el registro y la carga masiva da claves temporales)" ""; MAIL_HOST="$R"
+MAIL_PORT=""; MAIL_USER=""; MAIL_PASS=""; MAIL_FROM=""
+if [ -n "$MAIL_HOST" ]; then
+  pregunta SPRING_MAIL_PORT "Puerto SMTP" "587"; MAIL_PORT="$R"
+  pregunta SPRING_MAIL_USERNAME "Usuario SMTP" ""; MAIL_USER="$R"
+  act_mail="$(actual SPRING_MAIL_PASSWORD)"
+  leer_secreto "Clave SMTP [Enter = $([ -n "$act_mail" ] && echo conservar || echo vacio)]: "
+  MAIL_PASS="$(limpiar "${V:-}")"; MAIL_PASS="${MAIL_PASS:-$act_mail}"
+  echo "   recibido: clave de ${#MAIL_PASS} caracteres"
+  pregunta APP_MAIL_FROM "Remitente (debe estar aprobado en el proveedor de correo)" "no-reply@sulotec.com"; MAIL_FROM="$R"
+fi
 echo "== Administrador inicial"
 if [ "$tablas" = "0" ] && [ -z "$(actual APP_SEED_ADMIN_PASSWORD)" ] && [ "$(actual APP_SEED_ENABLED)" != "false" ]; then
   SEMILLA=true; ADMIN_PASS="$(clave_admin)"; GENERADA=1
@@ -89,6 +102,17 @@ install -m 640 -o root -g docker /dev/null "$ENV" 2>/dev/null || install -m 640 
   echo "JWT_SECRET=$JWT"
   echo "CORS_ALLOWED_ORIGINS=$WEB"
   echo "WEB_URL=$WEB"
+  if [ -n "$MAIL_HOST" ]; then
+    echo "# Correo de salida (SMTP): invitaciones a cuentas nuevas y recuperacion de clave"
+    echo "SPRING_MAIL_HOST=$MAIL_HOST"
+    echo "SPRING_MAIL_PORT=$MAIL_PORT"
+    echo "SPRING_MAIL_USERNAME=$MAIL_USER"
+    echo "SPRING_MAIL_PASSWORD=$MAIL_PASS"
+    echo "SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=true"
+    echo "SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true"
+    echo "SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED=true"
+    echo "APP_MAIL_FROM=$MAIL_FROM"
+  fi
   echo "ML_BASE_URL=http://plaft-ml:8000"
   echo "ML_API_KEY=$MLKEY"
   [ -z "$MLT" ] || echo "ML_CHATTIMEOUTSECONDS=$MLT"

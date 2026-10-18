@@ -37,6 +37,7 @@ pantallas responden "servicio no disponible". Se instala con el paso 8 y `desple
 | `deploy/pasar-dev-a-produccion.sh` | Pasa a `plaft` lo valioso de la copia de desarrollo (cuentas con sus roles, personas, listas, consultas, matrices); simula por defecto y respalda antes de escribir |
 | `deploy/cargar-operaciones-demo.sh` | Carga 10 registros ficticios en Operaciones (el script de demostración del backend) para probar ese módulo |
 | `deploy/asignar-empresa.sh` | Pone empresa a los usuarios que no tienen (o a los que se le indiquen): Operaciones filtra por la empresa del usuario y sin empresa no deja entrar; es solo para pruebas. Desde que la web tiene la pantalla **Administración** (lista de empresas y cuentas), cada cuenta nueva se crea ya con su empresa; este script queda para dejar de una vez a las cuentas viejas |
+| `deploy/limpiar-cuentas-prueba.sh` | Borra las cuentas de prueba (todas menos `superadmin` y las de `CONSERVAR`) con sus registros ligados, para volver a crearlas limpias con la carga masiva; simula por defecto y con `--aplicar` respalda antes de borrar |
 | `deploy/resetear-clave.sh` | Pone una clave nueva a una cuenta (por ejemplo la del administrador inicial `superadmin` si no se guardó): `sudo bash /data/apps/plaft/resetear-clave.sh superadmin`. La genera en el servidor, la canjea contra la propia API (que la guarda cifrada) y la muestra **una sola vez** en pantalla; no pasa por el correo ni queda en archivos |
 | `deploy/ejemplos-para-probar.sh` | Muestra ejemplos reales de lo cargado (qué buscar, qué cuentas, denuncias, operaciones, matrices) para probar cada módulo de la web |
 | `deploy/importar-dev.sh` | Trae a este servidor la base de desarrollo de Aiven (el respaldo) en bases `aiven_*` y la compara con producción, sin tocarla |
@@ -59,7 +60,7 @@ sudo rm -rf /tmp/sulotec-infra
 y pide los dos datos que esa línea devuelve (no son secretos). Prueba subir, leer y borrar un archivo en `plaft-archivos`.
 El usuario `svc-plaft` debe tener permiso solo sobre ese bucket (`manage objects` y `read buckets`).
 
-**4. Configuración:** `sudo bash /data/apps/plaft/preparar.sh`. Pide la clave de la base. Si la base es nueva, genera la clave del
+**4. Configuración:** `sudo bash /data/apps/plaft/preparar.sh`. Pide la clave de la base y, opcionalmente, el **correo de salida** (SMTP de OCI Email Delivery): con él, las cuentas nuevas reciben un enlace para crear su contraseña y funciona «¿Olvidaste tu contraseña?»; sin él, la carga masiva entrega claves temporales. Si la base es nueva, genera la clave del
 administrador (`superadmin`, 12 caracteres: es el máximo que acepta el login) y la muestra **una sola vez**.
 
 **5. Publicar:** `sudo bash /data/apps/plaft/desplegar.sh`. La primera vez tarda varios minutos (compila Kotlin y Next.js).

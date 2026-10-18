@@ -62,7 +62,7 @@ export const soluciones: Solucion[] = [
     publico: true,
     subdominio: 'plaft.sulotec.com',
     demo: '/demo/plaft',
-    publicado: false,
+    publicado: true, // en Oracle (plaft.sulotec.com); el boton del portal lleva alli desde 2026-10-18
   },
   {
     clave: 'buscador',

@@ -31,16 +31,33 @@ Un **SaaS propio con marca Sulotec**, para ofrecer a empresas —en especial del
 2. **Un producto = un contenedor (o un grupo pequeño), su base y su bucket.** Bases separadas en servidores compartidos (PostgreSQL 16 y MySQL 8.4); archivos en buckets privados con llave propia.
 3. **Nada expuesto.** Sin puertos abiertos: todo entra por el túnel de Cloudflare. Lo privado lleva Cloudflare Access **y** su propia validación dentro de la app (defensa en profundidad).
 4. **Mínimo privilegio.** Cada persona y cada servicio ve solo lo que necesita (por ejemplo, el CEO entra al Buscador pero no al servidor).
-5. **Multiempresa.** Cada cliente ve solo lo suyo. En PLAFT ya existe la lista de empresas y cada cuenta pertenece a una; el objetivo es que sea la norma en todos los productos.
+5. **Multiempresa.** Cada cliente ve solo lo suyo y cada producto es una plantilla que se adapta a otros clientes (reglas y modelo en §1.3). En PLAFT ya existe la lista de empresas y cada cuenta pertenece a una.
 6. **Reproducible y sin depender de una PC.** Terraform para Oracle, scripts idempotentes para el servidor, kits por producto, despliegues con vuelta atrás, secretos solo en el servidor y en el gestor.
 7. **Cumplimiento.** Alineado a ISO/IEC 27001 (Anexo A), Ley 29733 (datos personales) y requisitos de la SBS. Los datos están en Santiago de Chile: validar con legal el flujo transfronterizo antes de cargar datos reales de clientes.
 8. **Costo bajo control.** Todo dentro de *Always Free* (hoy US$ 0/mes), con presupuesto aprobado de hasta US$ 260/mes **solo si hace falta**.
 
-### 1.3 Cómo se ve "terminado" (camino propuesto; no todo está decidido por el usuario)
+### 1.3 Cada producto es una plantilla multiempresa (decidido por el usuario, 2026-10-17)
+
+**Idea:** cada producto (MiRadar, PLAFT, Buscador, Auditoría de Visitas…) es una **plantilla de Sulotec**, adaptable, que se puede **entregar a otras cajas y negocios**. Sulotec la **aloja** y la modifica para cada cliente. Los productos propios (MiRadar, PLAFT y el Buscador) se hicieron primero para un solo cliente y **no a esa escala** (multiempresa y modificables); la app de Caja Huancayo es la primera que conviene diseñar así desde el inicio. Esto **aplica a todos los productos**.
+
+- **Jerarquía:** Sulotec (**Administrador Universal**) → producto → **cliente** (una caja o negocio: un *tenant*) → usuarios y roles de ese cliente.
+- **Administrador Universal:** rol explícito de Sulotec que ve todos los productos y entra a cada cliente; cada ingreso a un cliente queda **auditado**. Los demás usuarios solo ven lo de su cliente.
+- **UUID para identificar** clientes y datos (no números consecutivos): no chocan al migrar ni al crear datos sin conexión (apps móviles) y no se pueden recorrer. **Un UUID no es seguridad:** el aislamiento lo garantiza el servidor.
+- **Reglas de oro (obligatorias en todo producto nuevo y en lo que se adapte):**
+  1. El cliente (tenant) **sale del token verificado en el servidor, nunca de lo que mande la web o la app** (parámetros, cuerpo o cabeceras).
+  2. El filtro por cliente va en **una capa central** (no consulta por consulta); en PostgreSQL, valorar *row-level security* como segunda barrera.
+  3. Archivos: prefijo por cliente en el bucket y URLs firmadas de corta vida.
+  4. **Pruebas automáticas de acceso cruzado:** una cuenta del cliente A intenta leer, editar y crear datos del cliente B llamando a la API directo; debe fallar siempre. (En PLAFT se comprobó que esto fallaba: §4.3.)
+  5. La personalización (nombre, logo, colores, reglas como la geocerca) son **datos por cliente**, no código: una sola base de código sirve a todos.
+  6. Caché, sesiones, WebSockets, exportaciones (PDF/Excel) y registros de auditoría también van **por cliente**; cuando el administrador universal cambia de cliente, la web limpia el estado.
+- **Propuesta de implementación (por confirmar con el usuario):** una **instalación compartida por producto** con `tenant_id` (UUID) en cada tabla, y la opción de una **instalación dedicada** (misma plantilla, otra base y otro subdominio) para clientes que la exijan (por ejemplo por la SBS); **Keycloak** como identidad única, con el `tenant_id` y los roles (`administrador-universal`, `administrador-cliente`…) dentro del token; y un **registro central de clientes** (UUID, nombre, productos contratados, configuración).
+- **Estado a 2026-10-17:** ningún producto lo cumple del todo. PLAFT filtra por empresa solo en la web y usa un id numérico, no UUID; MiRadar, el Buscador y la app de Caja Huancayo se usan hoy con un solo cliente **(por confirmar el detalle de cada uno)**. Es el rumbo de todos los proyectos; el orden de adaptación se decide con el usuario.
+
+### 1.4 Cómo se ve "terminado" (camino propuesto; no todo está decidido por el usuario)
 
 - Todos los productos en Oracle, bajo sus subdominios, con **Render, Vercel, Aiven y Backblaze apagados**.
 - **Cuentas con inicio de sesión único** (Keycloak) también dentro de los productos (hoy el portal usa Keycloak y cada producto tiene sus propias cuentas).
-- Cada backend **hace cumplir** la separación por empresa (no solo la web).
+- Cada backend **hace cumplir** la separación por empresa (no solo la web), con el modelo multiempresa de §1.3 (clientes con UUID y Administrador Universal).
 - 2FA/MFA en todo, repositorios privados, claves rotadas y guardadas, monitoreo y alertas, migraciones de base versionadas, pruebas separadas de producción y, con clientes reales, una VM de pago con SLA.
 
 ## 2. Cómo se trabaja con el usuario (reglas para cualquier chat)
@@ -205,7 +222,7 @@ Personas ─HTTPS──▶ │ DNS · HTTPS · WAF · Access (quién entra) · T
 - **Pendiente:** hoy la política temporal `Presentación` de Access deja pasar a todos → cambiarla a las sedes; túnel de Cloudflare en la oficina para la API (y apagar Tailscale Funnel y Vercel); mover el actualizador de la API a `Sulotec/buscador-interno` y replicar allí el MailKit; prefijos IPv6 de las sedes; script `004_menu_operador.sql`; fase 2 (API en TypeScript).
 
 ### 4.5 Auditoría de Visitas / Caja Huancayo, Compartamos y otros
-- **Auditoría de Visitas** (Caja Huancayo): verifica visitas con geocerca, fotos, firma y trabajo sin conexión. Node + MySQL. Repos `jeliases-informaDev/Huancayo-Backend`, `CajaHuancayo-App` y `CajaHuancayo-Web`. **Aún en Render; por migrar** siguiendo la receta de `docs/04` §4.5. El bucket `huancayo-archivos` ya existe.
+- **Auditoría de Visitas** (Caja Huancayo): verifica visitas con geocerca, fotos, firma y trabajo sin conexión. Node + MySQL. **Requisito (2026-10-17):** diseñarla desde el inicio como **plantilla multiempresa** (§1.3), para entregarla a otras cajas. Repos `jeliases-informaDev/Huancayo-Backend`, `CajaHuancayo-App` y `CajaHuancayo-Web`. **Aún en Render; por migrar** siguiendo la receta de `docs/04` §4.5. El bucket `huancayo-archivos` ya existe.
 - **Compartamos:** repo `AppCompartamos`; estado **(por confirmar)**.
 - **Fuera del ecosistema por ahora** (no tocar sin que el usuario lo pida): `Sistema-Tickets-TI`, `PlanillaFrontEd` y otros proyectos de Informa Perú de su PC.
 
@@ -281,7 +298,8 @@ sudo rm -rf /tmp/sulotec-infra && sudo git clone --depth 1 https://github.com/Su
 
 | Prioridad | Pendiente | Producto |
 |---|---|---|
-| **Alta** | **Hacer cumplir en el backend la separación por empresa** y restringir `GET /api/usuarios` (arreglo propuesto, falta el OK del usuario). Antes de cualquier cliente real | PLAFT |
+| **Alta** | **Definir y aplicar el modelo multiempresa de §1.3** (clientes con UUID, Administrador Universal, instalación compartida o dedicada, Keycloak con `tenant_id`): empezar por la plantilla de Caja Huancayo y reforzar PLAFT; luego MiRadar y el Buscador | Todos |
+| **Alta** | **Hacer cumplir en el backend la separación por empresa** y restringir `GET /api/usuarios` (arreglo propuesto, falta el OK del usuario). Es la primera aplicación práctica de §1.3 y va antes de cualquier cliente real | PLAFT |
 | **Alta** | Pasar los repositorios a **privados** (requiere llaves de despliegue de solo lectura en el servidor) | Todos |
 | **Alta** | **2FA** en Gmail, Cloudflare, Oracle y GitHub; **MFA** en las políticas de Access; cambiar la política temporal `Presentación` del Buscador a solo sedes | Plataforma |
 | **Alta** | **Rotar** lo que pasó por chats: SMTP, `Jwt:Key` y clave `irubio` del Buscador, tokens de RENIEC y de Vercel, `RRCC_API_KEY`; revisar el resto cada 90 días | Varios |

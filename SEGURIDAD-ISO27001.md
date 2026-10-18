@@ -11,7 +11,7 @@ Usuarios → Cloudflare (DNS, SSL, WAF, Access) → Cloudflare Tunnel "sulotec" 
                                                                               ├─ cloudflared
                                                                               ├─ PostgreSQL 16  (/data/postgres)
                                                                               ├─ MySQL 8.4      (/data/mysql)
-                                                                              └─ apps (un compose por proyecto: portal, cuenta, buscador, miradar)
+                                                                              └─ apps (un compose por proyecto: portal, cuenta, buscador, miradar, plaft)
 Object Storage: sulotec-backups (copias diarias) · sulotec-archivos (archivos de las apps)
 ```
 
@@ -28,7 +28,7 @@ Object Storage: sulotec-backups (copias diarias) · sulotec-archivos (archivos d
 | 8.14 Redundancia · 5.30 Continuidad TIC | Datos en un disco separado del sistema (se puede conectar a otra VM). Infraestructura reproducible con Terraform + `bootstrap.sh` + `setup-datos.sh`. Sin SLA en el plan actual. | `oracle/`, `vm/` |
 | 8.15 Registro · 8.16 Monitoreo | Cloudflare Access registra cada inicio de sesión; Oracle Audit registra cambios en la nube (activo por defecto); `journalctl -u ssh` en la VM; alertas de presupuesto (US$10) al correo. | Cloudflare One → Insights & Logs; Oracle → Audit |
 | 8.8 Vulnerabilidades técnicas | `unattended-upgrades` (parches de seguridad automáticos), `fail2ban`, imágenes oficiales de Docker. | VM |
-| 8.9 Gestión de la configuración · 8.32 Gestión de cambios | Infraestructura como código (Terraform) y scripts en el repositorio privado `Sulotec/Sulotec-infra` (organización de la empresa). Los cambios del portal se publican solo desde `main` con GitHub Actions y un runner propio sin puertos abiertos; cada publicación queda registrada (quién, qué, cuándo). | GitHub → Sulotec-infra → Commits / Actions |
+| 8.9 Gestión de la configuración · 8.32 Gestión de cambios | Infraestructura como código (Terraform) y scripts en el repositorio `Sulotec/Sulotec-infra` (organización de la empresa; **hoy es público**, pasarlo a privado está pendiente). Los cambios del portal se publican solo desde `main` con GitHub Actions y un runner propio sin puertos abiertos; cada publicación queda registrada (quién, qué, cuándo). | GitHub → Sulotec-infra → Commits / Actions |
 | 5.23 Servicios en la nube | Proveedores: Oracle Cloud (cómputo, discos, Object Storage; región Santiago de Chile) y Cloudflare (DNS, TLS, túnel, Access). | Este documento |
 | 5.17 Información de autenticación | Secretos solo en `/opt/sulotec/.env` y `/opt/sulotec/cuenta.env` (root:docker, 640) y en el gestor de contraseñas de la empresa; nunca en Git ni en chats. Rotación con claves generadas en el servidor y sin imprimirse: `vm/scripts/rotar-claves.sh` (bases) y `apps/miradar/deploy/rotar-s3.sh` (clave S3 de `svc-miradar`); rotadas el 2026-10-14. | VM |
 | 5.16 · 5.18 · 8.5 Cuentas de clientes y del equipo (cuenta.sulotec.com) | Keycloak en el servidor propio. Sin registro libre: el equipo de Sulotec crea y retira cada cuenta (alta y baja controladas). Correo verificado antes de entrar; contraseñas de 10+ caracteres con historial; bloqueo tras 5 intentos; sesión de 30 min sin uso y 8 h máximo. Los administradores de cuentas (grupo *Administradores Generales*) pueden crear o desactivar cuentas, pero no cambiar la configuración, y deben usar OTP. La consola `/admin` está además detrás de Cloudflare Access. El portal usa OIDC con PKCE y no guarda contraseñas. Las demos no usan datos personales. | Consola → Usuarios / Eventos; `apps/cuenta/` |
@@ -41,3 +41,5 @@ Object Storage: sulotec-backups (copias diarias) · sulotec-archivos (archivos d
 4. **Legal/cumplimiento:** los datos residen en Santiago de Chile → flujo transfronterizo según la Ley 29733; clientes supervisados por la SBS pueden exigir evidencias sobre tercerización en la nube. Validar antes de cargar datos reales.
 5. Para producción con clientes financieros: evaluar VM de pago (SLA) y separar producción de pruebas.
 6. Cuentas: reemplazar `admin-temporal` de Keycloak por un administrador maestro con nombre propio y OTP. Exigir OTP por regla del flujo de inicio de sesión para el rol `administrador-general`; hoy se exige al crear cada cuenta. Aviso de privacidad y consentimiento en el registro (Ley 29733) antes de abrir las cuentas al público.
+7. **Repositorios:** hoy todos son públicos (incluido `Sulotec-infra`); pasarlos a privados con llaves de despliegue de solo lectura en el servidor.
+8. **PLAFT:** hacer cumplir en el servidor la separación por empresa (hoy la aplica la web) y desactivar las cuentas de prueba antes de cargar datos de clientes.

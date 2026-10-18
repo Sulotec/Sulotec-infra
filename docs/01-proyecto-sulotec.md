@@ -12,9 +12,9 @@ Sulotec es el ecosistema SaaS de soluciones digitales de la empresa (sitio: **ht
 
 | Producto | Qué hace | Estado | Visibilidad | Dirección prevista |
 |---|---|---|---|---|
-| **MiRadar360** (antes AFACOP) | Torre de control de equipos en campo: rutas, visitas y evidencias GPS y fotos | En producción (Render/Vercel) | Público | `miradar360.sulotec.com` |
+| **MiRadar360** (antes AFACOP) | Torre de control de equipos en campo: rutas, visitas y evidencias GPS y fotos | En producción, **en Oracle desde 2026-10-14** | Público | `miradar360.sulotec.com` ✅ |
 | **Auditoría de Visitas** (Caja Huancayo) | Verifica visitas con geocerca, fotos, firma y trabajo sin conexión | En producción (Render) | Público | `auditoria.sulotec.com` |
-| **Prevención de Lavado de Activos** | Cumplimiento PLAFT con trazabilidad | En implementación | Público | `plaft.sulotec.com` |
+| **Prevención de Lavado de Activos** | Cumplimiento PLAFT con trazabilidad | **En Oracle** con datos de prueba (aún sin clientes reales) | Público | `plaft.sulotec.com` ✅ |
 | **Buscador Interno** | Consultas internas de personas y empresas | **Nuevo front en Sulotec** | **Privado** (solo personal y sedes) | **`buscadorinterno.sulotec.com`** ✅ |
 
 La lista de productos se edita en un solo archivo: [`apps/portal/src/data/soluciones.ts`](../apps/portal/src/data/soluciones.ts).
@@ -32,6 +32,8 @@ La lista de productos se edita en un solo archivo: [`apps/portal/src/data/soluci
 | Buscador Interno (front) | https://buscadorinterno.sulotec.com | Next.js 16 + React 19 + TypeScript | [Sulotec/buscador-interno `web/`](https://github.com/Sulotec/buscador-interno) | Oracle, contenedor `buscador` |
 | Buscador Interno (API) | Privada | .NET 10 + SQL Server | [Sulotec/buscador-interno `api/`](https://github.com/Sulotec/buscador-interno) | Servidor de la oficina (servicio Windows `BuscadorApi`) |
 | Consola del servidor | https://ssh.sulotec.com | SSH en el navegador (Cloudflare) | — | Oracle |
+| MiRadar 360 (web + API) | https://miradar360.sulotec.com · https://api-miradar360.sulotec.com | React + Node 24 (Socket.IO) + PostgreSQL | [`apps/miradar`](../apps/miradar) · `jeliases-informaDev/Afacop-*` | Oracle, contenedores `miradar-web` y `miradar-api` |
+| PLAFT (web + API + IA) | https://plaft.sulotec.com · https://api-plaft.sulotec.com | Next.js 16 + Spring Boot (Kotlin) + MySQL; IA con FastAPI + Ollama | [`apps/plaft`](../apps/plaft) · `jeliases-informaDev/Security-*` | Oracle, contenedores `plaft-web`, `plaft-api`, `plaft-ml` y `plaft-ollama` |
 
 ## 1.4 Repositorios (GitHub, organización `Sulotec`)
 
@@ -41,7 +43,11 @@ La lista de productos se edita en un solo archivo: [`apps/portal/src/data/soluci
 | [Sulotec/buscador-interno](https://github.com/Sulotec/buscador-interno) | Código del Buscador: `web/` (React) y `api/` (.NET) | Equipo de desarrollo del Buscador |
 | `jeliases-informaDev/InternalBuscador` | API vieja; el servidor de la oficina aún se actualiza desde aquí | Retirar al mover el actualizador |
 | `jeliases-informaDev/internal-search-frontend` | Front Angular antiguo (Vercel) | Retirar cuando se apague Vercel |
-| `jeliases-informaDev/Afacop-*`, Caja Huancayo | Productos aún en Render/Vercel | Pasar a la organización al migrar |
+| `jeliases-informaDev/Afacop-*`, `App-Afacop` | MiRadar 360 (ya en Oracle) | `desplegar.sh` construye desde `main` |
+| `jeliases-informaDev/Security-*` | PLAFT (ya en Oracle) | `desplegar.sh` construye desde `main` |
+| `jeliases-informaDev/Huancayo-Backend`, `CajaHuancayo-*`, `AppCompartamos` | Caja Huancayo (aún en Render) y Compartamos | Pasar a la organización al migrar |
+
+> **Hoy todos los repositorios son públicos**, también `Sulotec/Sulotec-infra`. Pasarlos a privados está pendiente: antes hacen falta llaves de despliegue de solo lectura en el servidor (ver [`CONTEXTO-PARA-OTRO-CHAT.md`](../CONTEXTO-PARA-OTRO-CHAT.md) §5).
 
 Estructura de `Sulotec-infra`:
 ```
@@ -50,6 +56,8 @@ vm/            servicios base del servidor (túnel, PostgreSQL, MySQL) y scripts
 apps/portal/   sulotec.com
 apps/cuenta/   cuenta.sulotec.com (Keycloak: realm, tema, scripts)
 apps/buscador/ operación del Buscador (el código está en buscador-interno)
+apps/miradar/  kit de MiRadar 360 (compose, desplegar.sh, migraciones)
+apps/plaft/    kit de PLAFT (compose, desplegar.sh, IA, carga de datos)
 .github/       publicación automática (runner propio en el servidor)
 docs/          esta documentación
 ```
@@ -103,6 +111,8 @@ docs/          esta documentación
 4. **Todo cambio pasa por GitHub:** se edita, se sube a `main` y se publica solo. Nada se cambia a mano en el servidor sin dejarlo documentado.
 
 ## 1.9 Pendientes (consolidado)
+
+> La lista **vigente y priorizada** está en [`CONTEXTO-PARA-OTRO-CHAT.md`](../CONTEXTO-PARA-OTRO-CHAT.md) §9. Esta tabla es el consolidado del 2026-10-09 y puede estar desactualizada.
 
 | Prioridad | Pendiente | Dónde |
 |---|---|---|

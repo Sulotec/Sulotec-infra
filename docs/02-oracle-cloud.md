@@ -32,6 +32,7 @@ El **estado de Terraform** vive en el **Cloud Shell** de Oracle (`~/oracle/terra
 | Disco de datos | `sulotec-data` | 50 GB, montado en **`/data`** (bases, apps y archivos). Se puede conectar a otra VM |
 | Bucket | `sulotec-backups` | Privado, con versionado. Respaldos diarios (namespace `axkjo5bh8iys`) |
 | Bucket | `sulotec-archivos` | Privado. Archivos de las aplicaciones |
+| Buckets | `miradar-archivos`, `plaft-archivos`, `huancayo-archivos` | Privados, con versionado y llave propia. Cada producto usa su propio usuario de servicio (`svc-miradar`, `svc-plaft`…) con permiso solo sobre su bucket |
 | Grupo dinámico + política | `sulotec-vm`, `sulotec-vm-backups` | El servidor sube respaldos **sin llaves guardadas** (*instance principal*) |
 | Presupuesto | `sulotec-mensual` | Alertas por correo |
 
@@ -51,10 +52,12 @@ terraform apply
 ├── .env                      claves del túnel y de las bases. NO BORRAR. Nunca a GitHub
 ├── cuenta.env                claves de Keycloak (lo crea apps/cuenta/preparar.sh)
 ├── buscador.env              API, IPs de sedes y token de Access del Buscador (apps/buscador/deploy/preparar.sh)
+├── miradar.env               claves de MiRadar 360 (apps/miradar/deploy/preparar.sh)
+├── plaft.env  plaft-ml.env   claves de PLAFT y de su IA (apps/plaft/deploy/preparar.sh y preparar-ml.sh)
 └── scripts/                  backup.sh, new-project-db.sh
 /data/                        disco de datos (50 GB)
 ├── postgres/  mysql/         datos de las bases
-└── apps/                     portal/, cuenta/, buscador/  (los copia GitHub)
+└── apps/                     portal/, cuenta/, buscador/ (los copia GitHub); miradar/, plaft/ (kits que se copian a mano)
 /opt/actions-runner/          runner de GitHub (usuario github-runner)
 /opt/sulotec/buscador-actualizador/   publicador automático del Buscador (llave de solo lectura)
 ```
@@ -62,17 +65,21 @@ terraform apply
 **Redes de Docker**
 - `sulotec_edge`: contenedores que el túnel de Cloudflare puede alcanzar (`portal`, `cuenta`, `buscador`, `cloudflared`).
 - `sulotec_data`: acceso a PostgreSQL y MySQL. **Las bases no publican puertos.**
+- `ia`: la IA de PLAFT (`plaft-ml` y `plaft-ollama`); no está en el túnel.
 
 **Contenedores**
 
 | Contenedor | Imagen | Para qué | Memoria |
 |---|---|---|---|
 | `cloudflared` | `cloudflare/cloudflared` | Túnel saliente hacia Cloudflare | — |
-| `postgres` | `postgres:16` | Base de Keycloak (y futuras apps) | — |
-| `mysql` | `mysql:8.4` | Para apps MySQL (p. ej. Auditoría de Visitas) | — |
+| `postgres` | `postgres:16` | Bases de Keycloak, MiRadar y la IA de PLAFT | — |
+| `mysql` | `mysql:8.4` | Base de PLAFT (y apps MySQL, p. ej. Auditoría de Visitas) | — |
 | `portal` | `nginx:stable-alpine` | sulotec.com (solo lectura) | 64 MB |
 | `cuenta` | `quay.io/keycloak/keycloak:26.8.0` | cuenta.sulotec.com | 1,5 GB |
 | `buscador` | `buscador-web` (construida aquí) | buscadorinterno.sulotec.com (solo lectura) | 512 MB |
+| `miradar-api` · `miradar-web` | construidas aquí (Node 24 · nginx) | MiRadar 360 | — |
+| `plaft-api` · `plaft-web` | construidas aquí (Spring Boot · Next.js) | PLAFT (solo lectura, sin privilegios) | limitada |
+| `plaft-ml` · `plaft-ollama` | construida aquí (FastAPI) · `ollama/ollama` | IA de PLAFT (opcional): personas, prensa e Indira con modelo local | ~9 GB (Ollama) |
 
 **Scripts de referencia** (en [`vm/`](../vm))
 
@@ -114,6 +121,7 @@ terraform apply
   - `cuenta.yml`: copia Keycloak, lo reinicia y aplica `ajustar-realm.sh`.
   - `buscador.yml`: copia la operación del Buscador.
 - **Buscador:** el servidor **lee** `Sulotec/buscador-interno` cada 2 minutos con una llave de solo lectura (`buscador-actualizador.timer`), construye y publica. Los desarrolladores no tienen acceso al servidor.
+- **MiRadar y PLAFT:** no usan workflow. El administrador copia el kit y corre `desplegar.sh` en el servidor (construye desde `main` y vuelve a la versión anterior si algo falla). Ver `apps/miradar/README.md` y `apps/plaft/README.md`.
 
 ## 2.7 Pendiente: correo de salida (OCI Email Delivery)
 

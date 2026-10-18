@@ -15,7 +15,8 @@ Documentación técnica del ecosistema Sulotec: qué hay, dónde está, cómo se
 | Documento | Para qué sirve |
 |---|---|
 | [`SEGURIDAD-ISO27001.md`](../SEGURIDAD-ISO27001.md) | Controles del Anexo A y brechas pendientes |
-| [`CONTEXTO-PARA-OTRO-CHAT.md`](../CONTEXTO-PARA-OTRO-CHAT.md) | Bitácora detallada de decisiones |
+| [`CONTEXTO-PARA-OTRO-CHAT.md`](../CONTEXTO-PARA-OTRO-CHAT.md) | **Empieza aquí.** Contexto vigente del ecosistema: visión, mapa, productos, reglas de trabajo y pendientes priorizados (pensado para continuar en otro chat) |
+| [`historico/`](historico/bitacora-2026-10-06-al-14.md) | Bitácora original, en orden de llegada (puede estar desactualizada) |
 | [`apps/portal/README.md`](../apps/portal/README.md) | sulotec.com |
 | [`apps/cuenta/README.md`](../apps/cuenta/README.md) | Cuentas (Keycloak) |
 | [`apps/buscador/README.md`](../apps/buscador/README.md) | Operación del Buscador |

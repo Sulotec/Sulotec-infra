@@ -34,6 +34,8 @@ Hay **tres capas de identidad**, cada una con su propósito:
 | **Keycloak** (`cuenta.sulotec.com`) | sulotec.com: demos y "Mis productos" | Cuentas de clientes y del equipo; rol `administrador-general` | Las crea el equipo (sin registro libre) |
 | **Buscador** (API + SQL Server) | `buscadorinterno.sulotec.com` | Usuarios, roles (`ADMIN GENERAL`, `SUPERVISOR`, `GERENCIA`, `Operador`) y tokens de consulta | Las crea un ADMIN GENERAL dentro del Buscador |
 
+Además, **MiRadar** (PostgreSQL) y **PLAFT** (MySQL) tienen **cuentas propias** dentro de cada producto; unificarlas con Keycloak (inicio único) es un objetivo.
+
 **Cómo se conectan hoy**
 1. Una persona entra a sulotec.com con su cuenta Keycloak. El token trae `roles`.
 2. Si es **Administrador General**, "Mis productos" le muestra **Abrir Buscador Interno**.
@@ -51,6 +53,8 @@ Hay **tres capas de identidad**, cada una con su propósito:
 | Operación del Buscador | `Sulotec-infra` → `apps/buscador` | Workflow `buscador.yml` (copia scripts y compose) | segundos |
 | Buscador (front) | `buscador-interno` → `web/` | El servidor **lee** `main` cada 2 min con una llave de solo lectura y construye; si falla, vuelve a la versión anterior | ~2–5 min |
 | Buscador (API) | `buscador-interno` → `api/`, hoy aún el repo viejo | `actualizar.ps1` en el servidor de la oficina, cada 2 min | ~5 min |
+| MiRadar 360 | `Afacop-Backend`, `Afacop-FrontEnd` y `App-Afacop` (kit en `Sulotec-infra` → `apps/miradar`) | `desplegar.sh` en el servidor: construye desde `main` y vuelve a la versión anterior si falla (la app móvil, con EAS) | ~5–10 min |
+| PLAFT | `Security-Backend`, `Security-FrontEnd` y `Security-MachineLearning` (kit en `apps/plaft`) | `desplegar.sh`, igual que MiRadar (la primera vez compila Kotlin y Next.js) | ~5–10 min |
 
 **Por qué el Buscador se publica distinto:** el runner del servidor ejecuta lo que diga un workflow. Si los desarrolladores del Buscador tuvieran un workflow con ese runner, podrían ejecutar comandos en el servidor. Por eso el servidor **tira** del código (*pull*) en lugar de que GitHub lo **empuje**.
 
@@ -63,6 +67,8 @@ Hay **tres capas de identidad**, cada una con su propósito:
 | Historial de cargas masivas | Servidor de la oficina (`C:\Buscador\historial`) | Lo gestiona la oficina |
 | Claves del túnel y de las bases | `/opt/sulotec/.env` | Gestor de contraseñas |
 | Claves de Keycloak | `/opt/sulotec/cuenta.env` | Gestor de contraseñas |
+| Claves de MiRadar | `/opt/sulotec/miradar.env` | Gestor de contraseñas (la `MFA_ENCRYPTION_KEY` es imprescindible) |
+| Claves de PLAFT y de su IA | `/opt/sulotec/plaft.env`, `/opt/sulotec/plaft-ml.env` y la llave de `svc-plaft` en `/opt/sulotec/plaft-oci/` | Gestor de contraseñas |
 | Configuración del Buscador (API, sedes, token de Access) | `/opt/sulotec/buscador.env` | Se regenera con `preparar.sh` |
 | Llave de solo lectura del Buscador | `/opt/sulotec/buscador-actualizador/llave` | Se puede regenerar |
 
@@ -105,7 +111,7 @@ Ejemplo: mudar **Auditoría de Visitas** de Render a `auditoria.sulotec.com`.
 | Operación del Buscador | [`apps/buscador/README.md`](../apps/buscador/README.md) |
 | Código del Buscador | [Sulotec/buscador-interno](https://github.com/Sulotec/buscador-interno) |
 | Seguridad ISO 27001 | [`SEGURIDAD-ISO27001.md`](../SEGURIDAD-ISO27001.md) |
-| Bitácora completa | [`CONTEXTO-PARA-OTRO-CHAT.md`](../CONTEXTO-PARA-OTRO-CHAT.md) |
+| Contexto vigente del ecosistema | [`CONTEXTO-PARA-OTRO-CHAT.md`](../CONTEXTO-PARA-OTRO-CHAT.md) |
 | Next.js 16 | https://nextjs.org/docs |
 | Keycloak | https://www.keycloak.org/documentation |
 | Cloudflare Tunnel | https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/ |

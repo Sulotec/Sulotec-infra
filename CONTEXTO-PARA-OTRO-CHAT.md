@@ -1,239 +1,326 @@
-# Contexto del proyecto Sulotec (para continuar en otro chat / otra PC)
+# Sulotec — contexto del ecosistema (para continuar en otro chat)
 
-Pega o adjunta este archivo en el chat nuevo y di: "Continúa desde donde quedamos".
-Este proyecto es de **Sulotec** y NO tiene relación con la pizzería (esa es personal, no mezclar).
+> **Actualizado: 2026-10-17.** Léelo completo antes de actuar. Si algo de aquí contradice lo que ves en el servidor o en el código, **manda lo que ves**: corrige este archivo en el mismo commit.
+>
+> **Para un chat nuevo:** pega o adjunta este archivo y di *"Continúa desde donde quedamos"*. Para bajarlo:
+> `gh api repos/Sulotec/Sulotec-infra/contents/CONTEXTO-PARA-OTRO-CHAT.md -H "Accept: application/vnd.github.raw"`
+>
+> Aquí **nunca** van contraseñas, tokens ni datos personales. Los secretos viven solo en el servidor (`/opt/sulotec/*.env`) y en el gestor de contraseñas de la empresa.
+> Este proyecto es de **Sulotec / Informa Perú**. No tiene relación con proyectos personales del usuario (por ejemplo, la pizzería): no mezclar.
+>
+> Lo que no se pudo comprobar está marcado como **(por confirmar)**. La bitácora original (decisiones y avances día a día) está en [`docs/historico/`](docs/historico/bitacora-2026-10-06-al-14.md).
 
-## Objetivo
-Montar un ecosistema de aplicaciones web SaaS en subdominios de `sulotec.com`: Caja Huancayo, Compartamos, lavado de activos (security backend) y AFACOP.
-Stack mixto: React, Angular, TypeScript/JavaScript, C# .NET, Java Spring Boot, APIs. Nada estaba configurado al empezar (2026-10-06).
+## 0. En 60 segundos
 
-## Arquitectura elegida
+- **Sulotec** es el ecosistema SaaS de soluciones digitales de Informa Perú, en `sulotec.com`: un **portal** público (demos + cuentas) y **productos** en subdominios propios.
+- Todo corre en **una VM de Oracle Cloud** (ARM, Santiago de Chile) detrás de **Cloudflare** (túnel; la VM no abre ningún puerto). Nada depende de una PC.
+- **Productos hoy:** MiRadar 360 (en producción, ya en Oracle), PLAFT (prevención de lavado de activos; corre en Oracle con datos de prueba, sin clientes reales todavía), Buscador Interno (privado; la web está en Oracle y la API en la oficina) y Auditoría de Visitas / Caja Huancayo (aún en Render, por migrar).
+- **Cada producto = un kit en `apps/<producto>/`** de este repositorio (compose + scripts) **+ su código en repositorios de GitHub.** MiRadar y PLAFT se publican con `desplegar.sh` en el servidor (construye desde `main` y vuelve a la versión anterior si algo falla); el portal, las cuentas y el Buscador, por workflow o por *pull* (§5).
+- **Seguridad:** buena base (túnel sin puertos, Access, respaldos con restauración probada, claves de bases rotadas el 2026-10-14), pero con **brechas conocidas** (§9): repositorios públicos, 2FA pendiente y, en PLAFT, la separación entre empresas aún no la hace cumplir el backend.
+- **El usuario no es especialista en infraestructura:** pasos cortos, comandos completos y listos para copiar, español simple (§2).
+
+## 1. Qué queremos lograr (el ecosistema SaaS)
+
+### 1.1 Visión
+
+Un **SaaS propio con marca Sulotec**, para ofrecer a empresas —en especial del sector financiero (Caja Huancayo, Compartamos y entidades supervisadas por la SBS)— soluciones de **trabajo en campo, cumplimiento normativo y consulta de información**, operadas desde una infraestructura **propia, segura, barata y reproducible**.
+
+### 1.2 Principios (lo que hace que todo encaje)
+
+1. **Una sola puerta.** `sulotec.com` es el portal: demos públicas con datos ficticios, cuentas de personas y "Mis productos" según el rol. Los productos viven en subdominios de **un solo nivel** (`plaft.sulotec.com`, no `app.plaft.sulotec.com`).
+2. **Un producto = un contenedor (o un grupo pequeño), su base y su bucket.** Bases separadas en servidores compartidos (PostgreSQL 16 y MySQL 8.4); archivos en buckets privados con llave propia.
+3. **Nada expuesto.** Sin puertos abiertos: todo entra por el túnel de Cloudflare. Lo privado lleva Cloudflare Access **y** su propia validación dentro de la app (defensa en profundidad).
+4. **Mínimo privilegio.** Cada persona y cada servicio ve solo lo que necesita (por ejemplo, el CEO entra al Buscador pero no al servidor).
+5. **Multiempresa.** Cada cliente ve solo lo suyo. En PLAFT ya existe la lista de empresas y cada cuenta pertenece a una; el objetivo es que sea la norma en todos los productos.
+6. **Reproducible y sin depender de una PC.** Terraform para Oracle, scripts idempotentes para el servidor, kits por producto, despliegues con vuelta atrás, secretos solo en el servidor y en el gestor.
+7. **Cumplimiento.** Alineado a ISO/IEC 27001 (Anexo A), Ley 29733 (datos personales) y requisitos de la SBS. Los datos están en Santiago de Chile: validar con legal el flujo transfronterizo antes de cargar datos reales de clientes.
+8. **Costo bajo control.** Todo dentro de *Always Free* (hoy US$ 0/mes), con presupuesto aprobado de hasta US$ 260/mes **solo si hace falta**.
+
+### 1.3 Cómo se ve "terminado" (camino propuesto; no todo está decidido por el usuario)
+
+- Todos los productos en Oracle, bajo sus subdominios, con **Render, Vercel, Aiven y Backblaze apagados**.
+- **Cuentas con inicio de sesión único** (Keycloak) también dentro de los productos (hoy el portal usa Keycloak y cada producto tiene sus propias cuentas).
+- Cada backend **hace cumplir** la separación por empresa (no solo la web).
+- 2FA/MFA en todo, repositorios privados, claves rotadas y guardadas, monitoreo y alertas, migraciones de base versionadas, pruebas separadas de producción y, con clientes reales, una VM de pago con SLA.
+
+## 2. Cómo se trabaja con el usuario (reglas para cualquier chat)
+
+**Estilo**
+- **Español simple y coloquial.** Respuestas **cortas**: qué cambió, qué tiene que hacer él, comandos listos. Sin resúmenes técnicos largos.
+- No es especialista en infraestructura: explica el porqué de cada paso. Suele pedir algo grande en una frase y espera que lo resuelvas con criterio.
+- **Verifica de verdad y di con franqueza lo que no pudiste probar.** Pero **no gastes tokens en rondas de pruebas** ("no entres en bucle"): una comprobación proporcional por cambio; pregunta antes de una tanda larga. Sugiérele un chat nuevo cuando el actual sea muy largo (este archivo y la memoria conservan el contexto).
+- Si dice **"espera"** o pregunta por otra alternativa: **para y contesta la pregunta** (comparación corta, recomendación, y si seguimos) antes de ejecutar nada más.
+
+**Comandos y scripts**
+- Da **archivos y scripts completos con valores reales**, no marcadores ("pégalo tú"): él pega literalmente lo que se le da y no es técnico en PowerShell/JSON. Con cada paso, un comando de verificación que **falle a la vista**.
+- Los comandos **del servidor** van en bloques **sin etiqueta de lenguaje** (así no aparece un botón de ejecutar en su PC); los de su PC, con `bash`/`powershell`.
+- Los scripts que piden claves muestran un `*` por carácter y "recibido: N caracteres" (un prompt mudo le parece un terminal congelado).
+- Antes de tocar archivos de producción, copia `.bak`.
+
+**Git y entregas**
+- **Commits sin ninguna atribución a Claude** (ni `Co-Authored-By` ni "Generated with…"), con la cuenta git del usuario, mensajes en español **sin tildes**, añadiendo archivos **por nombre** (nunca `git add -A`).
+- `Sulotec-infra`: directo a `main` (se publica solo lo que corresponda). **Repositorios de las aplicaciones** (`Security-*`, `Afacop-*`, etc.): **rama + Pull Request que el usuario une**; no unir ni desplegar sin decirlo.
+- Nada de configuración que dependa de su PC. Trabaja desde la **laptop de trabajo**; la PC personal solo sirve de navegador.
+
+**Seguridad**
+- **Nunca secretos ni datos personales en chats, repositorios ni documentos.** Si el usuario pega uno, avísale y recuérdale rotarlo (ya lo ha hecho varias veces: está en los pendientes).
+- **RENIEC:** no llamar al proveedor real en pruebas (cuota limitada; se usan servidores simulados).
+- Las reglas de seguridad impiden que un asistente ponga tokens o integre código ajeno por su cuenta: esos pasos los corre el usuario.
+
+## 3. Mapa de la plataforma
+
 ```
-Usuario → Cloudflare (DNS, SSL, WAF, Access) → Cloudflare Tunnel → VM Oracle ARM (Ubuntu) → Docker
-                                                                   ├─ cloudflared
-                                                                   ├─ postgres (una BD + usuario por proyecto)
-                                                                   └─ un contenedor por app
+                   ┌──────────────────────── Cloudflare ────────────────────────┐
+Personas ─HTTPS──▶ │ DNS · HTTPS · WAF · Access (quién entra) · Túnel "sulotec"  │
+                   └───────────────┬────────────────────────────────────────────┘
+                                   │ conexión SALIENTE desde la VM (sin puertos abiertos)
+        ┌────────────── VM Oracle "sulotec-main" (ARM · Ubuntu · Docker) ───────────────┐
+        │ red sulotec_edge:  cloudflared · portal · cuenta(Keycloak) · buscador          │
+        │                    miradar-web/api · plaft-web/api                             │
+        │ red sulotec_data:  postgres 16 · mysql 8.4   (sin puertos publicados)          │
+        │ red ia (PLAFT):    plaft-ml ◀──▶ plaft-ollama   (sin ruta pública)             │
+        └──────────────┬───────────────────────────────────────────────┬────────────────┘
+                       │ Object Storage (privado): backups, archivos    │ API del Buscador
+                       ▼                                                ▼ (por ahora Tailscale Funnel)
+              buckets de Oracle                          Servidor de la oficina (Windows): API .NET + SQL Server
 ```
-- La VM no abre puertos web; solo SSH desde la IP del administrador.
-- Subdominios de **un solo nivel** (`api-afacop.sulotec.com`, no `api.afacop.sulotec.com`) por el SSL gratis de Cloudflare.
-- Todo está en la carpeta `sulotec-infra/`: `README.md` (fases paso a paso), `oracle/` (Terraform), `vm/` (compose base + scripts), `templates/` (Dockerfiles .NET, Spring Boot, SPA).
 
-## >>> MiRadar 360 en Oracle (2026-10-14) <<<
-- Producto: MiRadar 360 (antes AFACOP). Código en `jeliases-informaDev/Afacop-Backend`, `Afacop-FrontEnd` y `App-Afacop`; kit del servidor en `apps/miradar/` (su README trae los pasos y la operación).
-- Corre en `sulotec-main`: contenedores `miradar-api` (Node 24, puerto 4000) y `miradar-web` (nginx, 8080), compose en `/data/apps/miradar`, configuración en `/opt/sulotec/miradar.env` (root:docker 640; no está en ningún repositorio). Rutas del túnel: `miradar360.sulotec.com → http://miradar-web:8080` y `api-miradar360.sulotec.com → http://miradar-api:4000`.
-- Base: PostgreSQL 16 compartida de la VM, base `miradar`. Se copió el 2026-10-14 desde la PostgreSQL 18 de Render (14 tablas, mismas filas); el volcado queda en `/data/backups/miradar`.
-- Fotos y firmas: bucket `miradar-archivos` de Object Storage por la API S3, con el usuario `svc-miradar` (política `storage-miradar`); se copiaron desde Backblaze.
-- Despliegue: `sudo bash /data/apps/miradar/desplegar.sh` (construye desde `main` y vuelve a la versión anterior si falla). Pruebas de humo: `probar.sh`.
-- Dependencia externa: la RRCC-API (`RRCC_API_URL`) está en un túnel ngrok gratuito; conviene mudarla.
-- Pendiente: app móvil con la URL nueva (EAS) y la URL de privacidad en Play Console; cerrar Render y Backblaze; rotar claves (base `miradar`, S3 de `svc-miradar`, RRCC); repositorios privados.
+### 3.1 Oracle Cloud (detalle en [`docs/02-oracle-cloud.md`](docs/02-oracle-cloud.md))
 
-## >>> ÚLTIMO (2026-10-09) — leer primero <<<
-- **Documentación completa en `docs/`:** índice, 1) Proyecto Sulotec, 2) Oracle Cloud, 3) Cloudflare, 4) Integración de proyectos.
-- **Buscador Interno separado en su propio repo privado: `Sulotec/buscador-interno`.**
-  - Contiene `web/` (Next.js 16 + React 19 + TS, por módulos) y `api/` (.NET, sin `reportes/` y sin historial).
-  - `Sulotec-infra/apps/buscador/` queda solo con la operación: compose, `preparar.sh`, `actualizar.sh`, `instalar-actualizador.sh`.
-  - El servidor publica el Buscador **leyendo** el repo con una llave de solo lectura cada 2 minutos (systemd `buscador-actualizador.timer`). Así los desarrolladores no tienen acceso al servidor.
-  - ✅ Publicador automático instalado el 2026-10-09 (primera publicación `3cb1f71`).
-  - En la organización se encendieron las deploy keys; la llave `servidor-sulotec-main` es de solo lectura.
-- **Buscador en el servidor:** contenedor `buscador` en marcha.
-  - `/opt/sulotec/buscador.env`: API `https://win-hkbui0id607.tail4a0d10.ts.net:8443` (Funnel), SEDES_IPS vacío (solo ADMIN GENERAL).
-  - **Pendiente:** ruta del túnel `buscadorinterno.sulotec.com → http://buscador:3000`, si no se agregó.
-- **Equipo en GitHub (2026-10-09):**
-  - Jorge Luis Elias Estrada (jeliases) ya trabaja con pull requests. PR #1 en Sulotec-infra: MiRadar360 `publicado: true` → `miradar360.sulotec.com` (responde 200).
-  - Rol recomendado para programadores en `buscador-interno`: **Write**. **Admin** solo para `informaperu2-cmyk`. Nadie del equipo en `Sulotec-infra`.
-  - Plan GitHub Free: las reglas de protección de `main` no se aplican en repositorios privados; para que sean obligatorias hace falta GitHub Team.
-- **Cómo retomar en un chat nuevo:** clonar `Sulotec/Sulotec-infra` y `Sulotec/buscador-interno` (cuenta `informaperu2-cmyk`), leer `docs/README.md` y este archivo, y seguir la tabla de pendientes de `docs/01-proyecto-sulotec.md`. Preferencias del usuario: español simple, paso a paso con capturas, sin rondas de pruebas, nada de configuración que dependa de su PC, nunca secretos ni datos personales en chats o repositorios.
-- **Portal:** Mis productos renovado (bienvenida por rol, panel "Tu cuenta", botón Abrir Buscador); pie con "Síguenos" (`sitio.ts → redes`).
-- **Cuentas:** SaaS sin registro libre; las crea el equipo; recuperación encendida.
-  - El usuario creó su cuenta (Administrador General) y ya entra a Mis productos.
+| Dato | Valor |
+|---|---|
+| Cuenta | Pay As You Go (con tarjeta) usando solo recursos **Always Free**; costo actual US$ 0 |
+| Región | Chile Central (Santiago), `sa-santiago-1` |
+| Servidor | `sulotec-main`: `VM.Standard.A1.Flex` (**ARM**), 4 OCPU, 24 GB, Ubuntu 24.04; disco de arranque 150 GB |
+| Datos | Disco `sulotec-data` de 50 GB montado en **`/data`** (bases, apps, respaldos); se puede conectar a otra VM |
+| Red | VCN `sulotec-vcn`; **puerto 22 cerrado** (`ssh_enabled = false`); la IP pública no sirve servicios |
+| Infraestructura como código | `oracle/` (Terraform). **El estado vive en el Cloud Shell de Oracle**, no en una PC |
+| Acceso al servidor | Solo por **https://ssh.sulotec.com** (SSH en el navegador, Cloudflare Access, certificados cortos); un usuario Linux por persona, sin contraseña, con `sudo` y `docker` |
+| Emergencia (si falla Cloudflare) | En Cloud Shell: `ssh_enabled = true` + `admin_cidr` = tu IP, `terraform apply`; volver a `false` al terminar |
+| Correo de salida | OCI Email Delivery con el dominio `sulotec.com` (DKIM y SPF activos), remitente `no-reply@sulotec.com`. Funciona para el Buscador; para las invitaciones de Keycloak **(por confirmar)** |
 
-## >>> ESTADO ACTUAL (2026-10-07, 23:40 Lima) — leer esto primero <<<
-**Plataforma base terminada y funcionando.** Lo de más abajo es historial.
-- **Oracle (Pay As You Go, todo en Always Free = US$0):** VM `sulotec-main` A1 4 OCPU/24 GB, Ubuntu 24.04 ARM, IP pública 155.181.132.137 (IP privada 10.0.1.178). Boot 150 GB + **disco de datos 50 GB montado en `/data`** (etiqueta `sulotec-data`). Buckets privados `sulotec-backups` y `sulotec-archivos` (namespace `axkjo5bh8iys`). **Puerto 22 cerrado** (`ssh_enabled = false` en tfvars). Presupuesto real: US$260/mes, gastar solo si hace falta; alerta en US$10.
-- **Cloudflare:** `sulotec.com` con HTTPS obligatorio y TLS ≥1.2. Túnel **`sulotec`** (ID 2bb087e4-…) Healthy. Zero Trust Free (team `round-butterfly-3ee7`, se puede renombrar). App de Access **`ssh.sulotec.com`** (SSH en el navegador) con política `Administradores` = `informaperu2@gmail.com`, `serviciosdigitales@informaperu.com`; certificados SSH cortos (CA en `/etc/ssh/ca.pub`). Ruta del túnel: `ssh.sulotec.com → ssh://10.0.1.178:22`.
-- **Cómo entrar al servidor:** abrir **https://ssh.sulotec.com** desde cualquier navegador → código al correo → usuario `informaperu2` (o `serviciosdigitales`). Cada persona tiene su usuario Linux, sin contraseña, con sudo y docker. El usuario `ubuntu` + llave de la laptop solo sirve si se reabre el puerto 22 (emergencia).
-- **Emergencia (si Cloudflare falla):** Cloud Shell → `cd ~/oracle`, exportar `TF_VAR_*`, poner `ssh_enabled = true` y `admin_cidr = "<IP actual>/32"` en `terraform.tfvars`, `terraform apply`; entrar con la llave de la laptop (`ubuntu@155.181.132.137`). Volver a `false` al terminar.
-- **En la VM (`/opt/sulotec`, root:docker):** `docker-compose.yml` con `cloudflared`, `postgres:16` (`/data/postgres`) y `mysql:8.4` (`/data/mysql`), redes `sulotec_edge` y `sulotec_data`. `.env` con `CF_TUNNEL_TOKEN`, `POSTGRES_PASSWORD`, `MYSQL_ROOT_PASSWORD`, `BACKUP_BUCKET` (**no borrar `.env`**). Scripts: `scripts/backup.sh` (cron diario 02:00 → `/var/log/sulotec-backup.log`, copia local en `/var/backups/sulotec` 14 días + bucket con instance principal; primer backup OK 23:36) y `scripts/new-project-db.sh <postgres|mysql> <proyecto>`. OCI CLI en `/usr/local/bin/oci`. Volumen Docker viejo `sulotec_pgdata` quedó sin uso (vacío; se puede borrar).
-- **Archivos de referencia:** `vm/bootstrap.sh` (túnel, VM nueva) → `vm/setup-datos.sh` (disco, bases, backups). `SEGURIDAD-ISO27001.md` con el mapeo de controles y pendientes.
-- **Pendientes:** las claves de `POSTGRES_PASSWORD` y `MYSQL_ROOT_PASSWORD` se mostraron en el chat el 2026-10-07 y el usuario decidió no rotarlas aún → **rotarlas antes de cargar datos reales** (ALTER USER en ambas bases + actualizar `.env` + `docker compose up -d` + `backup.sh`); guardar claves de Postgres/MySQL en el gestor de la empresa; 2FA en Gmail/Cloudflare/Oracle y MFA en la política de Access; prueba de restauración; repo Git privado de la empresa; repos de Caja Huancayo a privado; validar Ley 29733/SBS con legal; limpiar la PC personal (llave `C:\Users\Jorge\.ssh\sulotec_oci` nunca autorizada, zips en Descargas). **Siguiente gran paso: subir los 3 proyectos** (Caja Huancayo usa Node + MySQL; su código está en GitHub `jeliases-informaDev/*`).
+### 3.2 Cloudflare (detalle en [`docs/03-cloudflare.md`](docs/03-cloudflare.md))
 
-## Portal sulotec.com y subdominios (2026-10-08, madrugada)
-- Portal en `apps/portal/` (Astro + componentes; datos en `src/data/sitio.ts` y `src/data/soluciones.ts`). Marca **Sulotec**, estilo tomado como **referencia** del manual de marca de Informa Perú (azul `#1B4589`, rojo `#ED1C24` solo acento, Leelawadee UI/Arial, corte curvo con filete rojo, íconos lineales) y estructura inspirada en experian.com.pe (sin copiar diseño ni imágenes). Animaciones solo CSS (respeta "reducir movimiento").
-- Productos: **MiRadar360** (antes AFACOP; repos `jeliases-informaDev/Afacop-*`, "torre de control" de asesores en campo, web + Android/iOS, en producción), **Auditoría de Visitas** (Caja Huancayo; Node + MySQL), **Prevención de Lavado de Activos** (web + app), **Buscador Interno** (repos `InternalBuscador` (T-SQL → SQL Server) e `internal-search-frontend`).
-- Despliegue: nginx `stable-alpine` en `/data/apps/portal` (red `sulotec_edge`, contenedor `portal`); rutas del túnel `sulotec.com` y `www.sulotec.com` → `http://portal:80`. El build (`npm run build`) se hace en una PC por ahora; luego CI/CD desde GitHub.
-- Subdominios propuestos (un solo nivel): `miradar360`/`api-miradar360`, `auditoria`/`api-auditoria`, `plaft`/`api-plaft`, `buscador` (con Cloudflare Access). Por confirmar con el usuario.
-- **GitHub:** organización **`Sulotec`** (creada desde la cuenta de empresa `informaperu2-cmyk`, como "business"), repo **privado `Sulotec/Sulotec-infra`** con todo este proyecto. Es la fuente oficial: editar → push a `main` → se publica solo.
-- **CI/CD:** `.github/workflows/portal.yml` corre en un **runner propio** `sulotec-main` (servicio `actions.runner.Sulotec-Sulotec-infra.sulotec-main`, usuario `github-runner` en grupo docker, `/opt/actions-runner`, etiqueta `sulotec`), instalado con `vm/scripts/instalar-runner.sh`. Conexión saliente, sin puertos. Compila Astro en `node:24-alpine` y publica en `/data/apps/portal/sitio` (dueño `github-runner:docker`). Primera publicación OK (2026-10-08 ~01:20).
-- **Rutas del túnel:** `ssh.sulotec.com → ssh://10.0.1.178:22`, `sulotec.com → http://portal:80`, `www.sulotec.com → http://portal:80`. **https://sulotec.com en línea** (HTTP 200, encabezados de seguridad del nginx).
-- **Productos públicos vs privados:** MiRadar360, Auditoría de Visitas y Lavado de Activos son **públicos** (aparecen en el portal). **Buscador Interno es privado** de la empresa: `publico: false` en `soluciones.ts` (no aparece en el portal) y `buscadorinterno.sulotec.com` se protege con Cloudflare Access (app "buscadorinterno", creada 2026-10-08), política reutilizable **"Administradores generales"**: `abel.chavez@informaperu.com` (CEO), `serviciosdigitales@informaperu.com`, `informaperu2@gmail.com`. El CEO NO tiene acceso al servidor SSH (mínimo privilegio). **Requisito del usuario: el Buscador solo debe abrirse desde la red de la sede** (no desde casa ni datos móviles): agregar a la política un "Require → IP ranges" con la IP pública fija de la oficina (pendiente: obtenerla el viernes en https://ifconfig.me y confirmar que es fija; si no lo es, usar WARP con equipos registrados). Dentro de la app: CEO acceso total, demás usuarios con permisos limitados (roles por correo). La app Buscador debe leer la identidad verificada por Cloudflare (`Cf-Access-Jwt-Assertion`, validar contra el team domain y el AUD de la app) para sus roles (inicio de sesión único). Ojo: `InternalBuscador` es T-SQL → SQL Server (no corre en ARM).
-- Portal: cada producto tiene `url` opcional (dirección actual mientras se muda) y `publicado` (subdominio propio). Pendiente: que el usuario pase las URLs actuales de MiRadar360, Auditoría y Lavado de Activos.
-- En el terminal web de Cloudflare el pegado agrega `^[[200~ … ~`: antes de pegar comandos, ejecutar `bind 'set enable-bracketed-paste off'`.
+- DNS de `sulotec.com`, **HTTPS obligatorio**, TLS ≥ 1.2, plan Free. Cloudflare **corta las peticiones que pasan de 100 s**.
+- **Túnel `sulotec`:** conector `cloudflared` (contenedor). Cada subdominio se enruta a un contenedor por nombre (`http://<contenedor>:<puerto>`).
+- **Zero Trust / Access** (Free): ingreso con código al correo. Aplicaciones protegidas: el servidor SSH (`Administradores`), el Buscador (`Administradores Generales`; sedes por IP) y `/admin` de cuentas (`Equipo de cuentas`).
+- Subdominios de **un solo nivel**: el certificado gratuito solo cubre ese nivel.
 
-## Cuentas: cuenta.sulotec.com + demos públicas (2026-10-08)
-- **Decisiones del usuario:**
-  - Keycloak como sistema de cuentas.
-  - Cualquier correo puede registrarse, con restricciones de seguridad.
-  - Quien tiene cuenta ve la demo completa y se le invita a una consulta personal.
-  - **Prohibido usar datos personales en demos**: solo datos de ejemplo.
-- **Demos públicas** en `/demo/miradar360`, `/demo/auditoria` y `/demo/plaft`, con datos ficticios (`src/data/demos.ts`). Tras 3 acciones bloqueadas o 75 segundos, se invita a crear cuenta. Con sesión iniciada, se invita a agendar una consulta (mailto).
-- **Keycloak 26.8.0** en `apps/cuenta/` (guía completa en `apps/cuenta/README.md`):
-  - Realm `sulotec` con usuario propio (`registrationEmailAsUsername=false`) o correo.
-  - Verificación de correo obligatoria: con KC 26.8 el registro no pide contraseña, se pone después de verificar.
-  - Política de contraseñas y protección contra fuerza bruta.
-  - Grupo **Administradores Generales**: rol `administrador-general` + `manage-users`/`view-users`/`query-*`/`view-events`. Puede crear cuentas pero no cambiar la configuración (probado: 403).
-  - Tema `sulotec` (keycloak.v2).
-  - Cliente público `portal` con PKCE y `baseUrl=/cuenta/entrar`, que inicia sesión automáticamente.
-- **Portal:**
-  - `public/cuenta.js` (OIDC + PKCE sin librerías). El inicio pendiente va en localStorage por `state`, porque el enlace del correo se abre en otra pestaña (bug encontrado y corregido). La sesión dura 30 minutos.
-  - Páginas `/cuenta/callback` y `/cuenta/entrar`.
-  - CSP con `connect-src https://cuenta.sulotec.com`.
-  - Se enciende con la variable de GitHub **`CUENTA_ACTIVA=true`** + correr "Publicar portal". Mientras no se encienda, el portal se ve igual que antes.
-- **Despliegue:**
-  - Workflow `.github/workflows/cuenta.yml` copia a `/data/apps/cuenta`.
-  - Una sola vez: `sudo bash /data/apps/cuenta/preparar.sh`. Crea la base `keycloak` y `/opt/sulotec/cuenta.env` (root:docker 640), muestra una vez la clave de `admin-temporal`, levanta el contenedor `cuenta` (redes edge + data) y opcionalmente configura el SMTP.
-  - Cloudflare: primero la app de Access "Consola de cuentas" (`cuenta.sulotec.com/admin`), luego la ruta `cuenta.sulotec.com → http://cuenta:8080`.
-- **Probado en local** (Docker Desktop, contenedores temporales `kc-prueba` + `mailpit`):
-  - Registro → correo → verificación en otra pestaña → contraseña → vuelve a la demo con "Hola, <nombre>".
-  - Invitación de administrador ("Actualiza tu cuenta").
-  - Permisos del grupo.
-  - SQL del script contra Postgres 16 (repetible).
-- **Desplegado el 2026-10-08:** `cuenta.sulotec.com` arriba, con la app de Access "cuenta" (`/admin`, política "Equipo de cuentas") y la ruta del túnel `cuenta.sulotec.com → http://cuenta:8080`. **"Iniciar sesión" encendido en sulotec.com**, con `CUENTA_ACTIVA` en `true` por defecto en `portal.yml`. **"Crear cuenta" apagado** hasta tener SMTP: `CUENTA_REGISTRO=true` en GitHub, y Keycloak abre el registro solo con `ajustar-realm.sh`.
-- **Decisión final del usuario (2026-10-08): es un SaaS, NO hay registro libre. Las cuentas las crea el equipo de Sulotec** en la consola (Users → Create → Credential reset con Verify Email y Update Password). Las personas **sí pueden recuperar** su acceso con "¿Olvidaste tu contraseña?".
-  - El correo de Oracle (OCI Email Delivery) hace falta para las invitaciones y la recuperación (README, Parte 2).
-  - Se descartaron "Crear cuenta" y Google/Microsoft porque creaban cuentas solas. `ajustar-realm.sh` fuerza `registrationAllowed=false` y `resetPasswordAllowed=true`, y borra los proveedores de reserva sin configurar.
-  - En la demo, quien no tiene cuenta ve "Iniciar sesión" + "Solicitar acceso" (mailto a contacto@).
-  - **Pendiente urgente: Email Routing de `contacto@sulotec.com`.**
-- **Reglas pedidas por el usuario:**
-  - Visitante sin sesión: 2 minutos de demo en total (en localStorage `sulotec.demo.inicio`); después, una ventana obligatoria pide iniciar sesión, con la opción "Solicitar acceso" por correo.
-  - Con sesión: demo sin límite; al minuto se recomienda agendar una cita (una vez por visita).
-  - Al iniciar sesión desde la cabecera se llega a **`/mis-productos`**. Grupo **Administradores Generales** (rol `administrador-general` en el claim `roles` del id_token) = **ve todo, incluido el Buscador** (hoy: el CEO). Los demás ven solo las demos y la invitación a la consulta.
-  - Los botones "Abrir" esperan las URLs reales: `url` en `soluciones.ts`. Para el Buscador: puerta `buscadorinterno.sulotec.com` (Access) → redirección a Vercel, **pendiente la URL de Vercel**.
-- **Pedido del usuario (2026-10-08):** crear 3 cuentas de equipo: `jeliases`, `sjuarez`, `AbelCEO` (queda `abelceo`; CEO). Se crean en la consola cuando cuenta.sulotec.com esté arriba (README, Parte 2), con `Configure OTP`. Solo `abelceo` va en Administradores Generales (ve todo); jeliases y sjuarez van sin grupo y solo ven las demos, salvo que el usuario diga otra cosa. Los correos de jeliases y sjuarez los pone el usuario.
-- **Pendiente:**
-  - Desplegar en el servidor (preparar.sh + Cloudflare).
-  - Crear las 3 cuentas.
-  - SMTP con OCI Email Delivery (remitente `no-reply@sulotec.com`, SPF/DKIM en Cloudflare).
-  - Luego `CUENTA_ACTIVA=true`.
-  - Reemplazar `admin-temporal` por un administrador maestro con nombre propio + OTP.
+### 3.3 El servidor por dentro (detalle en [`docs/02-oracle-cloud.md`](docs/02-oracle-cloud.md) §2.3)
 
-## Estado actual (2026-10-06, noche)
-- **Cloudflare:** `sulotec.com` activo, plan Free. Túnel `sulotec-oci` ya creado (ver "Avance" más abajo). **Para el estado más reciente y el plan de mañana, ir a "Plan para mañana".**
-- **Oracle Cloud:** tenancy `InformaPeru`, región home Chile Central (Santiago) = `sa-santiago-1`. Cuenta en **Free Trial** (sin método de pago). El usuario solo tiene tarjeta de débito y no la tenía a mano; se decidió **seguir sin upgrade** y hacerlo luego si hace falta (Billing → Change Payment Method → Upgrade your account).
-- **Cloud Shell de Oracle:** `terraform plan` y `terraform apply` ya corrieron. Se crearon **12 de 13 recursos** (VCN, subred, internet gateway, ruta, security list solo-SSH, bucket `sulotec-backups`, presupuesto US$10 y sus 3 alertas). **Falta la VM** (`oci_core_instance.main`) y, como dependen de ella, el dynamic group y la policy. Oracle responde `500 Out of host capacity` (la capa gratuita ARM no tiene hueco en Santiago). Es esperable; se reintenta en bucle. A las 03:16 UTC (22:16 Lima) del 2026-10-07 llevaba ~20 min reintentando sin éxito.
-- **Siguiente paso inmediato:** conseguir que se cree la VM (ver "Retomar en Cloud Shell"). Si tras ~1 hora no sale: bajar a 2 OCPU / 12 GB. Si tampoco: upgrade a Pay As You Go con **tarjeta de crédito** (Billing → Change Payment Method → Upgrade your account; el usuario solo tiene débito, que puede no ser aceptada), o usar otro proveedor de VPS (los compose/scripts sirven en cualquier Ubuntu).
+| Ruta | Qué hay |
+|---|---|
+| `/opt/sulotec/` (root:docker) | `docker-compose.yml` base (cloudflared, postgres, mysql), `.env` (**no borrar**), `scripts/`; un `<producto>.env` por producto (`cuenta.env`, `buscador.env`, `miradar.env`, `plaft.env`, `plaft-ml.env`) |
+| `/data/` | `postgres/`, `mysql/` (datos de las bases), `apps/<producto>/` (kits y compose), `backups/` |
+| `/var/backups/sulotec/` | Respaldos locales de 14 días y los que hacen los scripts antes de escribir datos |
+| `/opt/actions-runner/` | Runner de GitHub Actions (usuario `github-runner`); atiende **solo** a `Sulotec-infra` |
 
-## Retomar en Cloud Shell (cada sesión nueva pierde las variables)
-```bash
-cd ~/oracle
-export TF_VAR_tenancy_ocid=$OCI_TENANCY TF_VAR_compartment_ocid=$OCI_TENANCY TF_VAR_region=$OCI_REGION
-# opcional, si hay que bajar el tamaño:  printf 'ocpus = 2\nmemory_gb = 12\n' >> terraform.tfvars
-while true; do terraform apply -auto-approve -input=false > /tmp/tf.log 2>&1 && break; grep -q "Out of host capacity" /tmp/tf.log || break; echo "$(date +%H:%M) sin capacidad, reintento en 60 s"; sleep 60; done; tail -20 /tmp/tf.log
+**Contenedores**
+
+| Contenedor | Para qué | Notas |
+|---|---|---|
+| `cloudflared` | Túnel a Cloudflare | token en `/opt/sulotec/.env` |
+| `postgres` (16) · `mysql` (8.4) | Bases compartidas | solo red `sulotec_data` |
+| `portal` | sulotec.com (nginx, Astro estático) | |
+| `cuenta` | Keycloak 26.8 (cuenta.sulotec.com) | 1,5 GB |
+| `buscador` | Web del Buscador Interno (Next.js) | solo lectura, 512 MB |
+| `miradar-api` · `miradar-web` | MiRadar 360 (Node 24 + Socket.IO · nginx) | |
+| `plaft-api` · `plaft-web` | PLAFT (Spring Boot · Next.js) | memoria limitada, solo lectura, sin privilegios |
+| `plaft-ml` · `plaft-ollama` | IA de PLAFT (FastAPI · Ollama con `qwen2.5:7b`) | opcionales, red `ia`, sin ruta pública |
+
+**Bases de datos**
+
+| Motor | Base | De quién |
+|---|---|---|
+| PostgreSQL 16 | `keycloak` · `miradar` · `plaft_ml` | cuentas del portal · MiRadar · IA de PLAFT |
+| MySQL 8.4 | `plaft` · `aiven_*` | PLAFT · copias **temporales** de la base de desarrollo de PLAFT (restauradas el 2026-10-15) |
+| SQL Server | (en la oficina) | Buscador Interno; **no corre en ARM** |
+
+**Buckets de Object Storage** (privados, con versionado; los de producto con llave propia en el Vault): `sulotec-backups` (respaldos diarios y `externos/…`), `sulotec-archivos`, `miradar-archivos`, `plaft-archivos` y `huancayo-archivos`. Cada servicio usa **su propia identidad** (p. ej. `svc-miradar`, `svc-plaft`) con permiso solo sobre su bucket.
+
+### 3.4 Dominios y rutas del túnel
+
+| Dirección | Va a | Quién entra |
+|---|---|---|
+| `sulotec.com`, `www` | `portal:80` | público |
+| `ssh.sulotec.com` | SSH de la VM | Access: administradores |
+| `cuenta.sulotec.com` | `cuenta:8080` | público (la consola `/admin` tras Access) |
+| `buscadorinterno.sulotec.com` | `buscador:3000` | Access + regla de sedes |
+| `miradar360.sulotec.com` · `api-miradar360.sulotec.com` | `miradar-web:8080` · `miradar-api:4000` | público (cuentas propias de MiRadar) |
+| `plaft.sulotec.com` · `api-plaft.sulotec.com` | `plaft-web:3000` · `plaft-api:8081` | público (cuentas propias de PLAFT) |
+| `auditoria` · `api-auditoria` | **(previsto)** Auditoría de Visitas | — |
+
+### 3.5 Identidad: quién es quién
+
+| Capa | Dónde | Para qué |
+|---|---|---|
+| **Cloudflare Access** | Delante de lo sensible (SSH, `/admin`, Buscador) | Primera puerta: correo verificado con código, o IP de sede |
+| **Keycloak** (`cuenta.sulotec.com`) | Portal: demos y "Mis productos" | **SaaS sin registro libre:** el equipo crea las cuentas; recuperación de contraseña sí. Rol `administrador-general` |
+| **Cuentas propias de cada producto** | MiRadar (PostgreSQL), PLAFT (MySQL), Buscador (SQL Server de la oficina) | Hoy no comparten identidad con Keycloak (el inicio único es un objetivo, §1.3) |
+
+### 3.6 Respaldos y secretos (resumen)
+
+- **Respaldos:** diarios a las 02:00 (`pg_dumpall` + `mysqldump` + `/data/apps`), 14 días en el servidor y copia en el bucket `sulotec-backups`. **Restauración probada el 2026-10-14** (`vm/scripts/probar-restauracion.sh --desde-bucket`; repetir cada trimestre).
+- **Los `*.env` de `/opt/sulotec` NO entran en el respaldo.** Lo imprescindible (p. ej. `MFA_ENCRYPTION_KEY` de MiRadar, que **no se rota**) debe estar también en el gestor. Inventario **sin valores**: [`docs/05-inventario-de-claves.md`](docs/05-inventario-de-claves.md).
+- **Rotación:** `sudo /opt/sulotec/scripts/rotar-claves.sh` (bases) y `apps/miradar/deploy/rotar-s3.sh` (clave S3). Rotadas el 2026-10-14.
+- Controles ISO 27001 y brechas: [`SEGURIDAD-ISO27001.md`](SEGURIDAD-ISO27001.md).
+
+## 4. Productos (estado a 2026-10-17)
+
+### 4.1 Portal y cuentas (`apps/portal`, `apps/cuenta`)
+- **Portal** (Astro): textos en `apps/portal/src/data/` (`sitio.ts`, `soluciones.ts`, `demos.ts`). **Demos públicas** (`/demo/miradar360`, `/demo/auditoria`, `/demo/plaft`) **solo con datos ficticios** (los datos personales están prohibidos): sin sesión hay 2 minutos y luego se pide iniciar sesión o solicitar acceso. **"Mis productos"** (`/mis-productos`): los *Administradores Generales* ven todo (incluido el Buscador); los demás, las demos.
+- **Cuentas** (Keycloak, realm `sulotec`): sin registro libre; contraseña de 10+ caracteres, bloqueo tras 5 intentos, sesión de 30 min sin uso (máx. 8 h); OTP al crear cada cuenta. Se publica con el workflow `cuenta.yml`.
+- **Pendiente:** reemplazar el administrador temporal de Keycloak por uno con nombre propio + OTP; confirmar el correo de invitaciones/recuperación; Email Routing de `contacto@sulotec.com` (hoy los correos de "Solicitar acceso" rebotan).
+
+### 4.2 MiRadar 360 — antes AFACOP (`apps/miradar`)
+- **Qué es:** "torre de control" de asesores en campo: rutas, clientes, visitas con GPS, fotos y firmas, mapa y MFA. **En producción.**
+- **Código:** `jeliases-informaDev/Afacop-Backend` (Node 24, Socket.IO), `Afacop-FrontEnd` (React) y `App-Afacop` (Expo; se compila con EAS).
+- **Corre en Oracle desde el 2026-10-14:** base `miradar` (se copió de la PostgreSQL 18 de Render a la 16 de la VM como SQL en una transacción), fotos y firmas en `miradar-archivos` (copiadas desde Backblaze con las mismas rutas). Las fotos nunca son públicas (URL firmadas de 5 y 10 minutos).
+- **Publicar:** `sudo bash /data/apps/miradar/desplegar.sh`. Comprobar: `probar.sh`. Detalle: [`apps/miradar/README.md`](apps/miradar/README.md).
+- **Datos útiles:** en Rutas se asignan **asesores** (no usuarios); el rol ASESOR solo entra por la app móvil; el planificador necesita latitud/longitud del asesor. Las 13 cuentas de testers son MiRadar (ASESOR), no PLAFT.
+- **Hecho (2026-10-15/16):** corregida la paginación de asesores (PR #21, desplegado) y selector de ubicación con mapa para el asesor (PR #22, unido; **falta confirmar que corrió `desplegar.sh`**).
+- **Trampas:** con datos migrados `INITIAL_ADMIN_PASSWORD` va **vacía** (si no, el arranque cambia la clave del administrador y borra su MFA); `MFA_ENCRYPTION_KEY` debe ser la misma que tenía Render y no se rota; el cliente S3 necesita `forcePathStyle` y `requestChecksumCalculation: WHEN_REQUIRED`.
+- **App móvil (a 2026-10-14):** `main` en 1.0.6 (código 9) con la dirección de Oracle; Play Console: prueba interna 1.0.5 y alpha cerrada 1.0.6 en revisión; falta cambiar la URL de privacidad a `https://api-miradar360.sulotec.com/privacidad/radar360`.
+- **Pendiente:** que todos los celulares usen la app nueva → apagar **Render y Backblaze** (antes, comparar con `SOLO_COMPARAR=1`); mover la **RRCC-API** fuera de un túnel ngrok gratuito; asesor duplicado "Santos Juarez" (ids 31 y 42).
+
+### 4.3 PLAFT — prevención de lavado de activos (`apps/plaft`)
+- **Qué es:** plataforma de cumplimiento PLAFT. Módulos de la web: **Listas Negativas / PEP**, **Canal de Denuncias** (con archivos en `plaft-archivos`), **Scoring de Riesgo**, **Matrices de Riesgo**, **Registro de Operaciones**, **Administración** (empresas y cuentas; solo administradores), Cursos (*próximamente*) e **Indira** (chat de IA acoplado a la derecha).
+- **Código** (`jeliases-informaDev`): `Security-Backend` (Kotlin sobre Java 17, Spring Boot 4, MySQL), `Security-FrontEnd` (Next.js 16, React 19, Tailwind 4), `Security-MachineLearning` (FastAPI: casos en prensa, scoring de personas, Indira) y `Security-App` (Expo). El módulo de Operaciones del backend lo desarrolla un compañero (`irubio06dev`).
+- **Corre en Oracle:** `plaft-api` → base MySQL `plaft`; `plaft-ml` → base PostgreSQL `plaft_ml`; Indira con **Ollama local (`qwen2.5:7b`)** por privacidad. Rutas: `plaft.sulotec.com` y `api-plaft.sulotec.com`.
+- **Publicar:** `sudo bash /data/apps/plaft/desplegar.sh` (construye desde `main`; al primer arranque con base nueva apaga solo la "semilla" y borra la clave inicial del archivo). Probar: `probar.sh`. Guía completa de 13 pasos: [`apps/plaft/README.md`](apps/plaft/README.md).
+- **Cuentas:** el administrador inicial es `superadmin`; su clave fue **aleatoria**, se mostró **una sola vez** y no se guarda en el servidor: si se perdió, `sudo bash /data/apps/plaft/resetear-clave.sh superadmin`. También pasaron cuentas de desarrollo (`admin001`, `lavado_pru*`, con claves que conoce el equipo de desarrollo).
+- **Datos cargados:** listas (colorimetría) y sancionadas SBS desde Excel, figuras políticas con sus casos en prensa, y **toda la base de desarrollo** (decisión del usuario para probar todos los módulos: personas y listas de demostración, consultas, matrices, scoring, denuncias de prueba, 10 operaciones DEMO). **No hay clientes reales todavía;** antes de tenerlos hay que desactivar las cuentas de prueba.
+- **Empresas y cuentas (2026-10-16):** `usuarios.empresa` era texto libre; ahora hay una **lista de empresas** (`/api/empresas`), la empresa es **obligatoria** y se elige de la lista al crear una cuenta, y la web trae **Administración** para crear cuentas (con clave generada) y administrar empresas. Operaciones **filtra por la empresa de la cuenta**; sin empresa no se puede usar. (PRs `Security-Backend#25` y `Security-FrontEnd#20`, desplegados.) Documentado en `Security-Backend/docs/EMPRESAS-Y-CUENTAS.md`.
+- **Rediseño de la web (2026-10-16):** la raíz va directo al login; estructura común (`PageShell`/`PageHeader`/`Panel`), tipografía IBM Plex, Indira como panel acoplado, módulo de Operaciones (lista, alta/edición, PDF, responsable).
+- **Verificado el 2026-10-16** con la web de producción y MySQL 8.4 reales en local: todo lo anterior funciona. **Hallazgo crítico:** el backend del módulo de Operaciones toma la empresa y el usuario de lo que manda la web, así que **la separación por empresa hoy solo la aplica la web, no el servidor** (otra cuenta común podría leer/editar datos de otra empresa llamando a la API directo); `GET /api/usuarios` además devuelve las cuentas de todas las empresas a cualquier cuenta. Hay un **arreglo propuesto** (la empresa sale de la cuenta autenticada; administradores pueden todas; registros ajenos responden "no encontrado") **pendiente de la aprobación del usuario**; tocaría el módulo del compañero y una de sus pruebas. **No dar acceso a un cliente real antes de cerrarlo.**
+- **Otros hallazgos del código:** `ddl-auto: update` (Hibernate cambia las tablas al arrancar, sin migraciones; conviene Flyway/Liquibase); el login no limita intentos (poner regla de velocidad en Cloudflare); Swagger y `/actuator` (salvo `health`) quedan cerrados por variables.
+- **IA lenta:** una respuesta de Indira puede tardar ~160 s en CPU y Cloudflare corta a los 100 s. Arreglo de fondo propuesto: chat **asíncrono** (el POST devuelve un id y la web consulta); mientras tanto, un modelo más liviano (`qwen2.5:3b`). Sin responder aún.
+- **Cómo compilar y probar el backend desde la laptop de trabajo:** Java directo **no funciona** en el entorno de Claude Code (Gradle falla al abrir sockets locales); se usa **Docker** con la imagen `eclipse-temurin:17-jdk` y un volumen de caché de Gradle. Para pruebas de punta a punta: contenedor `mysql:8.4` + backend (`bootRun`) + la web compilada, manejados con Playwright.
+
+### 4.4 Buscador Interno (`apps/buscador` + repo `Sulotec/buscador-interno`)
+- **Qué es:** consulta interna de personas (DNI, RENIEC, teléfono) y empresas (RUC), cargas masivas con historial, y administración de usuarios/roles/tokens/auditoría. **Privado**: no aparece en el portal.
+- **Partes:** web nueva (Next.js 16) en un contenedor de Oracle; **API .NET 10** en un **servidor Windows de la oficina** (servicio `BuscadorApi`) con **SQL Server** en la red interna. Hoy la API se alcanza por **Tailscale Funnel**.
+- **Publicación:** el servidor **lee** `Sulotec/buscador-interno` cada 2 minutos con una llave de solo lectura y construye (si falla, vuelve a la anterior). Es *pull* a propósito: los desarrolladores externos no tienen acceso al servidor.
+- **Acceso:** Cloudflare Access (`Administradores Generales`) + **regla de sedes** (solo desde las IP de Lince y Los Olivos; `ADMIN GENERAL` entra desde cualquier lugar; soporta IPv4/IPv6/CIDR). Cuentas propias del Buscador. Correo con OCI Email Delivery vía MailKit (OCI solo ofrece AUTH PLAIN y `SmtpClient` no lo soporta).
+- **Pendiente:** hoy la política temporal `Presentación` de Access deja pasar a todos → cambiarla a las sedes; túnel de Cloudflare en la oficina para la API (y apagar Tailscale Funnel y Vercel); mover el actualizador de la API a `Sulotec/buscador-interno` y replicar allí el MailKit; prefijos IPv6 de las sedes; script `004_menu_operador.sql`; fase 2 (API en TypeScript).
+
+### 4.5 Auditoría de Visitas / Caja Huancayo, Compartamos y otros
+- **Auditoría de Visitas** (Caja Huancayo): verifica visitas con geocerca, fotos, firma y trabajo sin conexión. Node + MySQL. Repos `jeliases-informaDev/Huancayo-Backend`, `CajaHuancayo-App` y `CajaHuancayo-Web`. **Aún en Render; por migrar** siguiendo la receta de `docs/04` §4.5. El bucket `huancayo-archivos` ya existe.
+- **Compartamos:** repo `AppCompartamos`; estado **(por confirmar)**.
+- **Fuera del ecosistema por ahora** (no tocar sin que el usuario lo pida): `Sistema-Tickets-TI`, `PlanillaFrontEd` y otros proyectos de Informa Perú de su PC.
+
+## 5. Repositorios y cómo se publica cada cosa
+
+> **Hoy todos los repositorios son PÚBLICOS** (los documentos antiguos decían que `Sulotec-infra` era privado; ya no lo es). El servidor clona por HTTPS sin credenciales: pasarlos a privados exige antes **llaves de despliegue de solo lectura** en el servidor (§9).
+
+| Repositorio | Contenido | Cómo se publica |
+|---|---|---|
+| `Sulotec/Sulotec-infra` | Terraform, scripts del servidor, kits `apps/*`, portal, cuentas y estos documentos | Push a `main`: los workflows (`portal`, `cuenta`, `buscador`) corren en el **runner propio** del servidor. Los kits de MiRadar y PLAFT se copian a mano al servidor (ver §6) |
+| `Sulotec/buscador-interno` | Buscador: `web/` y `api/` | El servidor lo **lee** cada 2 min (web). La API de la oficina aún se actualiza desde `jeliases-informaDev/InternalBuscador` |
+| `jeliases-informaDev/Afacop-*`, `App-Afacop` | MiRadar 360 | `desplegar.sh` construye desde `main`; la app se compila con EAS |
+| `jeliases-informaDev/Security-*` | PLAFT | `desplegar.sh` construye desde `main` |
+| `jeliases-informaDev/Huancayo-Backend`, `CajaHuancayo-*` | Auditoría de Visitas | Render (por ahora) |
+| `jeliases-informaDev/InternalBuscador`, `internal-search-frontend` | Buscador anterior | Se retiran al mover el actualizador y apagar Vercel |
+
+**Cuentas de GitHub:** `jeliases-informaDev` (cuenta de desarrollo del usuario; es solo lectura en `buscador-interno`), `informaperu2-cmyk` (cuenta de la empresa, dueña de la organización `Sulotec`) y `irubio06dev` (compañero de desarrollo). Los programadores del Buscador tienen rol *Write* en su repositorio; los programadores externos **no** tienen acceso a `Sulotec-infra` (quien escribe ahí controla el servidor).
+
+## 6. Recetas (lo que más se usa)
+
+Los comandos del servidor se corren desde **https://ssh.sulotec.com**.
+
+**Actualizar el kit de un producto en el servidor** (cambia `plaft` por `miradar` o el producto que sea):
+
 ```
-Éxito = `Apply complete!` con `public_ip` y `ssh`. Mantener la pestaña de Oracle abierta, o el bucle se corta.
-
-## Regla: la configuración NO depende de ninguna PC personal
-- La PC personal de Jorge (escritorio, 2 pantallas) se usa **solo por comodidad**, como navegador para Cloud Shell y Cloudflare. Nada de la configuración vive ni depende de ella.
-- La VM se crea **solo con la llave de la laptop de trabajo** (la que ya está en `terraform.tfvars`). La llave de la PC personal NO va en Terraform.
-- Si algún día se quiere SSH desde la PC personal, se agrega temporalmente en `~/.ssh/authorized_keys` de la VM y se quita después. (Hay una llave generada en `C:\Users\Jorge\.ssh\sulotec_oci`, no autorizada en ningún lado.)
-- Misma IP pública en ambas PCs (`38.253.149.94`, misma red), así que `admin_cidr` no cambia.
-- En `main.tf` se añadió `metadata` a `ignore_changes`: Oracle no permite cambiar las llaves de una VM ya creada, y sin esto un cambio en `ssh_public_key` podría hacer que Terraform intente recrear la VM.
-- El estado de Terraform está en el Cloud Shell de Oracle (`~/oracle/terraform.tfstate`), no en una PC: se ve igual desde cualquier navegador con la misma cuenta. No correr dos bucles a la vez (uno por pestaña/PC): el segundo falla por el lock del estado.
-- Pendiente para no depender de nadie: repo Git privado de Sulotec para `sulotec-infra/`, secretos en gestor de contraseñas de la empresa, estado de Terraform al bucket.
-
-## Qué crea Terraform (oracle/main.tf)
-VCN + subred pública + security list (solo SSH desde `admin_cidr`), VM `VM.Standard.A1.Flex` (4 OCPU, 24 GB, 150 GB, Ubuntu 24.04) con cloud-init que instala Docker/fail2ban, bucket privado `sulotec-backups`, dynamic group + policy para que la VM suba backups, y presupuesto de US$10/mes con alertas al 50/80/100 % al correo serviciosdigitales@informaperu.com.
-
-## Si cambias de PC (importante)
-- `admin_cidr` está fijado a la IP pública de la PC original (`38.253.149.94/32`). Desde otra PC/red el SSH será bloqueado: edita `admin_cidr` en `oracle/terraform.tfvars` (Cloud Shell) y ejecuta `terraform apply` otra vez (solo cambia la security list).
-- La llave SSH privada autorizada está en la laptop de trabajo: `C:\Users\INFORMA PERU\.ssh\sulotec_oci` (sin passphrase, pendiente ponerle una con `ssh-keygen -p -f`). La pública está en `terraform.tfvars`. **No pegues ni subas la privada a ningún chat.** Para otra PC, genera otra llave allí y agrégala a `~/.ssh/authorized_keys` en la VM (no en Terraform).
-- Copia la carpeta `sulotec-infra/` completa a la PC nueva (o súbela al Cloud Shell si solo vas a trabajar ahí).
-
-## Avance 2026-10-06 noche (PC personal)
-- Cloudflare: túnel `sulotec-oci` creado (Networking → Tunnels, sin pasar por Zero Trust), estado Inactive, sin rutas. Token guardado por el usuario (NO está en estos archivos).
-- Cloud Shell: bucle de `terraform apply` relanzado ~22:40 Lima con `metadata` en `ignore_changes`; solo la llave de la laptop en tfvars. Cloud Shell se cerró por inactividad (~20 min sin teclado) y mató el bucle.
-- 23:05 Lima: bucle relanzado **en segundo plano** (`nohup`), con **2 OCPU / 12 GB** (`ocpus`/`memory_gb` agregados a tfvars). Avance en `~/tf-loop.log` (horas en UTC), detalle en `~/tf.log`. Cada intento tarda ~1 min. Hay que presionar Enter en Cloud Shell cada ~10 min para que no se cierre. Ver avance: `tail -5 ~/tf-loop.log`.
-- `vm/bootstrap.sh`: un solo script que se pega en la VM y escribe compose + scripts, pide el token del túnel (oculto), genera la clave de Postgres, crea `.env` y levanta todo. Evita copiar archivos desde una PC.
-- Decisión del usuario: **Caja Huancayo y demás apps se ven después**. Prioridad: dejar funcionando la arquitectura base de Oracle + Cloudflare.
-- Cloudflare SSL/TLS → Edge Certificates: certificado universal `*.sulotec.com, sulotec.com` activo; **Always Use HTTPS = On**, **Minimum TLS = 1.2**, Automatic HTTPS Rewrites = On. Cloudflare base queda lista; falta solo conectar el túnel (necesita la VM).
-- 23:15 Lima: a 2 OCPU / 12 GB seguía "Out of host capacity". **Decisión: mañana 2026-10-07 hacer upgrade a Pay As You Go** (Menú ☰ → Billing & Cost Management → Upgrade and Manage Payment → Upgrade; probar débito, si no, crédito de la empresa) y relanzar el bucle.
-- Pendientes del usuario: 2FA en Gmail `informaperu2`, Cloudflare y Oracle; poner **privados** los 3 repos de Caja Huancayo (son públicos; antes confirmar que Render está conectado a GitHub en Account Settings → Git Providers); copiar esta carpeta a la laptop.
-
-## 2026-10-07: VM CREADA
-- Upgrade a **Pay As You Go** hecho. Con eso la VM salió **al primer intento** con **4 OCPU / 24 GB** (02:48 UTC del 2026-10-08 = 21:48 Lima del 07).
-- `terraform apply` completo (13/13 + dynamic group + policy). Salidas: `public_ip = 155.181.132.137`, `backup_bucket = sulotec-backups`, `object_storage_namespace = axkjo5bh8iys`.
-- SSH desde la laptop OK (desde casa: la IP de casa `38.253.149.94` es la de `admin_cidr`; desde la oficina NO entra hasta resolver acceso por Cloudflare). `bootstrap.sh` OK: `/opt/sulotec/.env` creado, `cloudflared` y `postgres` (healthy) corriendo.
-- **NO borrar `/opt/sulotec/.env`**: Postgres ya se inicializó con esa clave. Para cambiar solo el token del túnel: `sed -i "s|^CF_TUNNEL_TOKEN=.*|CF_TUNNEL_TOKEN=<nuevo>|" .env && docker compose up -d`.
-- El token del primer túnel se pegó en el chat, así que se creó un túnel nuevo **`sulotec`** (ID `2bb087e4-1629-4778-beff-a94899412754`), **Healthy**, conectado desde 155.181.132.137 (linux_arm64, bordes scl04/gru07/gru11). El viejo `sulotec-oci` (8a3fcbf5…) fue **borrado**. La página del túnel tiene botón **Rotate token** para futuras rotaciones.
-- Siguiente: reiniciar la VM (`sudo reboot`) y comprobar que todo vuelve solo; guardar la clave de Postgres en el gestor de la empresa; luego acceso SSH por Cloudflare Access y cerrar el puerto 22.
-
-- 22:30 Lima: reinicio de la VM probado; `cloudflared` y `postgres` vuelven solos. **Arquitectura base funcionando.**
-
-## Decisiones del 2026-10-07 noche (lo siguiente a construir)
-- **Trabajo desde la laptop de trabajo.** La PC personal (usuario Windows `Jorge`) NO se autoriza en el servidor y no debe quedar configuración en ella. Ahí hay una llave `C:\Users\Jorge\.ssh\sulotec_oci` que nunca se autorizó: el usuario la borrará.
-- Sugerido: abrir Claude Code **en la laptop** con esta carpeta; así Claude ejecuta los comandos del servidor directamente con `ssh -i "$HOME\.ssh\sulotec_oci" ubuntu@155.181.132.137` (huella ED25519 `SHA256:U+Svw53XtB9utDhGXVMS2EMJLUpxll3h7bf4p0g5Lyo`) y el usuario solo hace clics en Cloudflare/Oracle.
-- **Presupuesto: US$260/mes**, gastar solo si es necesario. Esta etapa debe quedar en $0 (Always Free). Alertas siguen en US$10 como alarma de "algo empezó a cobrar".
-- **3 proyectos** a alojar (por confirmar cuáles; Caja Huancayo usa MySQL). Motores en uso: MySQL, SQL Server, PostgreSQL. SQL Server no corre en ARM: se decide con su proyecto (dejar en data center con conexión privada / migrar a PostgreSQL / VM x86 de pago ~US$55/mes, Express gratis hasta 10 GB).
-- **ISO/IEC 27001**: diseñar alineado al Anexo A y dejar `SEGURIDAD-ISO27001.md` con el mapeo de controles (acceso 5.15/8.5, redes 8.20/8.22, cripto 8.24, backup 8.13, logging 8.15/8.16, vulnerabilidades 8.8, cambios 8.32, nube 5.23). Advertir: datos en Santiago = flujo transfronterizo (Ley 29733) y clientes supervisados por SBS → que lo valide legal/cumplimiento.
-- **Correos con acceso al servidor (Cloudflare Access):** `informaperu2@gmail.com` (usuario/principal `informaperu2`) y `serviciosdigitales@informaperu.com` (principal `serviciosdigitales`).
-
-### Paso 1 — Acceso SSH por Cloudflare (y luego cerrar el puerto 22)
-1. Servidor: agregar a `cloudflared` `extra_hosts: ["host.docker.internal:host-gateway"]` (ya está en `vm/docker-compose.yml` local; en el servidor):
-   `cd /opt/sulotec && (grep -q host-gateway docker-compose.yml || sed -i '/command: tunnel --no-autoupdate run/a\    extra_hosts: ["host.docker.internal:host-gateway"]' docker-compose.yml) && docker compose up -d`
-2. Cloudflare → Zero Trust: onboarding con team name `sulotec`, plan Free.
-3. Access → Applications → Self-hosted `ssh.sulotec.com`, política Allow con los 2 correos (login por código al correo; 2FA), y **Browser rendering = SSH**.
-4. Túnel `sulotec` → Add route → published application `ssh.sulotec.com` → tipo **SSH** → `host.docker.internal:22`.
-5. Access → Service credentials / Service Auth → **SSH** → generar certificado (CA de certificados cortos) para esa app → copiar la llave pública (no es secreta).
-6. Servidor: `/etc/ssh/ca.pub` con esa llave; `/etc/ssh/auth_principals/ubuntu` con `informaperu2` y `serviciosdigitales`; `/etc/ssh/sshd_config.d/60-cloudflare-access.conf` con `PubkeyAuthentication yes`, `TrustedUserCAKeys /etc/ssh/ca.pub`, `AuthorizedPrincipalsFile /etc/ssh/auth_principals/%u`; `sudo sshd -t && sudo systemctl restart ssh`.
-7. Probar `https://ssh.sulotec.com` desde cualquier navegador → usuario `ubuntu`.
-
-### Paso 2 — Oracle (Terraform, Cloud Shell): almacenamiento y cierre de SSH
-- Volumen de bloque **50 GB** `sulotec-data` (paravirtualized) adjunto a la VM → total 150+50 = 200 GB, dentro de Always Free.
-- Bucket privado **`sulotec-archivos`** (Object Storage, API compatible S3) para fotos/documentos de las apps.
-- Variable `ssh_enabled` (bool) con `dynamic "ingress_security_rules"` para el puerto 22; poner `false` **solo después** de probar el paso 1.7. Plan de emergencia: `ssh_enabled = true` + `admin_cidr` = IP actual y `terraform apply` desde Cloud Shell.
-
-### Paso 3 — Servidor: datos y backups
-- Montar el volumen en **`/data`** (UUID en fstab con `_netdev,nofail`). Todo lo importante vive ahí: `/data/postgres`, `/data/mysql`, `/data/apps/<proyecto>`.
-- Pasar Postgres del volumen Docker `sulotec_pgdata` (vacío) a `/data/postgres` (misma `POSTGRES_PASSWORD` del `.env`; NO borrar `.env`). Agregar **MySQL 8.4** al compose base con `/data/mysql`, y soporte MySQL en `new-project-db.sh`.
-- OCI CLI con `pipx` (`sudo apt install -y pipx && pipx install oci-cli`); en `backup-postgres.sh` agregar `export PATH="$HOME/.local/bin:$PATH"` para cron. Backup diario: `pg_dumpall` + `mysqldump --all-databases` + `tar` de `/data/apps` → bucket `sulotec-backups` con `--auth instance_principal`. Correr uno a mano, verlo en el bucket y **probar una restauración**.
-
-### Paso 4 — Cierre
-- `SEGURIDAD-ISO27001.md`, repo Git privado de la empresa para `sulotec-infra`, 2FA en Gmail/Cloudflare/Oracle, repos de Caja Huancayo en privado.
-
-## Plan para mañana (en orden) — HISTÓRICO, ya cumplido
-1. Upgrade a Pay As You Go en Oracle.
-2. Cloud Shell: pegar el bloque de "Relanzar el bucle" de abajo y presionar Enter cada ~10 min.
-3. Cuando salga `>>> LISTO, VM CREADA` con `public_ip`: desde la **laptop** `ssh -i $HOME\.ssh\sulotec_oci ubuntu@<IP>`, pegar `vm/bootstrap.sh` como `~/bootstrap.sh` y ejecutar `bash ~/bootstrap.sh` (pide el token del túnel).
-4. Verificar túnel **Healthy** en Cloudflare → Networking → Tunnels. Guardar la clave de Postgres en el gestor de la empresa.
-5. Después: acceso admin por Cloudflare Access (y cerrar SSH), backups, repo Git de la empresa, y recién ahí las apps.
-
-### Relanzar el bucle (Cloud Shell; seguro de repetir)
-```bash
-cd ~/oracle
-export TF_VAR_tenancy_ocid=$OCI_TENANCY TF_VAR_compartment_ocid=$OCI_TENANCY TF_VAR_region=$OCI_REGION
-if terraform state list | grep -q '^oci_core_instance.main$'; then echo ">>> LA VM YA EXISTE"; terraform output; else
-grep -q '^ocpus' terraform.tfvars || printf 'ocpus = 2\nmemory_gb = 12\n' >> terraform.tfvars
-nohup bash -c 'while true; do echo "$(date +%H:%M) intentando..."; terraform apply -auto-approve -input=false > ~/tf.log 2>&1 && { echo ">>> LISTO, VM CREADA"; terraform output; break; }; grep -q "Out of host capacity" ~/tf.log || { echo ">>> ERROR DISTINTO:"; tail -20 ~/tf.log; break; }; echo "$(date +%H:%M) sin capacidad, reintento en 60 s"; sleep 60; done' > ~/tf-loop.log 2>&1 &
-sleep 2; tail -f ~/tf-loop.log; fi
+sudo rm -rf /tmp/sulotec-infra && sudo git clone --depth 1 https://github.com/Sulotec/Sulotec-infra.git /tmp/sulotec-infra && sudo cp /tmp/sulotec-infra/apps/plaft/docker-compose.yml /tmp/sulotec-infra/apps/plaft/deploy/*.sh /data/apps/plaft/
 ```
-Con Pay As You Go se puede volver a 4 OCPU / 24 GB (borrar las líneas `ocpus`/`memory_gb` de `terraform.tfvars`), pero 2/12 basta para empezar y se agranda después.
-- La cuenta de Oracle y la de Cloudflare están a nombre de `informaperu2@gmail.com`: asegurar 2FA y que la empresa controle ese Gmail.
 
-## Situación actual de las apps (dicho por el usuario)
-- Todo el código está en **GitHub**.
-- Algunas apps ya desplegadas en **Vercel** y **Render**; ya tienen **imágenes Docker**.
-- Algunas bases de datos están en el **data center propio** de la empresa. Motores en uso: **SQL Server, MySQL y PostgreSQL**.
-  - PostgreSQL y MySQL corren bien en la VM ARM (MySQL aún no está en `vm/docker-compose.yml`; agregarlo cuando un proyecto lo necesite).
-  - SQL Server NO corre en ARM: esas BDs se quedan en el data center (la app en la VM se conecta remoto) o se migran a PostgreSQL.
-- Implicancias: imágenes deben ser `linux/arm64` (la VM es ARM); despliegue por GitHub Actions; si una app en la VM usa una BD del data center, hay que resolver la conexión segura (no abrir la BD a internet) y la latencia Santiago↔Lima. Una app .NET puede seguir usando SQL Server remoto: lo que no corre en ARM es el servidor SQL Server, no el cliente.
+| Quiero… | Comando (en el servidor) |
+|---|---|
+| Publicar PLAFT / MiRadar | `sudo bash /data/apps/plaft/desplegar.sh` · `sudo bash /data/apps/miradar/desplegar.sh` |
+| Probar un producto | `sudo bash /data/apps/<producto>/probar.sh` |
+| Ver registros | `docker logs --tail 50 <contenedor>` (p. ej. `plaft-api`, `miradar-api`) |
+| Qué hay corriendo y su salud | `docker ps` |
+| Crear base y usuario para un proyecto | `sudo /opt/sulotec/scripts/new-project-db.sh <postgres\|mysql> <proyecto>` |
+| Respaldo a mano / probar restauración | `sudo /opt/sulotec/scripts/backup.sh` · `probar-restauracion.sh --desde-bucket` (script de `vm/scripts/` del repositorio) |
+| Informe de capacidad (memoria, discos, bases, respaldos) | `estado-capacidad.sh` (script de `vm/scripts/` del repositorio; solo lee) |
+| Rotar claves de las bases | `sudo /opt/sulotec/scripts/rotar-claves.sh` |
+| Recuperar el acceso de una cuenta de PLAFT | `sudo bash /data/apps/plaft/resetear-clave.sh <usuario>` |
+| Dejar empresa a cuentas viejas de PLAFT | `sudo bash /data/apps/plaft/asignar-empresa.sh` |
+| Volver a una versión anterior | `docker tag <imagen>:<commit> <imagen>:latest && cd /data/apps/<producto> && docker compose up -d --force-recreate` |
 
-## Pendiente (en orden)
-1. `terraform plan` / `apply` en Cloud Shell → obtener `public_ip`.
-2. SSH a la VM, copiar `vm/` a `/opt/sulotec/`, crear `.env`.
-3. Crear el túnel de Cloudflare, poner el token en `.env`, `docker compose up -d`.
-4. Primer proyecto (AFACOP o el más simple): `scripts/new-project-db.sh`, plantillas de `templates/`, hostnames públicos en el túnel.
-5. Cloudflare Access para paneles admin, cron de backups, probar restauración, ponerle passphrase a la llave SSH.
+**Sumar un producto nuevo** (receta completa en [`docs/04-integracion-de-proyectos.md`](docs/04-integracion-de-proyectos.md) §4.5): repositorio → base con `new-project-db.sh` → Dockerfile de `templates/` + compose (redes `sulotec_edge` y, si usa base, `sulotec_data`; `container_name`; secretos en `/opt/sulotec/<producto>.env`) → publicación (kit con `desplegar.sh`, o *pull* si hay un equipo externo) → ruta en el túnel (y Access si es privado) → `soluciones.ts` con `publicado: true` → corte (apagar Render/Vercel) → documentar aquí.
 
-## Advertencias
-- **SQL Server no corre en ARM.** Preguntar qué base de datos usan hoy las apps .NET; si es SQL Server, migrar a PostgreSQL o usar VM x86 de pago.
-- La capa gratuita no tiene SLA: sirve para desarrollo y pilotos. Para producción con datos reales de clientes financieros (Caja Huancayo, Compartamos, lavado de activos) conviene VM de pago, backups probados y revisar requisitos del cliente y la Ley 29733.
-- Estos archivos de Terraform no se validaron localmente (no hay `terraform` en la PC); `terraform plan` en Cloud Shell es la primera validación real.
+## 7. Cronología (resumen)
+
+| Fecha | Qué pasó |
+|---|---|
+| 2026-10-05/06 | Buscador: la API pasa de la laptop del usuario a un servidor de la oficina (servicio Windows, Funnel). Cloudflare con `sulotec.com`; Terraform en Oracle (la VM da *Out of host capacity*). |
+| 2026-10-07 | Upgrade a Pay As You Go: la VM sale al primer intento (4 OCPU/24 GB). Túnel `sulotec`, SSH por Cloudflare Access (puerto 22 cerrado), disco `/data`, PostgreSQL + MySQL, respaldos y Object Storage. |
+| 2026-10-08 | Portal sulotec.com con runner propio, demos, Keycloak (cuenta.sulotec.com), Buscador nuevo en Oracle, botón de MiRadar. Decisión: SaaS **sin registro libre**. |
+| 2026-10-09 | Buscador separado en `Sulotec/buscador-interno` con publicación *pull*; documentación completa en `docs/`. |
+| 2026-10-13 | Correo OCI + MailKit para el Buscador; regla de sedes con IPv6; buckets de producto con llaves en el Vault. |
+| 2026-10-14 | **MiRadar migrado a Oracle** (datos de Render, archivos de Backblaze). Ronda de seguridad: claves de bases y S3 rotadas, restauración probada, inventario de claves. **Primer despliegue de PLAFT.** |
+| 2026-10-15 | PLAFT: servicio de IA (ML + Ollama/Indira), carga de listas y sancionadas, importación de la base de desarrollo (Aiven) y paso a producción para pruebas. MiRadar: arreglo de asesores y ubicación. |
+| 2026-10-16 | PLAFT: raíz directo al login, rediseño, módulo de Operaciones, lista de empresas y pantalla de Administración; prueba de punta a punta con MySQL real y hallazgo de aislamiento entre empresas; `resetear-clave.sh`. Se une el arreglo del límite de largo del login (PR #24). MiRadar: selector de ubicación con mapa (PR #22). |
+
+## 8. Decisiones tomadas (y por qué)
+
+1. **Oracle con Pay As You Go dentro de Always Free:** el upgrade era necesario para conseguir capacidad ARM; el costo real es US$ 0 y se fija un tope de US$ 260/mes.
+2. **Túnel de Cloudflare y cero puertos abiertos;** SSH por el navegador con certificados cortos: reduce la superficie de ataque y evita llaves permanentes en PCs.
+3. **Una base y un usuario por proyecto en servidores compartidos:** ahorra memoria y facilita respaldos y rotaciones.
+4. **SaaS sin registro libre, Keycloak, cuentas creadas por el equipo:** control de quién entra; la recuperación de contraseña sí está permitida. Las demos usan solo datos ficticios.
+5. **Buscador privado con *pull*:** el runner ejecuta lo que diga un workflow; si los desarrolladores externos tuvieran uno, ejecutarían comandos en el servidor.
+6. **Kits `apps/<producto>` con `desplegar.sh` y vuelta atrás;** secretos solo en `/opt/sulotec/*.env`.
+7. **PLAFT directo a producción (sin clientes todavía):** base nueva `plaft`, IA en una segunda etapa, archivos de denuncias en un bucket propio con la llave de `svc-plaft` visible **solo** para `plaft-api` (no la identidad de todo el servidor), y la IA sin ruta pública.
+8. **PLAFT con toda la base de desarrollo en producción para probar** todos los módulos (riesgo aceptado: desactivar las cuentas de prueba antes de clientes reales).
+9. **Indira con modelo local:** privacidad de los datos a cambio de lentitud (CPU).
+10. **Empresas como lista administrable** (en vez de texto libre) y empresa obligatoria al crear una cuenta, para que todo funcione desde el inicio.
+11. **Entrega de cambios:** commits sin atribución, `Sulotec-infra` a `main`, repos de aplicaciones por Pull Request que une el usuario.
+
+## 9. Pendientes (priorizados)
+
+| Prioridad | Pendiente | Producto |
+|---|---|---|
+| **Alta** | **Hacer cumplir en el backend la separación por empresa** y restringir `GET /api/usuarios` (arreglo propuesto, falta el OK del usuario). Antes de cualquier cliente real | PLAFT |
+| **Alta** | Pasar los repositorios a **privados** (requiere llaves de despliegue de solo lectura en el servidor) | Todos |
+| **Alta** | **2FA** en Gmail, Cloudflare, Oracle y GitHub; **MFA** en las políticas de Access; cambiar la política temporal `Presentación` del Buscador a solo sedes | Plataforma |
+| **Alta** | **Rotar** lo que pasó por chats: SMTP, `Jwt:Key` y clave `irubio` del Buscador, tokens de RENIEC y de Vercel, `RRCC_API_KEY`; revisar el resto cada 90 días | Varios |
+| **Alta** | Antes de clientes: **desactivar cuentas de prueba** (`admin001`, `lavado_pru*`…), regla de **límite de velocidad** en Cloudflare para el login, política de privacidad y términos, ficha de datos personales (Ley 29733), validar con legal/SBS | PLAFT |
+| **Alta** | Indira **asíncrona** (Cloudflare corta a 100 s) | PLAFT |
+| Media | La prueba gratis de **Aiven vence ~2026-10-18**: ya hay copia como `aiven_*`; apagar y borrar sus claves | PLAFT / MiRadar |
+| Media | MiRadar: confirmar el despliegue del selector de mapa; publicar la app 1.0.6; apagar Render y Backblaze; sacar la RRCC-API de ngrok | MiRadar |
+| Media | Buscador: túnel de Cloudflare en la oficina (apagar Funnel y Vercel), API desde el repo nuevo, IPv6 de sedes | Buscador |
+| Media | Migrar **Auditoría de Visitas** (Caja Huancayo) de Render a Oracle; confirmar Compartamos | Caja Huancayo |
+| Media | Keycloak: administrador con nombre propio + OTP; correo de invitaciones; `contacto@sulotec.com` | Cuentas |
+| Media | Operación: monitoreo externo y alertas; Flyway/Liquibase; CI con pruebas en los repos de aplicaciones; separar pruebas de producción; VM de pago (SLA) con clientes reales | Plataforma |
+| Baja | Inicio único (Keycloak) dentro de los productos; Buscador fase 2 (API en TypeScript); prueba de restauración trimestral | Varios |
+
+## 10. Trampas conocidas (lecciones aprendidas)
+
+- **El servidor es ARM:** las imágenes deben ser `linux/arm64` (`eclipse-temurin:*-alpine` no existe para ARM). **SQL Server no corre en ARM.**
+- **Next.js:** `NEXT_PUBLIC_*` se fija al **compilar**: si cambia la URL de la API hay que reconstruir la web.
+- **bash 5.1 del servidor:** un heredoc dentro de `$(...)` falla aunque `bash -n` pase; con `pipefail`, `grep -q` en una tubería da falsos negativos (redirige a `/dev/null`).
+- **Terminal web de Cloudflare:** pegar agrega `^[[200~ … ~`; antes de pegar: `bind 'set enable-bracketed-paste off'`.
+- **Oracle S3:** cada usuario admite 2 llaves "customer secret"; tardan en activarse (`rotar-s3.sh` reintenta). El cliente necesita `forcePathStyle` y checksums `WHEN_REQUIRED`.
+- **OCI Email Delivery** solo ofrece `AUTH PLAIN`: en .NET usar MailKit.
+- **MiRadar:** ver §4.2 (clave del administrador inicial vacía y `MFA_ENCRYPTION_KEY` intocable).
+- **Spring (PLAFT):** `ddl-auto: update` crea tablas nuevas al arrancar; las pruebas de PDF del backend reescriben archivos versionados (`git checkout -- output tmp` antes de commitear); `contextLoads` necesita una MySQL y falla sin ella.
+- **En la laptop de trabajo (Windows):** `MSYS_NO_PATHCONV=1` con Docker y rutas en Git Bash; usar `./node_modules/.bin/tsc` y no `npx`; Java directo falla en el entorno de Claude Code (usar Docker).
+- **Cloudflare corta a los 100 s:** cualquier endpoint más lento (chat de IA) necesita ser asíncrono.
+- **Los `*.env` no se respaldan** y las claves que pasan por un chat se consideran expuestas.
+
+## 11. Documentos relacionados y cómo mantener esto al día
+
+| Documento | Para qué |
+|---|---|
+| [`docs/README.md`](docs/README.md) | Índice de la documentación técnica |
+| [`docs/01-proyecto-sulotec.md`](docs/01-proyecto-sulotec.md) | Visión, productos, repositorios, reglas |
+| [`docs/02-oracle-cloud.md`](docs/02-oracle-cloud.md) | Infraestructura: servidor, discos, buckets, respaldos, operación |
+| [`docs/03-cloudflare.md`](docs/03-cloudflare.md) | Dominio, túnel, Zero Trust y Access |
+| [`docs/04-integracion-de-proyectos.md`](docs/04-integracion-de-proyectos.md) | Identidad, publicación, datos y receta para sumar un producto |
+| [`docs/05-inventario-de-claves.md`](docs/05-inventario-de-claves.md) | Qué secretos hay y dónde viven (sin valores) |
+| [`SEGURIDAD-ISO27001.md`](SEGURIDAD-ISO27001.md) | Controles del Anexo A y brechas |
+| `apps/<producto>/README.md` | Operación de cada producto (portal, cuenta, buscador, miradar, plaft) |
+| [`docs/historico/`](docs/historico/bitacora-2026-10-06-al-14.md) | Bitácora original (puede estar desactualizada) |
+
+**Mantenimiento:** cuando cambie la infraestructura o un producto, actualiza **este archivo y el documento correspondiente en el mismo commit**. Lo que se resuelva sale de §9; lo nuevo entra con su fecha. Este archivo es la **fuente de verdad** para retomar trabajo; no guardes aquí valores secretos.

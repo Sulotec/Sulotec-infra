@@ -24,6 +24,10 @@ Cuenta: `informaperu2@gmail.com` (pendiente: 2FA). Plan **Free**; Zero Trust Fre
 | `www.sulotec.com` | `http://portal:80` | Web de Sulotec |
 | `cuenta.sulotec.com` | `http://cuenta:8080` | Cuentas (Keycloak) |
 | `buscadorinterno.sulotec.com` | `http://buscador:3000` | Buscador Interno (**agregar si aún no está**) |
+| `miradar360.sulotec.com` | `http://miradar-web:8080` | MiRadar 360 (web) |
+| `api-miradar360.sulotec.com` | `http://miradar-api:4000` | MiRadar 360 (API, con WebSockets) |
+| `plaft.sulotec.com` | `http://plaft-web:3000` | PLAFT (web) |
+| `api-plaft.sulotec.com` | `http://plaft-api:8081` | PLAFT (API) |
 
 **Agregar una aplicación nueva:**
 1. Su contenedor debe estar en la red `sulotec_edge`, con un `container_name`.

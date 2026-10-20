@@ -2,6 +2,7 @@
 
 > Esta carpeta tiene lo necesario para correr MiRadar en `sulotec-main` y dejar Aiven, Render y Backblaze.
 > Es para administradores: aquí se tocan claves y el servidor.
+> **Desarrolladores:** para clonar y correr el backend, la web y la app en tu PC, ve a [DESARROLLO-LOCAL.md](DESARROLLO-LOCAL.md).
 
 ```
 App móvil / navegador ──▶ Cloudflare Tunnel ──▶ miradar-web  (nginx, solo archivos estáticos)

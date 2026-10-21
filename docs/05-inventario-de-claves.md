@@ -2,7 +2,7 @@
 
 Qué secretos tiene la plataforma, dónde viven, cómo recuperarlos y cómo rotarlos. **Aquí no hay ningún valor**: solo nombres y lugares
 (control ISO 27001 5.17). Los valores viven en el servidor (`/opt/sulotec/*.env`) y en el gestor de contraseñas de la empresa.
-Última revisión: 2026-10-14.
+Última revisión: 2026-10-21.
 
 > **Los archivos `/opt/sulotec/*.env` NO entran en el respaldo diario** (`backup.sh` copia las bases, `/data/apps` y Object Storage).
 > Si el servidor se pierde, esas claves se pierden con él: por eso lo marcado como *imprescindible* debe estar también en el gestor.
@@ -43,6 +43,10 @@ Para sacar todo lo del servidor en una sola pantalla: `sudo /opt/sulotec/scripts
 | | `INITIAL_ADMIN_PASSWORD`, `INITIAL_UNIVERSAL_PASSWORD` | Solo el primer arranque con base vacía (crean al administrador de la empresa y al universal de Sulotec); con datos migrados la del administrador va vacía | Se pueden vaciar después del primer arranque; cada uno cambia su clave desde el panel |
 | `/opt/sulotec/dashboard.env` | `DB_PASSWORD` (clave del usuario `dashboard` de PostgreSQL) | Dashboard Empresarial → su base | Manual: ver «Rotar claves» en `apps/dashboard/README.md` |
 | | `JWT_SECRET` | Firma las sesiones | Cambiar en el archivo y `desplegar.sh`; cierra todas las sesiones abiertas |
+| `/opt/sulotec/planilla.env` | `DB_PASSWORD` y `DB_URL` (clave del usuario `planilla` de MySQL) | Sistema de Planillas → su base | Manual: §5 de `apps/planilla/README.md` (`ALTER USER` + `preparar.sh` con la cadena nueva) |
+| | `JWT_SECRET` | Firma las sesiones | Cambiar en el archivo y recrear el contenedor; cierra todas las sesiones abiertas |
+| | `ADMIN_PASSWORD` | Solo el primer arranque con base vacía (crea al administrador `admin`); `desplegar.sh` la borra del archivo cuando el usuario ya existe | Si se pierde la clave de una cuenta: `apps/planilla/deploy/resetear-clave.sh <usuario>` |
+| | `MAIL_PASSWORD` (SMTP de OCI Email Delivery, opcional) | Enviar boletas por correo | Consola de Oracle → credenciales SMTP nuevas; `preparar.sh` |
 | `/opt/sulotec/cuenta.env` | `KC_DB_PASSWORD` (rol `keycloak`) | Keycloak → su base | `ALTER ROLE keycloak PASSWORD …` y cambiarla en el archivo; recrear el contenedor `cuenta` |
 | | `KC_BOOTSTRAP_ADMIN_USERNAME` / `KC_BOOTSTRAP_ADMIN_PASSWORD` | Administrador temporal de Keycloak (pendiente reemplazarlo por uno con nombre propio) | Desde la consola de Keycloak |
 | `/opt/sulotec/buscador.env` | `CF_ACCESS_CLIENT_ID` / `CF_ACCESS_CLIENT_SECRET` | Token de servicio de Cloudflare Access para llegar a la API de la oficina | Cloudflare One → Access → Service Auth → regenerar; `apps/buscador/deploy/preparar.sh` |
@@ -73,6 +77,7 @@ Para sacar todo lo del servidor en una sola pantalla: `sudo /opt/sulotec/scripts
 | Claves de Render y Backblaze | — | Se anulan al borrar esos servicios |
 | Usuario `auditoria` de MySQL y clave S3 de `svc-auditoria` | Se crean en el corte de Auditoría de Visitas (octubre 2026) | Rotar a los 90 días con `rotar-claves.sh auditoria` y `apps/auditoria/deploy/rotar-s3.sh` |
 | Claves de Aiven (MySQL de la demo de Auditoría) | — | Se anulan al apagar Aiven tras el corte |
+| Usuario `planilla` de MySQL, `JWT_SECRET` y clave inicial de `admin` de Planillas | Se crean al instalar el kit `apps/planilla` (octubre 2026); nunca salen del servidor | Guardar la clave de la base y el `JWT_SECRET` en el gestor; rotar a los 90 días |
 | SMTP, `Jwt:Key`, `irubio`, token de RENIEC, token de Vercel, administrador temporal de Keycloak | — | Pasaron por chats; rotar |
 
 Política: rotar de inmediato cualquier secreto que se haya compartido por un chat o un correo, y revisar el resto cada 90 días.

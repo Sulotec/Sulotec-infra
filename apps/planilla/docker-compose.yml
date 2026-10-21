@@ -1,0 +1,33 @@
+# Sistema de Planillas (Informa Peru): API y pantalla en un solo contenedor. En el servidor vive en /data/apps/planilla.
+# Cloudflare Tunnel (Public hostname):
+#   planilla.sulotec.com -> http://planilla:8080
+# Configuracion y secretos (nunca en el repositorio): /opt/sulotec/planilla.env, lo crea deploy/preparar.sh.
+# La base es la MySQL 8.4 compartida de la VM (base "planilla", red sulotec_data); no publica puertos.
+# Maneja sueldos y datos personales: conviene poner Cloudflare Access delante (ver README).
+name: planilla
+
+services:
+  app:
+    image: planilla:latest
+    container_name: planilla
+    restart: unless-stopped
+    env_file: /opt/sulotec/planilla.env
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    networks: [edge, data]
+    mem_limit: 1g
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/actuator/health | grep -q UP"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 90s
+
+networks:
+  edge:
+    external: true
+    name: sulotec_edge
+  data:
+    external: true
+    name: sulotec_data

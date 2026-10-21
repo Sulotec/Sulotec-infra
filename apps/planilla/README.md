@@ -137,6 +137,10 @@ Volver a la versión anterior a mano: `docker images planilla` (se conservan las
   **No incluye `/opt/sulotec/planilla.env`**: guarda en el gestor la clave de la base y el `JWT_SECRET`
   (ver [`docs/05-inventario-de-claves.md`](../../docs/05-inventario-de-claves.md)).
 - Restaurar una tabla o la base: `vm/scripts/probar-restauracion.sh` describe el procedimiento general.
+- **Empezar de cero** (por ejemplo tras una carga equivocada): `sudo bash /data/apps/planilla/limpiar-datos.sh` borra trabajadores,
+  asistencias, horarios, movimientos, planillas y boletas (y su auditoría) y **conserva usuarios y configuración**. Pide escribir
+  `SI` y antes guarda una copia en `/var/backups/sulotec/planilla-antes-limpieza-<fecha>.sql.gz`; para volver atrás:
+  `zcat <copia> | sudo bash /data/apps/planilla/limpiar-datos.sh --restaurar`.
 - Los datos son reales (sueldos, DNI): aplica la Ley 29733 (datos personales); el servidor está en Santiago de Chile.
 
 ## 7. Variables de `/opt/sulotec/planilla.env`

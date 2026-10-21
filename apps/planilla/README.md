@@ -150,6 +150,7 @@ Volver a la versión anterior a mano: `docker images planilla` (se conservan las
 | `SEED_ENABLED` | Carga regímenes, conceptos PLAME, AFP, feriados y tabla de tardanzas si faltan (`true`) | `preparar.sh` |
 | `WEB_URL`, `CORS_ORIGINS` | Dirección pública (una sola, mismo origen) | `preparar.sh` |
 | `RMV`, `UIT`, `EMPRESA_RUC`, `EMPRESA_RAZON_SOCIAL`, `EMPRESA_DIRECCION`, `EMPRESA_LUGAR` | Parámetros legales y de la empresa; si faltan, la app usa los de 2026 (RMV 1230, UIT 5500) y los datos de Informa Perú | opcional |
+| `EMPRESA_REPRESENTANTE`, `EMPRESA_REPRESENTANTE_DOC` | Nombre y DNI del gerente que firma las constancias de gratificación y CTS (dato personal: solo aquí, nunca en el repositorio). Vacíos = línea para firmar a mano. Se fijan como variables al correr `preparar.sh` | opcional |
 | `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASSWORD`, `MAIL_FROM`, `MAIL_HABILITADO` | Correo saliente para boletas (OCI Email Delivery) | `preparar.sh` |
 | `SHOW_SQL` | `false` en producción | `preparar.sh` |
 

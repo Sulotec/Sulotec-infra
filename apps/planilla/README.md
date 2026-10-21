@@ -22,8 +22,8 @@ Todo se hace en la VM (`https://ssh.sulotec.com`). Son 5 pasos; cada script dice
 **1) Copiar el kit** desde GitHub a `/data/apps/planilla` (los scripts quedan sueltos ahí, como en los otros kits):
 
 ```
-sudo mkdir -p /data/apps/planilla && cd /tmp && rm -rf sulotec-infra \
- && git clone -q --depth 1 https://github.com/Sulotec/Sulotec-infra.git \
+sudo mkdir -p /data/apps/planilla && cd /tmp && sudo rm -rf sulotec-infra \
+ && git clone -q --depth 1 --branch main https://github.com/Sulotec/Sulotec-infra.git sulotec-infra \
  && sudo cp sulotec-infra/apps/planilla/{Dockerfile,.dockerignore,docker-compose.yml} /data/apps/planilla/ \
  && sudo cp sulotec-infra/apps/planilla/deploy/*.sh /data/apps/planilla/ \
  && sudo chmod +x /data/apps/planilla/*.sh && ls -la /data/apps/planilla

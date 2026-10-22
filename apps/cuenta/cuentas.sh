@@ -67,7 +67,11 @@ while IFS= read -r linea || [ -n "$linea" ]; do
   vistos[$correo]=1
   if [ "$universal" = "si" ]; then
     [ -z "$empresa" ] || { echo "  $f: un administrador universal no lleva empresa"; errores=$((errores+1)); }
-    nuevos_universales=$((nuevos_universales+1))
+    # Solo cuenta como nuevo si la persona no es ya miembro del grupo (asi el archivo puede repetir a los que ya estan)
+    uid_u=$(kc get users -r sulotec -q email="$correo" -q exact=true --fields id --format csv --noquotes | head -1 || true)
+    if [ -z "$uid_u" ] || ! kc get "users/$uid_u/groups" -r sulotec --fields id --format csv --noquotes | grep -qx "$gid_adm"; then
+      nuevos_universales=$((nuevos_universales+1))
+    fi
   else
     [ -z "$universal" ] || { echo "  $f: la columna universal solo admite 'si' o vacio"; errores=$((errores+1)); }
     [ -n "$empresa" ] || { echo "  $f: falta la empresa (slug) o universal=si"; errores=$((errores+1)); }

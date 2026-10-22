@@ -39,9 +39,9 @@ export const soluciones: Solucion[] = [
   },
   {
     clave: 'auditoria',
-    nombre: 'Auditoría de Visitas',
+    nombre: 'GeoMatrix', // nombre comercial desde 2026-10-22 (antes Auditoría de Visitas); el dominio y la clave no cambian
     descripcion:
-      'Comprueba que cada visita ocurrió de verdad: geocerca antifraude, fotos, firma digital y trabajo sin conexión, con un panel web para el seguimiento.',
+      'Auditoría de visitas en campo: comprueba que cada visita ocurrió de verdad, con geocerca antifraude, fotos, firma digital y trabajo sin conexión, y un panel web para el seguimiento.',
     estado: 'produccion',
     plataformas: ['Web', 'App móvil'],
     icono: 'mapCheck',
@@ -63,6 +63,18 @@ export const soluciones: Solucion[] = [
     subdominio: 'plaft.sulotec.com',
     demo: '/demo/plaft',
     publicado: true, // en Oracle (plaft.sulotec.com); el boton del portal lleva alli desde 2026-10-18
+  },
+  {
+    clave: 'dashboard',
+    nombre: 'Dashboard Empresarial',
+    descripcion:
+      'Tableros de Power BI de tu empresa, ordenados por periodo, con acceso por usuario y solo a la información de tu organización.',
+    estado: 'produccion',
+    plataformas: ['Web'],
+    icono: 'chart',
+    publico: false, // por ahora no se ofrece en el portal publico: lo ven los administradores universales y quien lo tenga contratado
+    subdominio: 'dashboards.sulotec.com',
+    publicado: true, // en Oracle desde 2026-10-18 (kit apps/dashboard)
   },
   {
     clave: 'buscador',

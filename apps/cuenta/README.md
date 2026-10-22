@@ -143,3 +143,38 @@ Para apagar el inicio de sesión en todo el portal en una emergencia: en GitHub,
 **Para dar acceso a Auditoría de Visitas a una persona:** en la consola, abre (o crea) su cuenta con el **mismo correo** que tiene su usuario en el
 panel de Auditoría, y agrégala al grupo **Clientes - Auditoria de Visitas**. Desde ese momento entra desde sulotec.com → Mis productos → Abrir, sin
 otra contraseña. Si su cuenta no está vinculada, el panel se lo dice y le ofrece entrar con usuario y contraseña.
+
+---
+
+## Modelo de cuentas (acordado el 2026-10-22)
+
+| Quién | En Keycloak | Qué ve |
+|---|---|---|
+| **Administrador universal** (Sulotec; **máximo 2 personas**) | grupo **Administradores Generales** (rol `administrador-general`) | Todos los productos y todos los clientes. |
+| **Empresa** (un cliente de Sulotec: una caja, un negocio) | subgrupo de **Empresas** con los atributos `empresa_uuid`, `empresa_nombre` y `empresa_slug`, y con los roles `producto-*` que tiene contratados | — |
+| **Persona de una empresa** | miembro del subgrupo de su empresa (de **una sola**) | Los productos que su empresa contrató: hereda los roles del grupo. Su rol dentro de cada producto (administrador de la empresa, supervisor, usuario) lo define el producto, no Keycloak. |
+
+- El **UUID de la empresa nace aquí** y es el mismo en todos los productos: al crear la empresa dentro de GeoMatrix, PLAFT o MiRadar se usa este UUID. Así el cliente se identifica igual en todo Sulotec.
+- Los tokens del portal y de los productos llevan `empresa_uuid`, `empresa_nombre` y `empresa_slug` (además de `email` y `roles`). Un administrador universal no lleva empresa.
+- **Sub-productos** (una plantilla con clientes debajo, cada uno con su marca y sus reglas): solo **GeoMatrix** (antes Auditoría de Visitas) y **MiRadar 360**. PLAFT y Dashboard Empresarial separan por empresa sin marca propia; el Buscador es interno.
+- El portal (`/mis-productos`) muestra **todo el catálogo**: «Abrir» si la empresa tiene el rol del producto, «Solicitar» si no; los productos privados (`publico: false`) solo aparecen a quien los tiene contratados.
+
+### Dar de alta una empresa y sus cuentas (en el servidor, por `ssh.sulotec.com`)
+
+1. **Crear la empresa** (o cambiar sus productos; se puede repetir, conserva el UUID):
+   ```bash
+   sudo bash /data/apps/cuenta/empresa.sh "Caja Huancayo" caja-huancayo auditoria,miradar360
+   ```
+   Productos válidos: `auditoria` (GeoMatrix), `miradar360`, `plaft`, `dashboard`. Con `--uuid <uuid>` se reutiliza el UUID que la empresa ya tiene en un producto. `sudo bash /data/apps/cuenta/empresa.sh --listar` muestra todas.
+2. **Preparar el CSV** copiando `plantilla-cuentas.csv` (`correo;nombres;apellidos;empresa;universal`; `empresa` es el slug del paso 1; `universal=si` solo para los 2 administradores de Sulotec, con empresa vacía) y revisarlo:
+   ```bash
+   sudo bash /data/apps/cuenta/cuentas.sh /ruta/cuentas.csv --revisar
+   ```
+3. **Crear e invitar:**
+   ```bash
+   sudo bash /data/apps/cuenta/cuentas.sh /ruta/cuentas.csv
+   ```
+   Cada persona recibe un correo de Sulotec con el enlace (7 días) para crear su contraseña. Si el correo de salida no está configurado, el script muestra una **clave temporal** por cuenta (una sola vez; se cambia al entrar). `--reinvitar` reenvía la invitación también a las cuentas que ya existían. Las cuentas que ya existen no se duplican ni se mueven de empresa.
+4. **En cada producto contratado**, crear la misma empresa con el **mismo UUID** y sus usuarios con el **mismo correo**: así el inicio único los reconoce (hoy lo hace GeoMatrix; PLAFT y Dashboard se enchufan a continuación).
+
+Los scripts corren dentro del contenedor `cuenta` con el administrador de `/opt/sulotec/cuenta.env`; se prueban en local con un Keycloak de prueba (variables `CONTENEDOR` y `PRUEBA`).

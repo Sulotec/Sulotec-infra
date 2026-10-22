@@ -17,6 +17,9 @@ const abrirDe = (s: (typeof soluciones)[number]) => s.url ?? (s.publicado ? `htt
 // Entrada del producto: con inicio unico (`acceso`) si lo tiene; si no, su direccion normal.
 const entrarDe = (s: (typeof soluciones)[number]) => s.acceso ?? abrirDe(s);
 const demos = solucionesPublicas.filter((s) => s.demo);
+// Catalogo para clientes: TODOS los productos. Los contratados se abren; los demas se ven con su demo y se pueden solicitar;
+// los privados (publico: false) solo aparecen si estan contratados (lo decide el script de abajo con los roles del token).
+const catalogo = soluciones.filter((s) => s.demo || s.acceso || s.publicado);
 const buscador = soluciones.find((s) => !s.publico);
 const asunto = encodeURIComponent('Quiero agendar una consulta con Sulotec');
 ---
@@ -52,7 +55,7 @@ const asunto = encodeURIComponent('Quiero agendar una consulta con Sulotec');
           </div>
           <ul class="datos">
             <li><Icon name="lock" size={16} />Tu sesión se cierra sola tras 30 minutos sin uso.</li>
-            <li><Icon name="check" size={16} /><span class="solo-admin">Rol: Administrador General</span><span class="solo-no-admin">Acceso a las demos completas</span></li>
+            <li><Icon name="check" size={16} /><span class="solo-admin">Rol: Administrador Universal</span><span class="solo-no-admin">Acceso a las demos completas</span></li>
           </ul>
           <div class="acciones-cuenta">
             <a class="boton boton-azul" href={sitio.cuentaUrl} target="_blank" rel="noopener"><Icon name="gear" size={18} />Mi cuenta y contraseña</a>
@@ -99,18 +102,18 @@ const asunto = encodeURIComponent('Quiero agendar una consulta con Sulotec');
     <section class="contenedor bloque solo-no-admin" id="productos-demo" aria-labelledby="titulo-demos">
       <div class="titulo-bloque">
         <h2 id="titulo-demos">Tus productos</h2>
-        <p>Los contratados se abren con esta misma cuenta; los demás, en demo</p>
+        <p>Los contratados se abren con esta misma cuenta; los demás puedes verlos en demo y solicitarlos</p>
       </div>
       <div class="productos tres">
-        {demos.map((s, i) => (
-          <article class="producto revelar" style={`--i:${i}`} data-producto={s.clave}>
+        {catalogo.map((s, i) => (
+          <article class="producto revelar" style={`--i:${i}`} data-producto={s.clave} data-publico={s.publico ? '1' : '0'} hidden={!s.publico}>
             <div class="arriba"><span class="icono"><Icon name={s.icono} size={26} /></span><span class:list={['chip', s.estado]}>{estados[s.estado]}</span></div>
             <h3>{s.nombre}</h3>
             <p>{s.descripcion}</p>
             <div class="pie">
               {entrarDe(s) && <a class="boton boton-azul" data-abrir hidden href={entrarDe(s)!} target="_blank" rel="noopener">Abrir<Icon name="arrow" size={18} /></a>}
-              <a class="boton secundario" href={s.demo}>Ver demo</a>
-              <span class="nota" data-no-contratado>No contratado</span>
+              {s.demo && <a class="boton secundario" href={s.demo}>Ver demo</a>}
+              <a class="boton secundario" data-no-contratado hidden href={`mailto:${sitio.correo}?subject=${encodeURIComponent(`Quiero ${s.nombre} en mi empresa`)}`}>Solicitar</a>
             </div>
           </article>
         ))}
@@ -145,6 +148,8 @@ const asunto = encodeURIComponent('Quiero agendar una consulta con Sulotec');
       el.classList.toggle('bloqueado', !contratado);
       el.querySelectorAll('[data-abrir]').forEach((a) => { a.hidden = !contratado; });
       el.querySelectorAll('[data-no-contratado]').forEach((n) => { n.hidden = contratado; });
+      // Productos privados (publico: false): solo se muestran a quien los tiene contratados
+      if (el.dataset.publico === '0') el.hidden = !contratado;
     });
   });
 </script>

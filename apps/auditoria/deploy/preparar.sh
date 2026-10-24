@@ -80,6 +80,8 @@ else
 fi
 
 JWT="$(actual JWT_SECRET)"; [ -n "$JWT" ] || JWT="$(aleatorio)"
+# Llave propia para firmar las claves de las fotos (distinta de la de las sesiones). Si ya existe se conserva; si no, se genera una.
+EVID_FIRMA="$(actual EVIDENCIA_FIRMA_SECRET)"; [ -n "$EVID_FIRMA" ] || EVID_FIRMA="$(aleatorio)"
 
 echo
 echo "== Empresas (plantilla multiempresa)"
@@ -137,6 +139,7 @@ install -m 640 -o root -g docker /dev/null "$ENV" 2>/dev/null || install -m 640 
   echo "PORT=4100"
   echo "DATABASE_URL=$DB"
   echo "JWT_SECRET=$JWT"
+  echo "EVIDENCIA_FIRMA_SECRET=$EVID_FIRMA"
   echo "MFA_ENCRYPTION_KEY=$MFA"
   echo "INITIAL_ADMIN_USERNAME=$ADMIN_USER"
   echo "INITIAL_ADMIN_PASSWORD=$ADMIN_PASS"

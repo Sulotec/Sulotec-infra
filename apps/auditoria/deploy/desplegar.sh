@@ -21,9 +21,20 @@ ENVFILE=/opt/sulotec/auditoria.env
 
 salud() { docker inspect -f '{{.State.Health.Status}}' "$1" 2>/dev/null || echo ninguno; }
 
+# Repositorios privados: si existe este archivo (un token de GitHub de SOLO LECTURA, permiso Contents: Read, solo para el backend y el panel; root, modo 600),
+# se usa para bajar el codigo. El token viaja en una cabecera de cada comando de git y no queda guardado en .git/config. Sin el archivo se baja como siempre (publico).
+TOKEN_GH=/opt/sulotec/github-lectura.token
+git_gh() {
+  if [ -r "$TOKEN_GH" ]; then
+    git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $(printf 'x-access-token:%s' "$(tr -d '[:space:]' < "$TOKEN_GH")" | base64 -w0)" "$@"
+  else
+    git "$@"
+  fi
+}
+
 # Baja o actualiza un repositorio y devuelve el commit. $1 = carpeta, $2 = url, $3 = rama
 bajar() {
-  if [ -d "$1/.git" ]; then git -C "$1" fetch -q origin "$3"; else git clone -q "$2" "$1"; git -C "$1" fetch -q origin "$3"; fi
+  if [ -d "$1/.git" ]; then git_gh -C "$1" fetch -q origin "$3"; else git_gh clone -q "$2" "$1"; git_gh -C "$1" fetch -q origin "$3"; fi
   git -C "$1" reset -q --hard "origin/$3"
   git -C "$1" rev-parse --short=12 HEAD
 }

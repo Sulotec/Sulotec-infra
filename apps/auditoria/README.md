@@ -147,3 +147,16 @@ Un universal local además necesita que la cuenta Sulotec sea de *Administrador 
 | Cliente y roles en Keycloak | Los crea `apps/cuenta/ajustar-realm.sh` (workflow *Publicar cuenta*): cliente público `auditoria` (PKCE, redirect `https://auditoria.sulotec.com/sso`), rol `producto-auditoria` y grupo **Clientes - Auditoria de Visitas** |
 | Dar acceso a una persona | 1) En el panel de Auditoría, su usuario debe tener su **correo**. 2) En la consola de cuentas (`cuenta.sulotec.com/admin`), crear o abrir su cuenta con **ese mismo correo** y ponerla en el grupo **Clientes - Auditoria de Visitas** (así el portal le muestra «Abrir»). |
 | Comprobar | `curl -s https://api-auditoria.sulotec.com/api/auth/sso/config` debe responder `{"activo":true,...}`; en sulotec.com → Mis productos → Abrir Auditoría de Visitas entra sin pedir otra contraseña |
+
+## Código en repositorios privados (opcional)
+
+`desplegar.sh` baja el código de GitHub (`Huancayo-Backend` y `CajaHuancayo-Web`). Si esos repositorios pasan a **privados**, el servidor necesita un
+token de **solo lectura**. Sin el archivo del token todo sigue como hasta ahora (repositorios públicos).
+
+| Qué | Cómo |
+|---|---|
+| Crear el token | GitHub → Settings → Developer settings → Fine-grained personal access tokens. Repositorios: solo `Huancayo-Backend` y `CajaHuancayo-Web`. Permiso: **Contents: Read-only** (nada más). Vigencia: la más larga que permita (renovarlo antes de que venza). |
+| Guardarlo en el servidor | `sudo install -m 600 -o root -g root /dev/null /opt/sulotec/github-lectura.token` y luego pegarlo dentro con `sudo nano /opt/sulotec/github-lectura.token` (una sola línea). No va en el repositorio ni en el respaldo. |
+| Cómo se usa | `desplegar.sh` lo manda en una cabecera de cada `git clone` y `git fetch`; no queda en `.git/config` ni en las variables de entorno. |
+| Comprobar | `sudo bash /data/apps/auditoria/desplegar.sh` debe bajar el código y terminar sano. Con el token mal escrito falla al bajar el código (no toca la versión que está corriendo). |
+| Rotarlo | Crear uno nuevo, reemplazar el contenido del archivo y borrar el anterior en GitHub. |

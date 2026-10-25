@@ -108,8 +108,25 @@ if [ -n "$myf" ]; then
       | docker exec -i -e MYSQL_PWD="$clave" "$mc" mysql -uroot >/dev/null 2>"$TMP/my.err" || true
     malos="$(grep -E 'ERROR' "$TMP/my.err" || true)"
     if [ -n "$malos" ]; then falla "MySQL: errores al restaurar ($(echo "$malos" | wc -l)); el primero: $(echo "$malos" | head -1 | cut -c1-150)"; else ok "MySQL: restauracion sin errores"; fi
-    docker exec -e MYSQL_PWD="$clave" "$mc" mysql -uroot -N -e "select table_schema, count(*) from information_schema.tables where table_schema not in ('mysql','sys','performance_schema','information_schema') group by 1 order by 1" 2>/dev/null \
-      | awk '{printf "   %-22s %6s tablas\n", $1, $2} END{if (NR==0) print "   (sin bases de usuario en MySQL)"}'
+    # Por cada base: tablas, filas exactas restauradas y filas en vivo (asi se ve que el respaldo trae lo que hay en produccion, menos lo del dia)
+    bases_my="$(docker exec -e MYSQL_PWD="$clave" "$mc" mysql -uroot -N -e "select schema_name from information_schema.schemata where schema_name not in ('mysql','sys','performance_schema','information_schema') order by 1" 2>/dev/null || true)"
+    [ -n "$bases_my" ] || falla "MySQL: no aparecio ninguna base de datos restaurada"
+    echo "   base de datos          tablas        filas (restaurado)    filas (en vivo)"
+    for b in $bases_my; do
+      # una sola consulta con un COUNT(*) exacto por tabla (table_rows de information_schema es aproximado)
+      sql_my="$(docker exec -e MYSQL_PWD="$clave" "$mc" mysql -uroot -N -e "select group_concat(concat('select count(*) as n from \`', table_name, '\`') separator ' union all ') from information_schema.tables where table_schema = '$b' and table_type = 'BASE TABLE'" 2>/dev/null || true)"
+      tablas_my="$(docker exec -e MYSQL_PWD="$clave" "$mc" mysql -uroot -N -e "select count(*) from information_schema.tables where table_schema = '$b' and table_type = 'BASE TABLE'" 2>/dev/null || echo '?')"
+      filas_my="?"
+      if [ -n "$sql_my" ] && [ "$sql_my" != "NULL" ]; then
+        filas_my="$(docker exec -e MYSQL_PWD="$clave" "$mc" mysql -uroot -N -D "$b" -e "select sum(n) from ($sql_my) t" 2>/dev/null || echo '?')"
+      fi
+      vivo="n/d"
+      if [ -r "$BASE/docker-compose.yml" ] && [ -z "${PRUEBA:-}" ] && [ -n "$sql_my" ] && [ "$sql_my" != "NULL" ]; then
+        vivo="$( cd "$BASE" && set -a && . ./.env && set +a && docker compose exec -T -e MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql mysql -uroot -N -D "$b" -e "select sum(n) from ($sql_my) t" 2>/dev/null || echo '?' )"
+      fi
+      printf '   %-22s %6s %18s %18s\n' "$b" "$tablas_my" "$filas_my" "$vivo"
+      [ "$tablas_my" != "?" ] && [ "$tablas_my" != "0" ] || falla "base $b: sin tablas"
+    done
   fi
 fi
 

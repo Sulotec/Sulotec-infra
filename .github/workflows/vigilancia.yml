@@ -1,0 +1,42 @@
+# Vigilancia externa de los productos de Sulotec (ISO/IEC 27001, control 8.16): cada 15 minutos GitHub, desde fuera del servidor, comprueba que
+# cada direccion publica responda. Si alguna no responde en 3 intentos, el trabajo falla y GitHub manda el correo de "Run failed" a quien hizo el
+# ultimo cambio en este archivo (la cuenta del administrador). No necesita cuentas ni claves de ningun servicio.
+# Limites: GitHub puede atrasar unos minutos una tarea programada, y la desactiva si el repositorio no tiene cambios en 60 dias (se vuelve a
+# activar con un clic en Actions). Para agregar un producto, suma una linea en la lista.
+name: Vigilancia de los productos
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+jobs:
+  comprobar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Comprobar que cada direccion publica responda
+        shell: bash
+        run: |
+          set -u
+          fallos=0
+          # "Responde" = contesta con un codigo HTTP menor que 500 (una pantalla de acceso 302/401/403 cuenta como viva). Sin respuesta o 5xx = caido.
+          probar() {
+            local nombre="$1" url="$2" codigo=""
+            for intento in 1 2 3; do
+              codigo="$(curl -s -m 20 -o /dev/null -w '%{http_code}' "$url" 2>/dev/null || echo 000)"
+              if [ "$codigo" != "000" ] && [ "$codigo" -lt 500 ]; then echo "  OK     $nombre ($codigo)  $url"; return 0; fi
+              sleep 20
+            done
+            echo "  CAIDO  $nombre (ultimo codigo: $codigo)  $url"
+            fallos=$((fallos+1))
+          }
+          probar "Portal Sulotec"              https://sulotec.com/
+          probar "Cuentas (Keycloak)"          https://cuenta.sulotec.com/
+          probar "Auditoria de Visitas: API"   https://api-auditoria.sulotec.com/health/live
+          probar "Auditoria de Visitas: panel" https://auditoria.sulotec.com/
+          probar "Dashboard Empresarial"       https://dashboards.sulotec.com/
+          probar "Sistema de Planillas"        https://planilla.sulotec.com/
+          echo
+          if [ "$fallos" -gt 0 ]; then echo "$fallos producto(s) sin responder"; exit 1; fi
+          echo "Todos responden."

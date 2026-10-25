@@ -18,6 +18,8 @@ La VM **no abre ningún puerto**: todo el tráfico entra por el túnel de Cloudf
 - **Nueva base para un proyecto:** `sudo /opt/sulotec/scripts/new-project-db.sh mysql miproyecto` (o `postgres`).
 - **Backups:** automáticos a las 02:00 (`/var/log/sulotec-backup.log`); a mano: `sudo /opt/sulotec/scripts/backup.sh`.
 - **Emergencia sin Cloudflare:** en Cloud Shell poner `ssh_enabled = true` y tu IP en `admin_cidr`, `terraform apply`, entrar con la llave de la laptop; luego volver a `false`.
+- **Vigilancia externa:** GitHub comprueba cada 15 minutos, desde fuera del servidor, que cada producto responda (`.github/workflows/vigilancia.yml`); si uno se cae, GitHub manda el correo «Run failed» al administrador. Para sumar un producto, agrega una línea al archivo.
+- **Prueba de restauración:** `sudo /opt/sulotec/scripts/probar-restauracion.sh --desde-bucket` restaura el último respaldo en contenedores temporales sin red y compara tablas y filas con las bases en vivo (no toca nada real). Repetir cada trimestre y anotar el resultado en `SEGURIDAD-ISO27001.md`. Si cambió el script en el repositorio: `sudo curl -fsSL https://raw.githubusercontent.com/Sulotec/Sulotec-infra/main/vm/scripts/probar-restauracion.sh -o /opt/sulotec/scripts/probar-restauracion.sh`.
 - **Controles de seguridad:** ver `SEGURIDAD-ISO27001.md`.
 
 Las fases de abajo documentan cómo se construyó (y cómo rehacerlo desde cero).

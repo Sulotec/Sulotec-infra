@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Publica Dashboard Empresarial (API y web): baja el codigo, construye las imagenes, las levanta y espera a que esten sanas.
+# Publica Dashboard Empresarial (API y web): baja el codigo, construye las imagenes, aplica el esquema de la base (solo agrega lo que falta),
+# las levanta y espera a que esten sanas.
 # Si la version nueva no arranca, vuelve a la anterior. Se puede repetir las veces que haga falta:
 #   sudo bash /data/apps/dashboard/desplegar.sh
 # Para probar una rama antes de unirla a main:
@@ -39,6 +40,19 @@ echo "   backend $RAMA_BACKEND @ $cb   web $RAMA_FRONTEND @ $cf"
 echo "== Construyendo imagenes (la primera vez tarda unos minutos)"
 docker build -q -t "dashboard-api:$cb" "$APP/backend" >/dev/null
 docker build -q -t "dashboard-web:$cf" --build-arg "NEXT_PUBLIC_API_URL=$API_PUBLICA" "$APP/frontend" >/dev/null
+
+echo "== Base de datos (el esquema solo agrega lo que falta y no toca datos)"
+leer() { grep -E "^$1=" "$ENVFILE" | head -1 | cut -d= -f2- || true; }
+DB_HOST="$(leer DB_HOST)"; DB_PORT="$(leer DB_PORT)"; DB_NAME="$(leer DB_NAME)"; DB_USER="$(leer DB_USER)"; PGPASSWORD="$(leer DB_PASSWORD)"; export PGPASSWORD
+{ [ -n "$DB_HOST" ] && [ -n "$DB_NAME" ] && [ -n "$DB_USER" ] && [ -n "$PGPASSWORD" ]; } || { echo "$ENVFILE no tiene los datos de la base." >&2; exit 1; }
+# El esquema viaja dentro de la imagen de la API recien construida y corre ANTES de levantar la version nueva: si falla, no se publica nada
+# y la version actual sigue corriendo. Es repetible: crea solo lo que falta (por ejemplo columnas nuevas) y no cambia ni borra datos.
+if ! docker run --rm --entrypoint cat "dashboard-api:$cb" /app/db/schema.sql \
+  | docker run --rm -i --network sulotec_data -e PGPASSWORD -e PGOPTIONS="-c client_min_messages=warning" postgres:16 \
+      psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -X -q -v ON_ERROR_STOP=1 >/dev/null; then
+  echo "No se pudo actualizar el esquema de la base: no se publico nada y la version actual sigue corriendo." >&2
+  exit 1
+fi
 
 anterior_api=$(docker image inspect -f '{{.Id}}' dashboard-api:latest 2>/dev/null || true)
 anterior_web=$(docker image inspect -f '{{.Id}}' dashboard-web:latest 2>/dev/null || true)

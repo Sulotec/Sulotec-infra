@@ -31,7 +31,7 @@ Una diferencia a propósito: SQL Server no distinguía mayúsculas en el nombre 
 | `herramientas/exportar-sqlserver.ps1` | **Se corre en Windows (la oficina).** Lee SQL Server (solo `SELECT`) y genera un `.sql` con todos los datos para PostgreSQL |
 | `deploy/instalar.sh` | Atajo: revisa el servidor y hace de una vez copiar kit, crear base, configurar, publicar y crear tablas vacías (`revisar` solo mira) |
 | `deploy/preparar.sh` | Crea `/opt/sulotec/dashboard.env` (base, clave de sesiones, web permitida) |
-| `deploy/desplegar.sh` | Baja el código, construye, levanta y vuelve a la versión anterior si algo falla |
+| `deploy/desplegar.sh` | Baja el código, construye, **aplica el esquema de la base** (solo agrega lo que falta; si falla, no publica nada), levanta y vuelve a la versión anterior si algo falla |
 | `deploy/importar-datos.sh` | Crea las tablas y carga el `.sql` en **una sola transacción**; comprueba fila por fila los totales |
 | `deploy/crear-admin.sh` | Crea (o da clave nueva a) un administrador general; clave aleatoria que se ve **una sola vez** |
 | `deploy/probar.sh` | Pruebas de humo: contenedores, base, login, direcciones públicas y CORS |
@@ -132,18 +132,22 @@ sudo bash /data/apps/dashboard/probar.sh
 | Recuperar el acceso del administrador | `sudo bash /data/apps/dashboard/crear-admin.sh admin.sulotec --resetear` |
 | Respaldo | La base `dashboard` entra en el respaldo diario de la VM (`pg_dumpall`) |
 
-## Cómo se trabaja: cargar los periodos de una empresa
+## Cómo se trabaja: el reporte de cada empresa
 
-Cada empresa cliente tiene su reporte de Power BI (por ejemplo «Huancayo» o «Portfolio» de Qapaq). Cada mes hay un **periodo** (`AAAAMM`) con dos enlaces: el del reporte de Power BI y, opcional, el de la descarga en MEGA.
+Cada empresa tiene su reporte de Power BI (por ejemplo «Huancayo», o «Portfolio» de Qapaq); al registrar la empresa el portal le crea su dashboard. El vínculo de Power BI **es del reporte, no del mes**, y los periodos son **opcionales**: sirven para dar la descarga de MEGA de cada mes. Es la misma lógica del login anterior de Informa.
 
-1. En Power BI, quien publica el reporte abre **Publicar en la web → Código para insertar** y copia el **«HTML para pegar en un sitio web»** (empieza con `<iframe …>`; también sirve el «Vínculo»). El mismo vínculo vale para todos los meses de esa empresa.
-2. El administrador entra a `dashboards.sulotec.com` → **Gestión de Empresas** → la empresa → **Periodos** y pega ese HTML en «Power BI (HTML o vínculo)». La pantalla muestra el vínculo detectado y el nombre del reporte; se guarda **solo el vínculo**, nunca el HTML.
-3. Escribe el periodo (la pantalla propone el mes siguiente al último) y pega el vínculo de **MEGA** del mes en «Link Descarga». Registrar. Para el mes siguiente el formulario ya trae el mismo vínculo de Power BI: solo hace falta el periodo y su MEGA.
-4. El cliente entra con su cuenta, elige el periodo en el desplegable y ve el reporte; el botón **Descargar** abre el vínculo de MEGA en otra pestaña.
+1. En Power BI, quien publica el reporte abre **Publicar en la web → Código para insertar** y copia el **«HTML para pegar en un sitio web»** (empieza con `<iframe …>`; también sirve el «Vínculo»).
+2. El administrador entra a `dashboards.sulotec.com` → **Gestión de Empresas** → la empresa → **Periodos y Enlaces** y pega ese HTML en «Vínculo de Power BI del reporte». La pantalla muestra el vínculo detectado y el nombre del reporte; se guarda **solo el vínculo**, nunca el HTML. El cliente ya ve su reporte, aunque no haya ningún periodo. Para cambiarlo (por ejemplo si se vuelve a publicar el reporte) está «Cambiar vínculo»: lo cambia en todos los periodos y no toca las descargas.
+3. Opcional, cada mes: en «Periodos y descargas» escribe el periodo (la pantalla propone el mes siguiente) y pega el vínculo de **MEGA** del mes. Solo eso: ya no se vuelve a pegar el de Power BI.
+4. El cliente entra con su cuenta y ve el reporte; si hay periodos aparecen el desplegable de periodo y el botón **Descargar**, que abre el vínculo de MEGA en otra pestaña.
 
 Se rechaza, con un mensaje claro: dos reportes distintos en el mismo texto, un vínculo que no sea `https` de Power BI, el vínculo de MEGA en el campo de Power BI y el de Power BI en el campo de la descarga.
 
-**Los vínculos de «Publicar en la web» son públicos:** cualquiera que los tenga ve el reporte sin pasar por el portal. No van en repositorios, documentos ni chats; si se exponen, se borra el código en Power BI («Administrar códigos para insertar») y se vuelve a publicar.
+Por la API, un periodo puede llevar un vínculo de Power BI propio si ese mes usa otro reporte (la pantalla no lo ofrece). Los periodos cargados antes de este cambio conservan su vínculo propio: no se pierde nada.
+
+**Base de datos:** `db/schema.sql` del backend agrega la columna `Dashboards.url_powerbi` y rellena los reportes con el vínculo de su periodo más reciente. `desplegar.sh` lo aplica solo antes de levantar la versión nueva (se puede repetir). Si cambia `desplegar.sh`, hay que copiar el kit de nuevo al servidor con el comando de «Copiar el kit» (paso 3, arriba).
+
+**Los vínculos de «Publicar en la web» son públicos:** cualquiera que los tenga ve el reporte sin pasar por el portal. No van en repositorios, documentos ni chats; si se exponen, se borra el código en Power BI («Administrar códigos para insertar»), se vuelve a publicar y se pega el nuevo con «Cambiar vínculo».
 
 ## Rotar claves
 

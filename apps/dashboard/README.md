@@ -132,6 +132,19 @@ sudo bash /data/apps/dashboard/probar.sh
 | Recuperar el acceso del administrador | `sudo bash /data/apps/dashboard/crear-admin.sh admin.sulotec --resetear` |
 | Respaldo | La base `dashboard` entra en el respaldo diario de la VM (`pg_dumpall`) |
 
+## Cómo se trabaja: cargar los periodos de una empresa
+
+Cada empresa cliente tiene su reporte de Power BI (por ejemplo «Huancayo» o «Portfolio» de Qapaq). Cada mes hay un **periodo** (`AAAAMM`) con dos enlaces: el del reporte de Power BI y, opcional, el de la descarga en MEGA.
+
+1. En Power BI, quien publica el reporte abre **Publicar en la web → Código para insertar** y copia el **«HTML para pegar en un sitio web»** (empieza con `<iframe …>`; también sirve el «Vínculo»). El mismo vínculo vale para todos los meses de esa empresa.
+2. El administrador entra a `dashboards.sulotec.com` → **Gestión de Empresas** → la empresa → **Periodos** y pega ese HTML en «Power BI (HTML o vínculo)». La pantalla muestra el vínculo detectado y el nombre del reporte; se guarda **solo el vínculo**, nunca el HTML.
+3. Escribe el periodo (la pantalla propone el mes siguiente al último) y pega el vínculo de **MEGA** del mes en «Link Descarga». Registrar. Para el mes siguiente el formulario ya trae el mismo vínculo de Power BI: solo hace falta el periodo y su MEGA.
+4. El cliente entra con su cuenta, elige el periodo en el desplegable y ve el reporte; el botón **Descargar** abre el vínculo de MEGA en otra pestaña.
+
+Se rechaza, con un mensaje claro: dos reportes distintos en el mismo texto, un vínculo que no sea `https` de Power BI, el vínculo de MEGA en el campo de Power BI y el de Power BI en el campo de la descarga.
+
+**Los vínculos de «Publicar en la web» son públicos:** cualquiera que los tenga ve el reporte sin pasar por el portal. No van en repositorios, documentos ni chats; si se exponen, se borra el código en Power BI («Administrar códigos para insertar») y se vuelve a publicar.
+
 ## Rotar claves
 
 | Clave | Cómo |

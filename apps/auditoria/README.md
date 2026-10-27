@@ -131,6 +131,8 @@ que borrar: Render usaba `onrender.com`).
   con la cabecera `X-Empresa-Id` y cada acción queda en la auditoría.
 - `RESET_INITIAL_ADMIN` queda en `false`; solo se activa durante un despliegue de emergencia y se vuelve a apagar.
 - `ENFORCE_DEVICE_BINDING=true` (un celular por cuenta de campo) no se puede apagar en producción.
+- **Firma del auditor de campo:** la ficha 2 (app 0.2.0 o mayor) la pide en todas las visitas. Por defecto el servidor solo se la exige a las apps que declaran `ficha_version` 2 o mayor, así las apps anteriores siguen enviando visitas; cuando todos los celulares estén al día, `FIRMA_AUDITOR_OBLIGATORIA=true` en `/opt/sulotec/auditoria.env` y `desplegar.sh` la exige a todas.
+- **Orden al publicar la versión 0.2.0:** primero `desplegar.sh` (aplica la migración `firma_auditor`) y después instalar el APK; un servidor sin actualizar rechaza los campos nuevos.
 - El ajuste de checksums del cliente S3 (`requestChecksumCalculation: WHEN_REQUIRED`) y `S3_FORCE_PATH_STYLE=true` son necesarios para Oracle; no quitarlos.
 - La geocodificación externa (`GEOCODING_WORKER_ENABLED`) queda apagada salvo autorización del banco: manda direcciones de clientes a un proveedor externo.
 

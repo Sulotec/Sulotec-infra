@@ -186,7 +186,7 @@ Personas ─HTTPS──▶ │ DNS · HTTPS · WAF · Access (quién entra) · T
 
 ### 3.6 Respaldos y secretos (resumen)
 
-- **Respaldos:** diarios a las 02:00 (`pg_dumpall` + `mysqldump` + `/data/apps`), 14 días en el servidor y copia en el bucket `sulotec-backups`. **Restauración probada el 2026-10-14** (`vm/scripts/probar-restauracion.sh --desde-bucket`; repetir cada trimestre).
+- **Respaldos:** diarios a las 02:00 (`pg_dumpall` + `mysqldump` + `/data/apps` sin el modelo de IA ni los clones de MiRadar), 14 días en el servidor y copia en el bucket `sulotec-backups`. **Restauración probada el 2026-10-14** (`vm/scripts/probar-restauracion.sh --desde-bucket`; repetir cada trimestre).
 - **Los `*.env` de `/opt/sulotec` NO entran en el respaldo.** Lo imprescindible (p. ej. `MFA_ENCRYPTION_KEY` de MiRadar, que **no se rota**) debe estar también en el gestor. Inventario **sin valores**: [`docs/05-inventario-de-claves.md`](docs/05-inventario-de-claves.md).
 - **Rotación:** `sudo /opt/sulotec/scripts/rotar-claves.sh` (bases) y `apps/miradar/deploy/rotar-s3.sh` (clave S3). Rotadas el 2026-10-14.
 - Controles ISO 27001 y brechas: [`SEGURIDAD-ISO27001.md`](SEGURIDAD-ISO27001.md).
@@ -381,6 +381,7 @@ sudo rm -rf /tmp/sulotec-infra && sudo git clone --depth 1 https://github.com/Su
 - **En la laptop de trabajo (Windows):** `MSYS_NO_PATHCONV=1` con Docker y rutas en Git Bash; usar `./node_modules/.bin/tsc` y no `npx`; Java directo falla en el entorno de Claude Code (usar Docker).
 - **Cloudflare corta a los 100 s:** cualquier endpoint más lento (chat de IA) necesita ser asíncrono.
 - **Los `*.env` no se respaldan** y las claves que pasan por un chat se consideran expuestas.
+- **Disco lleno (2026-10-27):** el despliegue de MiRadar falló con `no space left on device` y los contenedores quedaron `unhealthy`. Causa: el respaldo nocturno comprimía `/data/apps` entero, incluido el modelo de IA de PLAFT (`plaft/ollama`, 9 GB): 8,9 GB por noche × 14 días = 102 GB en `/var/backups/sulotec` (más 19 GB de caché de construcción de Docker). Arreglo: `backup.sh` excluye `plaft/ollama` y limpia caché de más de 3 días cada noche con aviso al 80 %. Recuperación inmediata: `sudo docker builder prune -af; sudo docker image prune -f` y borrar los `apps_*.tar.gz` de más de 1 GB; **nunca** `docker volume prune` ni `system prune --volumes`. Antes de un despliegue conviene tener 10 GB libres (`df -h /`). Pendiente: el bucket `sulotec-backups` guarda también esas copias de ~9 GB (con versionado; fuera del cupo gratuito de 20 GB): limpiar objetos y versiones `apps_*` viejos y poner una regla de ciclo de vida.
 
 ## 11. Documentos relacionados y cómo mantener esto al día
 

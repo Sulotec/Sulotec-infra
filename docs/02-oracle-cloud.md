@@ -105,7 +105,8 @@ terraform apply
 
 ## 2.5 Respaldos
 
-- **Cada día a las 02:00** (cron), `backup.sh` hace `pg_dumpall` (PostgreSQL), `mysqldump` (MySQL) y un comprimido de `/data/apps`.
+- **Cada día a las 02:00** (cron), `backup.sh` hace `pg_dumpall` (PostgreSQL), `mysqldump` (MySQL) y un comprimido de `/data/apps`, **sin** el modelo de IA de PLAFT (`plaft/ollama`, ~9 GB) ni los clones de MiRadar, porque se vuelven a bajar. Incluir el modelo llenó el disco el 2026-10-27 (ver §10 del documento maestro).
+- **Mantenimiento del disco:** al terminar, `backup.sh` borra la caché de construcción de Docker de más de 3 días y las imágenes sin etiqueta, y deja un aviso en el registro si el disco pasa del 80 %. Para ver el espacio: `df -h /` y `sudo docker system df`.
 - **Dónde quedan:** 14 días en `/var/backups/sulotec`, y una copia fuera del servidor en el bucket `sulotec-backups`, con versionado.
 - **Registro:** `/var/log/sulotec-backup.log`.
 - **Pendiente:** prueba de restauración documentada.

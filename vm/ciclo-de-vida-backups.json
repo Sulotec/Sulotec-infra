@@ -1,0 +1,42 @@
+[
+  {
+    "name": "respaldos-borrar-a-los-7-dias",
+    "action": "DELETE",
+    "target": "objects",
+    "timeAmount": 7,
+    "timeUnit": "DAYS",
+    "isEnabled": true,
+    "objectNameFilter": {
+      "inclusionPatterns": [
+        "20??/*"
+      ],
+      "exclusionPatterns": [
+        "externos/*"
+      ]
+    }
+  },
+  {
+    "name": "versiones-anteriores-borrar-a-1-dia",
+    "action": "DELETE",
+    "target": "previous-object-versions",
+    "timeAmount": 1,
+    "timeUnit": "DAYS",
+    "isEnabled": true,
+    "objectNameFilter": {
+      "inclusionPatterns": [
+        "20??/*"
+      ],
+      "exclusionPatterns": [
+        "externos/*"
+      ]
+    }
+  },
+  {
+    "name": "subidas-incompletas-borrar-a-1-dia",
+    "action": "ABORT",
+    "target": "multipart-uploads",
+    "timeAmount": 1,
+    "timeUnit": "DAYS",
+    "isEnabled": true
+  }
+]

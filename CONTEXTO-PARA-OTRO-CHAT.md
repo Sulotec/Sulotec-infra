@@ -186,7 +186,7 @@ Personas ─HTTPS──▶ │ DNS · HTTPS · WAF · Access (quién entra) · T
 
 ### 3.6 Respaldos y secretos (resumen)
 
-- **Respaldos:** diarios a las 02:00 (`pg_dumpall` + `mysqldump` + `/data/apps` sin el modelo de IA ni los clones de MiRadar), 14 días en el servidor y copia en el bucket `sulotec-backups`. **Restauración probada el 2026-10-14** (`vm/scripts/probar-restauracion.sh --desde-bucket`; repetir cada trimestre).
+- **Respaldos:** diarios a las 02:00 (`pg_dumpall` + `mysqldump` + `/data/apps` sin el modelo de IA ni los clones de MiRadar), 2 respaldos en el servidor (hoy y el anterior; `RETENCION_DIAS`) y 7 días en el bucket `sulotec-backups` (reglas de ciclo de vida en `vm/ciclo-de-vida-backups.json`, decisión del usuario del 2026-10-27 de guardar pocos respaldos; 7 en el bucket porque con 2 un fallo de varias noches dejaría sin copias). **Restauración probada el 2026-10-14** (`vm/scripts/probar-restauracion.sh --desde-bucket`; repetir cada trimestre).
 - **Los `*.env` de `/opt/sulotec` NO entran en el respaldo.** Lo imprescindible (p. ej. `MFA_ENCRYPTION_KEY` de MiRadar, que **no se rota**) debe estar también en el gestor. Inventario **sin valores**: [`docs/05-inventario-de-claves.md`](docs/05-inventario-de-claves.md).
 - **Rotación:** `sudo /opt/sulotec/scripts/rotar-claves.sh` (bases) y `apps/miradar/deploy/rotar-s3.sh` (clave S3). Rotadas el 2026-10-14.
 - Controles ISO 27001 y brechas: [`SEGURIDAD-ISO27001.md`](SEGURIDAD-ISO27001.md).

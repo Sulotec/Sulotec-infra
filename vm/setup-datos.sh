@@ -98,7 +98,7 @@ EOF_COMPOSE
 cat > scripts/backup.sh <<'EOF_BACKUP'
 #!/usr/bin/env bash
 # Backup diario de todas las bases (PostgreSQL y MySQL) y de los archivos en /data/apps.
-# - Copia local 14 dias en /var/backups/sulotec (disco del sistema, separado de /data).
+# - Copia local de los ultimos RETENCION_DIAS (por defecto 2) en /var/backups/sulotec (disco del sistema, separado de /data).
 # - Copia fuera del servidor en el bucket sulotec-backups, con el permiso propio de la VM (sin llaves).
 # Lo ejecuta cron como root a las 02:00 (hora de Lima): /etc/cron.d/sulotec-backup
 # Ejecutarlo a mano:  sudo /opt/sulotec/scripts/backup.sh
@@ -121,7 +121,12 @@ docker compose exec -T -e MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql \
 # Incluirlo llenó el disco el 2026-10-27 (8,9 GB por noche durante 14 noches = 102 GB).
 tar -czf "$dir/apps_$ts.tar.gz" --exclude='apps/miradar/backend' --exclude='apps/miradar/frontend' --exclude='apps/plaft/ollama' -C /data apps
 
-find "$dir" -type f -mtime +14 -delete
+# Cuantos respaldos diarios se guardan EN EL SERVIDOR, contando el de hoy. Decision del usuario (2026-10-27): 2, hoy y el anterior.
+# Para guardar mas, poner RETENCION_DIAS=7 en /opt/sulotec/.env. La copia del bucket tiene su propia regla de ciclo de vida
+# (vm/ciclo-de-vida-backups.json) y se cambia aparte.
+retencion="${RETENCION_DIAS:-2}"
+[[ "$retencion" =~ ^[0-9]+$ ]] && [ "$retencion" -ge 1 ] || retencion=2
+find "$dir" -type f -mtime +$((retencion - 1)) -delete
 
 for f in "$dir"/*_"$ts".*; do
   oci os object put --auth instance_principal --bucket-name "${BACKUP_BUCKET:-sulotec-backups}" \

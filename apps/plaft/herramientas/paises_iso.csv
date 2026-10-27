@@ -1,0 +1,251 @@
+﻿alfa2,alfa3,numerico,nombre_es
+PE,PER,604,Perú
+AF,AFG,004,Afganistán
+AL,ALB,008,Albania
+DE,DEU,276,Alemania
+AD,AND,020,Andorra
+AO,AGO,024,Angola
+AI,AIA,660,Anguila
+AQ,ATA,010,Antártida
+AG,ATG,028,Antigua y Barbuda
+SA,SAU,682,Arabia Saudí
+DZ,DZA,012,Argelia
+AR,ARG,032,Argentina
+AM,ARM,051,Armenia
+AW,ABW,533,Aruba
+AU,AUS,036,Australia
+AT,AUT,040,Austria
+AZ,AZE,031,Azerbaiyán
+BS,BHS,044,Bahamas
+BD,BGD,050,Bangladés
+BB,BRB,052,Barbados
+BH,BHR,048,Baréin
+BE,BEL,056,Bélgica
+BZ,BLZ,084,Belice
+BJ,BEN,204,Benín
+BM,BMU,060,Bermudas
+BY,BLR,112,Bielorrusia
+BO,BOL,068,Bolivia
+BA,BIH,070,Bosnia y Herzegovina
+BW,BWA,072,Botsuana
+BR,BRA,076,Brasil
+BN,BRN,096,Brunéi
+BG,BGR,100,Bulgaria
+BF,BFA,854,Burkina Faso
+BI,BDI,108,Burundi
+BT,BTN,064,Bután
+CV,CPV,132,Cabo Verde
+KH,KHM,116,Camboya
+CM,CMR,120,Camerún
+CA,CAN,124,Canadá
+BQ,BES,535,Caribe neerlandés
+QA,QAT,634,Catar
+TD,TCD,148,Chad
+CZ,CZE,203,Chequia
+CL,CHL,152,Chile
+CN,CHN,156,China
+CY,CYP,196,Chipre
+VA,VAT,336,Ciudad del Vaticano
+CO,COL,170,Colombia
+KM,COM,174,Comoras
+CG,COG,178,Congo
+KP,PRK,408,Corea del Norte
+KR,KOR,410,Corea del Sur
+CR,CRI,188,Costa Rica
+CI,CIV,384,Côte d’Ivoire
+HR,HRV,191,Croacia
+CU,CUB,192,Cuba
+CW,CUW,531,Curazao
+DK,DNK,208,Dinamarca
+DM,DMA,212,Dominica
+EC,ECU,218,Ecuador
+EG,EGY,818,Egipto
+SV,SLV,222,El Salvador
+AE,ARE,784,Emiratos Árabes Unidos
+ER,ERI,232,Eritrea
+SK,SVK,703,Eslovaquia
+SI,SVN,705,Eslovenia
+ES,ESP,724,España
+US,USA,840,Estados Unidos
+EE,EST,233,Estonia
+SZ,SWZ,748,Esuatini
+ET,ETH,231,Etiopía
+PH,PHL,608,Filipinas
+FI,FIN,246,Finlandia
+FJ,FJI,242,Fiyi
+FR,FRA,250,Francia
+GA,GAB,266,Gabón
+GM,GMB,270,Gambia
+GE,GEO,268,Georgia
+GH,GHA,288,Ghana
+GI,GIB,292,Gibraltar
+GD,GRD,308,Granada
+GR,GRC,300,Grecia
+GL,GRL,304,Groenlandia
+GP,GLP,312,Guadalupe
+GU,GUM,316,Guam
+GT,GTM,320,Guatemala
+GF,GUF,254,Guayana Francesa
+GG,GGY,831,Guernesey
+GN,GIN,324,Guinea
+GQ,GNQ,226,Guinea Ecuatorial
+GW,GNB,624,Guinea-Bisáu
+GY,GUY,328,Guyana
+HT,HTI,332,Haití
+HN,HND,340,Honduras
+HU,HUN,348,Hungría
+IN,IND,356,India
+ID,IDN,360,Indonesia
+IQ,IRQ,368,Irak
+IR,IRN,364,Irán
+IE,IRL,372,Irlanda
+BV,BVT,074,Isla Bouvet
+IM,IMN,833,Isla de Man
+CX,CXR,162,Isla de Navidad
+NF,NFK,574,Isla Norfolk
+IS,ISL,352,Islandia
+AX,ALA,248,Islas Aland
+KY,CYM,136,Islas Caimán
+CC,CCK,166,Islas Cocos
+CK,COK,184,Islas Cook
+FO,FRO,234,Islas Feroe
+GS,SGS,239,Islas Georgia del Sur y Sandwich del Sur
+HM,HMD,334,Islas Heard y McDonald
+FK,FLK,238,Islas Malvinas
+MP,MNP,580,Islas Marianas del Norte
+MH,MHL,584,Islas Marshall
+UM,UMI,581,Islas menores alejadas de EE. UU.
+PN,PCN,612,Islas Pitcairn
+SB,SLB,090,Islas Salomón
+TC,TCA,796,Islas Turcas y Caicos
+VG,VGB,092,Islas Vírgenes Británicas
+VI,VIR,850,Islas Vírgenes de EE. UU.
+IL,ISR,376,Israel
+IT,ITA,380,Italia
+JM,JAM,388,Jamaica
+JP,JPN,392,Japón
+JE,JEY,832,Jersey
+JO,JOR,400,Jordania
+KZ,KAZ,398,Kazajistán
+KE,KEN,404,Kenia
+KG,KGZ,417,Kirguistán
+KI,KIR,296,Kiribati
+KW,KWT,414,Kuwait
+LA,LAO,418,Laos
+LS,LSO,426,Lesoto
+LV,LVA,428,Letonia
+LB,LBN,422,Líbano
+LR,LBR,430,Liberia
+LY,LBY,434,Libia
+LI,LIE,438,Liechtenstein
+LT,LTU,440,Lituania
+LU,LUX,442,Luxemburgo
+MK,MKD,807,Macedonia del Norte
+MG,MDG,450,Madagascar
+MY,MYS,458,Malasia
+MW,MWI,454,Malaui
+MV,MDV,462,Maldivas
+ML,MLI,466,Mali
+MT,MLT,470,Malta
+MA,MAR,504,Marruecos
+MQ,MTQ,474,Martinica
+MU,MUS,480,Mauricio
+MR,MRT,478,Mauritania
+YT,MYT,175,Mayotte
+MX,MEX,484,México
+FM,FSM,583,Micronesia
+MD,MDA,498,Moldavia
+MC,MCO,492,Mónaco
+MN,MNG,496,Mongolia
+ME,MNE,499,Montenegro
+MS,MSR,500,Montserrat
+MZ,MOZ,508,Mozambique
+MM,MMR,104,Myanmar (Birmania)
+NA,NAM,516,Namibia
+NR,NRU,520,Nauru
+NP,NPL,524,Nepal
+NI,NIC,558,Nicaragua
+NE,NER,562,Níger
+NG,NGA,566,Nigeria
+NU,NIU,570,Niue
+NO,NOR,578,Noruega
+NC,NCL,540,Nueva Caledonia
+NZ,NZL,554,Nueva Zelanda
+OM,OMN,512,Omán
+ZZ,ZZZ,999,País no determinado
+NL,NLD,528,Países Bajos
+PK,PAK,586,Pakistán
+PW,PLW,585,Palaos
+PA,PAN,591,Panamá
+PG,PNG,598,Papúa Nueva Guinea
+PY,PRY,600,Paraguay
+PF,PYF,258,Polinesia Francesa
+PL,POL,616,Polonia
+PT,PRT,620,Portugal
+PR,PRI,630,Puerto Rico
+HK,HKG,344,RAE de Hong Kong (China)
+MO,MAC,446,RAE de Macao (China)
+GB,GBR,826,Reino Unido
+CF,CAF,140,República Centroafricana
+CD,COD,180,República Democrática del Congo
+DO,DOM,214,República Dominicana
+RE,REU,638,Reunión
+RW,RWA,646,Ruanda
+RO,ROU,642,Rumanía
+RU,RUS,643,Rusia
+EH,ESH,732,Sáhara Occidental
+WS,WSM,882,Samoa
+AS,ASM,016,Samoa Americana
+BL,BLM,652,San Bartolomé
+KN,KNA,659,San Cristóbal y Nieves
+SM,SMR,674,San Marino
+MF,MAF,663,San Martín
+PM,SPM,666,San Pedro y Miquelón
+VC,VCT,670,San Vicente y las Granadinas
+SH,SHN,654,Santa Elena
+LC,LCA,662,Santa Lucía
+ST,STP,678,Santo Tomé y Príncipe
+SN,SEN,686,Senegal
+RS,SRB,688,Serbia
+SC,SYC,690,Seychelles
+SL,SLE,694,Sierra Leona
+SG,SGP,702,Singapur
+SX,SXM,534,Sint Maarten
+SY,SYR,760,Siria
+SO,SOM,706,Somalia
+LK,LKA,144,Sri Lanka
+ZA,ZAF,710,Sudáfrica
+SD,SDN,729,Sudán
+SS,SSD,728,Sudán del Sur
+SE,SWE,752,Suecia
+CH,CHE,756,Suiza
+SR,SUR,740,Surinam
+SJ,SJM,744,Svalbard y Jan Mayen
+TH,THA,764,Tailandia
+TW,TWN,158,Taiwán
+TZ,TZA,834,Tanzania
+TJ,TJK,762,Tayikistán
+IO,IOT,086,Territorio Británico del Océano Índico
+TF,ATF,260,Territorios Australes Franceses
+PS,PSE,275,Territorios Palestinos
+TL,TLS,626,Timor-Leste
+TG,TGO,768,Togo
+TK,TKL,772,Tokelau
+TO,TON,776,Tonga
+TT,TTO,780,Trinidad y Tobago
+TN,TUN,788,Túnez
+TM,TKM,795,Turkmenistán
+TR,TUR,792,Turquía
+TV,TUV,798,Tuvalu
+UA,UKR,804,Ucrania
+UG,UGA,800,Uganda
+UY,URY,858,Uruguay
+UZ,UZB,860,Uzbekistán
+VU,VUT,548,Vanuatu
+VE,VEN,862,Venezuela
+VN,VNM,704,Vietnam
+WF,WLF,876,Wallis y Futuna
+YE,YEM,887,Yemen
+DJ,DJI,262,Yibuti
+ZM,ZMB,894,Zambia
+ZW,ZWE,716,Zimbabue

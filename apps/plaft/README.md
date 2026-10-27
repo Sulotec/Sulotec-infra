@@ -33,6 +33,9 @@ pantallas responden "servicio no disponible". Se instala con el paso 8 y `desple
 | `deploy/preparar-ml.sh` | Crea `/opt/sulotec/plaft-ml.env` de la IA (usa la misma clave interna que ya tiene `plaft.env`) |
 | `deploy/restaurar-ml.sh` | Carga en la base `plaft_ml` un respaldo `pg_dump -Fc` de `security_ml` (todo o nada) |
 | `deploy/cargar-datos.sh` | Carga las listas (colorimetría), las sancionadas de la SBS (Excel) y las figuras políticas con sus casos en prensa (base de la IA); simula por defecto y respalda antes de escribir |
+| `deploy/cargar-listas.sh` | Carga masiva de listas (PEP, sanciones, investigados, noticias, fraudes) desde «Base total.xlsx» de ASBANC, «base antigua pep.xlsx» (hoja RISK) o la plantilla oficial; simula por defecto, `--aplicar` respalda antes. Ver «Carga masiva de listas» |
+| `herramientas/cargar_listas_masivas.py` | La herramienta que usa `cargar-listas.sh` (lee los formatos, revisa, convierte a la plantilla y carga por lotes) |
+| `plantillas/PLANTILLA-Carga-Listas-PLAFT.xlsx` | La estructura de datos que PLAFT necesita para las listas: instrucciones, hoja de datos con desplegables, ejemplos inventados, diccionario y catálogos |
 | `deploy/activar-indira.sh` | Instala Ollama (modelo local), baja el modelo, enciende a Indira y la deteccion de casos en prensa, y prueba una conversación real |
 | `deploy/pasar-dev-a-produccion.sh` | Pasa a `plaft` lo valioso de la copia de desarrollo (cuentas con sus roles, personas, listas, consultas, matrices); simula por defecto y respalda antes de escribir |
 | `deploy/cargar-operaciones-demo.sh` | Carga 10 registros ficticios en Operaciones (el script de demostración del backend) para probar ese módulo |
@@ -116,6 +119,31 @@ las relaciones con identificadores nuevos. **No pasa** las cuentas que usan una 
 **13. Datos de prueba para todos los módulos:** además de lo anterior, `sudo bash /data/apps/plaft/cargar-operaciones-demo.sh` carga los datos ficticios de Operaciones
 (`docs/operaciones-demo.sql` del backend; no se repite si ya hay). Operaciones muestra solo los registros de la **empresa del usuario** que entró, y los de demostración quedan a nombre del usuario de menor id: si al abrir el módulo dice que no tienes empresa, o sale vacío, `sudo bash /data/apps/plaft/asignar-empresa.sh` (o con los nombres: `... asignar-empresa.sh admin001 lavado_pru`) les asigna la misma empresa (con la pantalla **Administración** de la web, solo para administradores, también se hace desde ahí: Cuentas → Editar). Para pasar **toda** la base de desarrollo (incluidas las personas y listas de demostración, las cuentas de prueba y las
 denuncias de prueba): `sudo env CON_DENUNCIAS=1 bash /data/apps/plaft/pasar-dev-a-produccion.sh --aplicar`. Antes de salir con clientes reales hay que desactivar las cuentas de prueba.
+
+## Carga masiva de listas (PEP, sanciones, investigados, noticias, fraudes)
+
+**La estructura que PLAFT necesita** está en la plantilla [`plantillas/PLANTILLA-Carga-Listas-PLAFT.xlsx`](plantillas/PLANTILLA-Carga-Listas-PLAFT.xlsx). Es lo que se le da a quien provee datos: **una fila = una persona o empresa en una lista**, con 19 columnas (la hoja DICCIONARIO dice en qué tabla de PLAFT cae cada una). PLAFT guarda cada persona una sola vez (por tipo y número de documento) y cada aparición en una lista con su detalle, fechas y, si es PEP, cargo, institución y tipo.
+
+`deploy/cargar-listas.sh` usa `herramientas/cargar_listas_masivas.py`, que entiende tres formatos y los lleva a esa estructura: la **plantilla** (xlsx o csv), **«Base total.xlsx»** de ASBANC y la hoja **RISK** de «base antigua pep.xlsx». Qué hace con cada uno:
+
+- **ASBANC (Base total):** tipo de documento 21 = DNI (se rellena con ceros hasta 8 dígitos), 9 = RUC, 5 = pasaporte; el 35 y los demás son códigos internos y se guardan como SIN DOCUMENTO con la clave `ASBANC-<código>-<número>`. «Apellido» es el paterno y «Segundo Apellido» el materno. Las fechas falsas (`00/00/00`, `/ /`) quedan vacías. El tipo de lista y el texto de la observación deciden la lista de PLAFT: 3 = PEP (si dice «inhabilitado por la Contraloría», también la lista de la Contraloría); 5 y 2 = OFAC o ONU; 2 también MINJUS y UIF; 1 = investigados, World-Check, o PEP si es «political»; 6 = fraudes; 7 = noticias, o sancionados SBS si dice «SO SANCIONADO». La observación completa queda en el detalle de cada aparición.
+- **RISK (base antigua PEP):** todas las filas van a la lista «Perú - PEP base antigua (RISK)» (marcada como PEP) con institución, cargo y periodos; «NO INDICA» se conserva como texto y no como fecha. Es una lista aparte para poder apagarla o filtrarla sin tocar las demás.
+- **La hoja ASBANC de «base antigua pep.xlsx» no se carga:** sus documentos ya estaban todos en «Base total» y solo duplicaría apariciones.
+- **Filas con error** (sin nombre, fila corrida por comillas, lista desconocida…): no se cargan y quedan en un CSV en `/var/backups/sulotec/plaft_listas_rechazadas_*.csv`, con el motivo (tiene datos personales; borrarlo al terminar).
+- Las listas que no existían se crean con su grupo de color (propuesta; se corrige con una instrucción SQL sobre `tipo_lista.id_grupo`): MINJUS, UIF e «ASBANC - Investigados» en Rojo; World-Check y Fraudes en Naranja; Noticias y la lista RISK en Verde; sanciones internacionales de otras fuentes en Vinotinto.
+- Crea el índice `idx_entidades_documento` (búsqueda por DNI/RUC instantánea). Es **repetible** (no duplica) y **nunca borra**; con `--aplicar` guarda antes un respaldo de la base y lo comprueba.
+
+Pasos: subir «Base total.xlsx» y «base antigua pep.xlsx» al bucket `sulotec-backups`, carpeta `externos/plaft/` (consola de Oracle), y en el servidor:
+
+```bash
+cd /tmp && sudo rm -rf si && git clone -q --depth 1 https://github.com/Sulotec/Sulotec-infra.git si
+sudo bash si/apps/plaft/deploy/cargar-listas.sh              # simula: muestra el informe y no escribe nada
+sudo bash si/apps/plaft/deploy/cargar-listas.sh --aplicar    # respalda la base y escribe
+```
+
+**Probado (2026-10-27):** contra MySQL 8.4 real con tablas como las que crea el backend, con archivos inventados que imitan los defectos de los reales (DNI sin ceros, códigos 35, filas corridas, fechas falsas, sin nombre, repetidas): simulación, carga con respaldo, segunda carga sin duplicar, y un volumen de unas 350 mil personas y 435 mil apariciones en 2 min 20 s (125 MB). Con los archivos reales solo se probó la lectura y revisión (sin base): 507 949 filas, 785 rechazadas, unas 422 mil personas y empresas y 505 mil apariciones. **No probado:** el bajado desde el bucket ni el comando en el servidor.
+
+**Antes de que el módulo de listas aguante este volumen hay que arreglar el backend** (no se hizo todavía): `GET /api/listas/buscar` no tiene límite ni paginación, por cada persona devuelta guarda una consulta en el historial y lee sus apariciones de una en una; con unos 420 mil registros, buscar por un apellido corto devolvería decenas de miles de personas y se colgaría. La búsqueda por documento sí es instantánea (la herramienta crea el índice). No hay índices declarados en las entidades.
 
 ## Operación
 

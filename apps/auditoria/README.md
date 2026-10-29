@@ -134,7 +134,8 @@ que borrar: Render usaba `onrender.com`).
 - **Firma del auditor de campo:** la ficha 2 (app 0.2.0 o mayor) la pide en todas las visitas. Por defecto el servidor solo se la exige a las apps que declaran `ficha_version` 2 o mayor, así las apps anteriores siguen enviando visitas; cuando todos los celulares estén al día, `FIRMA_AUDITOR_OBLIGATORIA=true` en `/opt/sulotec/auditoria.env` y `desplegar.sh` la exige a todas.
 - **Orden al publicar la versión 0.2.0:** primero `desplegar.sh` (aplica la migración `firma_auditor`) y después instalar el APK; un servidor sin actualizar rechaza los campos nuevos.
 - El ajuste de checksums del cliente S3 (`requestChecksumCalculation: WHEN_REQUIRED`) y `S3_FORCE_PATH_STYLE=true` son necesarios para Oracle; no quitarlos.
-- La geocodificación externa (`GEOCODING_WORKER_ENABLED`) queda apagada salvo autorización del banco: manda direcciones de clientes a un proveedor externo.
+- La geocodificación externa (`GEOCODING_WORKER_ENABLED`) queda apagada salvo autorización del banco: manda direcciones de clientes a un proveedor externo. Para encenderla con Mapbox: `GEOCODING_PROVIDER=mapbox`, `GEOCODING_BATCH_SIZE=100` y `MAPBOX_ACCESS_TOKEN` en `/opt/sulotec/auditoria.env`, y `docker compose up -d --force-recreate api`; el modo permanente (el que guarda coordenadas) cuesta unos US$ 5 por 1,000 direcciones.
+- **Ubicación sin proveedor (desde 2026-10-29, `Huancayo-Backend#40`):** las direcciones de manzana y lote se ubican con nuestras propias visitas: un lote verificado da la referencia a los demás lotes de su manzana (`MANZANA_VECINA`) y la zona a los de su zona; sin referencia, la primera visita se controla contra la zona conocida con la regla `zona_radio_m` de la empresa (1 km por defecto). Trae la migración `geo_negocios_estado` (la aplica `desplegar.sh`); nada que configurar.
 
 ## Inicio único con la cuenta Sulotec
 

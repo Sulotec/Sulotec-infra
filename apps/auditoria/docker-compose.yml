@@ -6,6 +6,8 @@
 # Configuracion y secretos (nunca en el repositorio): /opt/sulotec/auditoria.env, lo crea deploy/preparar.sh.
 # La base es la MySQL compartida de la VM (red sulotec_data); no publica puertos.
 # Las fotos van al bucket huancayo-archivos (Object Storage, API compatible con S3, llave de svc-auditoria), con prefijo por empresa.
+# El motor de rutas por calles (auditoria-osrm, mapa de Peru de OpenStreetMap) no publica puertos: solo lo llama la API por la red edge
+# (OSRM_URL=http://auditoria-osrm:5000 en el env). Sus datos los prepara deploy/osrm-datos.sh; sin ellos el contenedor no arranca y la API dibuja rectas.
 name: auditoria
 
 services:
@@ -29,6 +31,18 @@ services:
     security_opt: ["no-new-privileges:true"]
     networks: [edge]
     mem_limit: 128m
+
+  osrm:
+    image: ghcr.io/project-osrm/osrm-backend:v5.27.1
+    container_name: auditoria-osrm
+    restart: unless-stopped
+    command: osrm-routed --algorithm mld --max-matching-size 500 --max-viaroute-size 200 --max-table-size 100 /data/peru-latest.osrm
+    volumes: ["/data/apps/auditoria/osrm:/data:ro"]
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    networks: [edge]
+    mem_limit: 1536m
 
 networks:
   edge:

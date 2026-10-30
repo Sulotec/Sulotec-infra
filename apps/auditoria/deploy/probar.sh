@@ -57,6 +57,17 @@ if [ "$permitido" = "$WEB_PUBLICA" ]; then ok "CORS: el panel puede llamar a la 
 ajeno="$(cabecera_cors "https://sitio-ajeno.example")"
 if [ -z "$ajeno" ]; then ok "CORS: un sitio ajeno NO puede llamar a la API"; else falla "CORS permite un origen ajeno: $ajeno"; fi
 
+echo "== Rutas por calles (motor OSRM)"
+if grep -qE '^OSRM_URL=.+' /opt/sulotec/auditoria.env 2>/dev/null; then
+  if docker exec auditoria-api node -e "fetch(process.env.OSRM_URL+'/route/v1/driving/-77.0428,-12.0464;-77.0300,-12.0600?overview=false',{signal:AbortSignal.timeout(10000)}).then(r=>r.json()).then(j=>process.exit(j.code==='Ok'?0:1)).catch(()=>process.exit(1))"; then
+    ok "la API llega al motor de rutas y este responde una ruta de prueba en Lima"
+  else
+    falla "OSRM_URL esta configurado pero el motor no responde (¿corriste osrm-datos.sh? mira: docker logs auditoria-osrm)"
+  fi
+else
+  aviso "sin OSRM_URL: la app y el panel dibujan rectas (para rutas por calles: osrm-datos.sh y luego preparar.sh)"
+fi
+
 echo
 if [ "$fallos" -eq 0 ]; then echo "TODO BIEN ($avisos aviso(s))."; exit 0; fi
 echo "$fallos prueba(s) fallaron."

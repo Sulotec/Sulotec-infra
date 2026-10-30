@@ -9,7 +9,8 @@
 App Android / navegador ──▶ Cloudflare Tunnel ──▶ auditoria-web  (nginx, solo archivos estáticos del panel)
                                              └──▶ auditoria-api  (Node 24 + Socket.IO)
                                                       ├──▶ MySQL 8.4 de la VM (base "auditoria", red sulotec_data)
-                                                      └──▶ Bucket huancayo-archivos (Object Storage, llave de svc-auditoria)
+                                                      ├──▶ Bucket huancayo-archivos (Object Storage, llave de svc-auditoria)
+                                                      └──▶ auditoria-osrm  (motor de rutas por calles: mapa de Perú de OpenStreetMap; sin puertos)
 ```
 
 | Dirección | Va a |
@@ -30,6 +31,7 @@ El servidor **construye** las imágenes desde GitHub (`desplegar.sh`); las bases
 | `deploy/desplegar.sh` | Baja el código, construye, levanta y vuelve a la versión anterior si algo falla |
 | `deploy/probar.sh` | Pruebas de humo: salud, bucket, direcciones públicas y CORS |
 | `deploy/rotar-s3.sh` | Cambia la clave S3 de `svc-auditoria`, prueba el bucket y vuelve a la anterior si falla |
+| `deploy/osrm-datos.sh` | Baja el mapa de Perú (OpenStreetMap) y lo prepara para el motor de rutas por calles; se repite para renovarlo |
 
 ## Puesta en marcha (en este orden)
 
@@ -102,6 +104,33 @@ que borrar: Render usaba `onrender.com`).
 `/data/backups/auditoria`), apagar Aiven y los dos servicios de Render, borrar sus claves del gestor, y en el portal poner `publicado: true` a
 «Auditoría de Visitas» en `apps/portal/src/data/soluciones.ts`.
 
+## Rutas por calles (motor OSRM propio)
+
+Desde `Huancayo-Backend#43` el servidor dibuja el recorrido real de cada auditor **ajustado a las calles** y traza por calles la ruta del día de la
+app y del panel (con distancia y tiempo). Lo hace un motor **OSRM** propio (contenedor `auditoria-osrm`, sin puertos: solo lo llama la API por la red
+`sulotec_edge`) con el mapa de Perú de **OpenStreetMap** (extracto de Geofabrik, licencia ODbL; el panel y la app ya muestran la atribución porque
+usan sus mosaicos). Google Directions/Roads quedó descartado: sus términos no permiten usar sus rutas sobre mapas que no sean de Google. Al motor
+solo viajan coordenadas y horas, nunca nombres ni expedientes.
+
+Sin el motor nada se rompe: la API responde «no disponible» y la app y el panel dibujan rectas, como antes.
+
+**Ponerlo en marcha (una vez):**
+
+1. Copiar el kit nuevo al servidor (paso 2 de la puesta en marcha: trae el `docker-compose.yml` con el servicio `osrm` y `deploy/osrm-datos.sh`).
+2. `sudo bash /data/apps/auditoria/osrm-datos.sh`: baja el mapa de Perú (unos 250 MB), lo convierte (10-20 min; 2-3 GB de RAM libres y unos 2 GB
+   de disco en `/data/apps/auditoria/osrm`) y levanta el motor; termina probando una ruta en Lima.
+3. `sudo bash /data/apps/auditoria/preparar.sh`: Enter en todo; en «Rutas por calles» acepta `http://auditoria-osrm:5000`.
+4. `sudo bash /data/apps/auditoria/desplegar.sh` y `sudo bash /data/apps/auditoria/probar.sh` (comprueba que la API llega al motor).
+
+**Renovar el mapa** (calles nuevas; cada 1-3 meses basta): volver a correr `osrm-datos.sh`; construye aparte y recién al final reemplaza el mapa
+anterior. **Apagarlo:** `OSRM_URL` vacío en `preparar.sh` y `desplegar.sh`; el contenedor puede quedar parado (`docker compose stop osrm`).
+
+| Recurso | Cuánto |
+|---|---|
+| Disco | ~1,5 GB (datos del motor) + 250 MB mientras se construye |
+| Memoria del motor en marcha | ~0,5-1 GB (`mem_limit` 1,5 GB) |
+| Memoria al construir | 2-3 GB libres durante 10-20 min |
+
 ## Operación
 
 | Qué | Cómo |
@@ -112,6 +141,7 @@ que borrar: Render usaba `onrender.com`).
 | Cambiar una clave o una regla | `sudo bash /data/apps/auditoria/preparar.sh` (Enter conserva) y luego `desplegar.sh` |
 | Comparar con Aiven antes de apagarlo | `SOLO_COMPARAR=1 sudo -E bash /data/apps/auditoria/migrar-datos.sh` |
 | Respaldo | La base entra en el respaldo diario de la VM (`mysqldump`); el bucket tiene versionado y llave propia en Oracle |
+| Renovar el mapa de rutas por calles | `sudo bash /data/apps/auditoria/osrm-datos.sh` (construye aparte y recién al final reemplaza; los datos del motor no entran al respaldo: se regeneran) |
 
 ## Rotar claves
 
@@ -136,6 +166,11 @@ que borrar: Render usaba `onrender.com`).
 - El ajuste de checksums del cliente S3 (`requestChecksumCalculation: WHEN_REQUIRED`) y `S3_FORCE_PATH_STYLE=true` son necesarios para Oracle; no quitarlos.
 - La geocodificación externa (`GEOCODING_WORKER_ENABLED`) queda apagada salvo autorización del banco: manda direcciones de clientes a un proveedor externo. Para encenderla con Mapbox: `GEOCODING_PROVIDER=mapbox`, `GEOCODING_BATCH_SIZE=100` y `MAPBOX_ACCESS_TOKEN` en `/opt/sulotec/auditoria.env`, y `docker compose up -d --force-recreate api`; el modo permanente (el que guarda coordenadas) cuesta unos US$ 5 por 1,000 direcciones. Con **Google** (desde `Huancayo-Backend#41`): `GEOCODING_PROVIDER=google` y `GOOGLE_MAPS_API_KEY`; sus resultados son solo sugerencias temporales (vencen a los `GEOCODING_TEMPORAL_DIAS` días, máximo 30, y nunca fijan la referencia), se buscan solo los casos asignados (`GEOCODING_SOLO_ASIGNADOS`, por defecto así con los proveedores de pago) y hay tope mensual de consultas (`GEOCODING_MAX_MES`, 10 000 por defecto, 0 = sin tope). Antes de encenderlo, que quien ve lo legal con el banco confirme la lectura de los términos de Google.
 - **Ubicación sin proveedor (desde 2026-10-29, `Huancayo-Backend#40`):** las direcciones de manzana y lote se ubican con nuestras propias visitas: un lote verificado da la referencia a los demás lotes de su manzana (`MANZANA_VECINA`) y la zona a los de su zona; sin referencia, la primera visita se controla contra la zona conocida con la regla `zona_radio_m` de la empresa (1 km por defecto). Trae la migración `geo_negocios_estado` (la aplica `desplegar.sh`); nada que configurar.
+- **Recorrido limpio y rutas por calles (desde 2026-10-30, `Huancayo-Backend#43`):** cada posición del celular se clasifica antes de guardarse (buena,
+  imprecisa según `precision_maxima_m` de la empresa, salto o simulada); solo las buenas entran al recorrido, y se guarda la hora real del GPS
+  (migración `tracking_capturado_en`, la aplica `desplegar.sh`). **Orden al publicar la versión 0.4.0 de la app:** primero `desplegar.sh`, después el
+  APK; las apps anteriores siguen funcionando (mandan la posición sin hora y el servidor usa la de llegada). Las rutas por calles van por el motor
+  OSRM propio de la sección anterior: sin `OSRM_URL`, rectas.
 
 ## Inicio único con la cuenta Sulotec
 

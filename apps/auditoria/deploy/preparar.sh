@@ -133,6 +133,10 @@ echo "== Servicios externos (Enter si no se usan)"
 pregunta MAPBOX_ACCESS_TOKEN "Token de Mapbox" "" secreto; MAPBOX="$R"
 if [ "$GEO_PROV" = "mapbox" ] && [ -z "$MAPBOX" ]; then echo "Con GEOCODING_PROVIDER=mapbox hace falta el token de Mapbox." >&2; exit 1; fi
 
+echo
+echo "== Rutas por calles (motor OSRM propio, contenedor auditoria-osrm; primero correr osrm-datos.sh). Vacio = sin rutas por calles: rectas, como antes"
+pregunta OSRM_URL "OSRM_URL" "http://auditoria-osrm:5000"; OSRM="$R"
+
 install -m 640 -o root -g docker /dev/null "$ENV" 2>/dev/null || install -m 640 /dev/null "$ENV"
 {
   echo "NODE_ENV=production"
@@ -176,6 +180,7 @@ install -m 640 -o root -g docker /dev/null "$ENV" 2>/dev/null || install -m 640 
   echo "TRACKING_RETENCION_DIAS=$RETENCION"
   echo "GEOCODING_WORKER_ENABLED=$GEO_WORKER"
   echo "GEOCODING_PROVIDER=$GEO_PROV"
+  echo "OSRM_URL=$OSRM"
   [ -n "$MAPBOX" ] && echo "MAPBOX_ACCESS_TOKEN=$MAPBOX"
 } > "$ENV"
 

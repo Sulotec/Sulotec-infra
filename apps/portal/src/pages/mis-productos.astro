@@ -1,7 +1,8 @@
 ---
 // Pagina a la que se llega al iniciar sesion. public/cuenta.js manda a iniciar sesion si no hay sesion
-// y marca <html class="es-admin"> si la persona esta en el grupo "Administradores Generales" de Keycloak:
-// - Administradores Generales: ven todos los productos (incluido el Buscador Interno, que ademas
+// y marca <html class="es-admin"> si la persona es administrador universal de Sulotec (grupo "Administradores Universales"
+// de Keycloak, rol tecnico administrador-general):
+// - Administradores universales: ven todos los productos (incluido el Buscador Interno, que ademas
 //   esta protegido por Cloudflare Access y por la regla de sedes).
 // - Los demas: ven sus productos contratados (rol `producto-<clave>` de Keycloak) con el boton "Abrir",
 //   los no contratados en gris, y las demos. "Abrir" lleva a la entrada con la cuenta Sulotec (`acceso`),
@@ -138,7 +139,7 @@ const asunto = encodeURIComponent('Quiero agendar una consulta con Sulotec');
 
 <script is:inline>
   // Productos contratados: la cuenta Sulotec trae en su token el rol `producto-<clave>` por cada producto;
-  // los demas quedan en gris con su demo. Los administradores generales tienen todo (lo marca cuenta.js).
+  // los demas quedan en gris con su demo. Los administradores universales de Sulotec tienen todo (lo marca cuenta.js).
   document.addEventListener('DOMContentLoaded', () => {
     const s = window.sulotecCuenta?.sesion();
     const roles = Array.isArray(s?.roles) ? s.roles : [];

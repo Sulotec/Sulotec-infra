@@ -46,8 +46,12 @@ pid=$(kc get groups -r sulotec -q search=Empresas -q exact=true --fields id,name
 [ -n "$pid" ] || { echo "No existe el grupo 'Empresas': corre ajustar-realm.sh y crea las empresas con empresa.sh." >&2; exit 1; }
 empresas=$(kc get "groups/$pid/children" -r sulotec -q max=500 --fields id,name --format csv --noquotes)
 gid_de() { echo "$empresas" | grep -E "^[^,]+,$1\$" | head -1 | cut -d, -f1 || true; }
-gid_adm=$(kc get groups -r sulotec -q search="Administradores Generales" -q exact=true --fields id --format csv --noquotes | head -1)
-[ -n "$gid_adm" ] || { echo "No existe el grupo 'Administradores Generales'." >&2; exit 1; }
+gid_adm=""
+for nombre in "Administradores Universales" "Administradores Generales"; do   # nombre desde el 2026-11-02 y el anterior
+  gid_adm=$(kc get groups -r sulotec -q "search=$nombre" -q exact=true --fields id --format csv --noquotes | head -1)
+  [ -z "$gid_adm" ] || break
+done
+[ -n "$gid_adm" ] || { echo "No existe el grupo 'Administradores Universales' (ni el anterior, 'Administradores Generales')." >&2; exit 1; }
 n_adm=$(kc get "groups/$gid_adm/members" -r sulotec -q max=100 --fields id --format csv --noquotes | grep -c . || true)
 
 # 1) Revision de todo el archivo (no se crea nada si hay una fila mala)

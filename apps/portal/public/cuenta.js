@@ -10,7 +10,8 @@
 
   const CALLBACK = `${location.origin}/cuenta/callback`;
   const MIS_PRODUCTOS = '/mis-productos';
-  // Rol de Keycloak (grupo "Administradores Generales") que ve todos los productos. Solo cambia lo que
+  // Rol de Keycloak del administrador universal de Sulotec (grupo "Administradores Universales"; el rol conserva su
+  // nombre tecnico) que ve todos los productos. Solo cambia lo que
   // se muestra: cada producto privado tiene su propia proteccion (ej. Cloudflare Access en el Buscador).
   const ROL_TOTAL = 'administrador-general';
   const CLAVE_SESION = 'sulotec.sesion';

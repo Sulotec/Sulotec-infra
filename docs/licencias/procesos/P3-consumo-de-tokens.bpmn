@@ -18,7 +18,7 @@
         <bpmn:flowNodeRef>t4</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>t5</bpmn:flowNodeRef>
       </bpmn:lane>
-      <bpmn:lane id="Carril_P3_2" name="Administrador de empresa">
+      <bpmn:lane id="Carril_P3_2" name="Administrador General">
         <bpmn:flowNodeRef>t3</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>e3</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>t6</bpmn:flowNodeRef>

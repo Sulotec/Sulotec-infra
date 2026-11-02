@@ -70,7 +70,7 @@ docs/          esta documentación
   - Sin sesión, la persona tiene **2 minutos** en total; luego una ventana obligatoria pide **Iniciar sesión** o **Solicitar acceso**.
   - Con sesión no hay límite, y al minuto se recomienda **agendar una consulta**.
 - **Mis productos** (`/mis-productos`), adonde se llega al iniciar sesión:
-  - **Administradores Generales:** ven los 4 productos, con botón directo al Buscador.
+  - **Administradores Universales** (antes *Administradores Generales*): ven los 4 productos, con botón directo al Buscador.
   - **Los demás:** ven las demos y la invitación a la consulta.
   - Todos tienen el panel "Tu cuenta".
 - **Redes sociales:** se configuran en `sitio.ts` → `redes`. Solo aparecen las que tienen link.
@@ -86,7 +86,7 @@ docs/          esta documentación
   - Contraseña de 10 caracteres o más, con mayúscula, minúscula y número, sin repetir las 3 últimas.
   - Bloqueo tras 5 intentos fallidos.
   - La sesión se cierra a los 30 minutos sin uso, y dura 8 horas como máximo.
-- **Roles:** el grupo **Administradores Generales** (rol `administrador-general`) ve todo en Mis productos y puede administrar cuentas, pero no cambiar la configuración. El rol llega al portal en el token (claim `roles`).
+- **Roles:** el grupo **Administradores Universales** (antes *Administradores Generales*; rol técnico `administrador-general`) ve todo en Mis productos y puede administrar cuentas, pero no cambiar la configuración. El rol llega al portal en el token (claim `roles`).
 - **Guía paso a paso** (crear, recuperar y quitar cuentas): [`apps/cuenta/README.md`](../apps/cuenta/README.md).
 
 ## 1.7 Buscador Interno

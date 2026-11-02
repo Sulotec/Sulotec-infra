@@ -7,11 +7,11 @@
 
 | Nivel | Quién | Qué puede | Licencia |
 |---|---|---|---|
-| **Administrador universal** | Sulotec (grupo «Administradores Generales» de Keycloak, máximo 2 personas, con segundo factor) | Entra a todos los productos y a todas las empresas; crea empresas, asigna el plan, invita al administrador de empresa, amplía cupos y bolsas, ve el consumo de todas. Todo lo que hace dentro de una empresa queda registrado. | Fuera de toda licencia: no ocupa cupo ni bolsa. Lo que gasta dentro de una empresa se descuenta de esa empresa, marcado «hecho por Sulotec». Para demos, una empresa propia de Sulotec. |
-| **Administrador de empresa** | Uno por empresa cliente, entregado al contratar | Crea y desactiva a sus usuarios con sus roles; reparte topes de tokens si quiere; ve el consumo; pide ampliar | Ocupa un cupo |
-| **Usuarios** | Los roles de cada producto (supervisor, auditor, asesor, analista…) | Usan el producto | Ocupan un cupo mientras están activos; consumen de la bolsa de la empresa |
+| **Administrador Universal** | Sulotec (grupo «Administradores Universales» de Keycloak, rol técnico `administrador-general`; máximo 2 personas, con segundo factor) | Entra a todos los productos y a todas las empresas; crea empresas, asigna el plan, invita al Administrador General, amplía cupos y bolsas, ve el consumo de todas. Todo lo que hace dentro de una empresa queda registrado. | Fuera de toda licencia: no ocupa cupo ni bolsa. Lo que gasta dentro de una empresa se descuenta de esa empresa, marcado «hecho por Sulotec». Para demos, una empresa propia de Sulotec. |
+| **Administrador General** (por licencia) | Uno por empresa cliente, entregado al contratar: el **titular de la licencia** (recibe los avisos, no lo puede borrar otro administrador) | Autogestiona sus sub-usuarios (administradores adicionales, supervisores, auditores de campo y usuarios, en app y web) con sus roles; reparte tokens si quiere; en el portal ve solo sus licencias y su consumo; pide ampliar (usuarios, tokens o un plan mayor) | Ocupa un cupo |
+| **Sub-usuarios** | Los roles de cada producto (administrador adicional, supervisor, auditor de campo, usuario, asesor, analista…) | Usan el producto | Ocupan un cupo mientras están activos; consumen de la bolsa de la empresa |
 
-El nombre «Administrador General» queda reservado para Sulotec (así está en Keycloak); el del cliente es **administrador de empresa**.
+**Nombres (decisión del usuario, 2026-11-02):** el del cliente es el **Administrador General** y el de Sulotec el **Administrador Universal**. Los administradores que ya existen en cada producto pasan a ser el Administrador General de su empresa (no se crea un tipo de usuario nuevo); solo se agrega la marca de **titular** (uno por empresa y producto). Donde el administrador actual es de Sulotec operando por el cliente (MiRadar, PLAFT), Sulotec se queda como universal y se le crea al cliente su propio Administrador General al entregar la licencia. En Keycloak el grupo de los universales pasa de «Administradores Generales» a «Administradores Universales» (`apps/cuenta/renombrar-universales.sh`, una sola vez en el servidor); el nombre técnico del rol, `administrador-general`, se mantiene porque lo leen el portal y GeoMatrix.
 
 ## 2. Qué se licencia en cada producto
 
@@ -23,7 +23,7 @@ El nombre «Administrador General» queda reservado para Sulotec (así está en 
 | GeoMatrix | sí | solo usuarios por ahora (si se enciende Google, cada ubicación sería un token) |
 | Dashboard Empresarial | sí | solo usuarios |
 
-Un token es algo que cuesta o que vale medir. **La bolsa es de la empresa** (la consumen todos sus usuarios); el administrador de empresa puede poner un tope por usuario, opcional. Cada producto se licencia aparte: una persona en dos productos ocupa un cupo en cada uno.
+Un token es algo que cuesta o que vale medir. **La bolsa es de la empresa** (la consumen todos sus usuarios); el Administrador General puede poner un tope por usuario, opcional. Cada producto se licencia aparte: una persona en dos productos ocupa un cupo en cada uno.
 
 ## 3. El pack
 
@@ -41,7 +41,7 @@ Adicionales: usuario extra, bolsa extra (propuesta: vence a los 12 meses) y subi
 
 | Pieza | Responsabilidad |
 |---|---|
-| **Keycloak** (`cuenta.sulotec.com`) | Identidad: quién es cada persona, a qué empresa pertenece (UUID), qué productos tiene (roles `producto-*`), segundo factor, administrador universal. **Sin contadores.** |
+| **Keycloak** (`cuenta.sulotec.com`) | Identidad: quién es cada persona, a qué empresa pertenece (UUID), qué productos tiene (roles `producto-*`), segundo factor, Administrador Universal. **Sin contadores.** |
 | **Portal Sulotec · módulo Licencias** (la verdad) | Plan de cada empresa por producto (cupo, bolsa, periodo, vencimiento); registro de consumo (cada token: empresa, producto, usuario, qué, cuándo); avisos (80 %, vencer, agotar); pantallas «Mi licencia» (empresa) y «Licencias» (Sulotec). |
 | **Cada producto** | Recibe su licencia del portal (como hoy recibe el UUID de la empresa), valida el cupo al crear usuarios, descuenta cada consulta y la reporta; sigue funcionando con la última licencia si el portal se cae. |
 
@@ -51,14 +51,12 @@ Modelo de datos mínimo del portal: `planes` (nombre, producto, usuarios_max, to
 
 | Archivo | Proceso | Carriles |
 |---|---|---|
-| `P1-contratacion-y-alta.bpmn` | Contratación y alta de licencia | Empresa cliente · Comercial Sulotec · Administrador universal · Plataforma |
-| `P2-gestion-de-usuarios.bpmn` | Gestión de usuarios de la empresa (crear con cupo, desactivar y liberar) | Administrador de empresa · Producto · Usuario |
-| `P3-consumo-de-tokens.bpmn` | Consumo de tokens (saldo, 80 %, tolerancia, bloqueo) | Usuario · Producto · Administrador de empresa |
-| `P4-renovacion-ampliacion-vencimiento.bpmn` | Renovación, ampliación y vencimiento (aviso, cotizar, pagar, actualizar; solo lectura y suspensión) | Plataforma · Administrador de empresa · Comercial · Administrador universal |
+| `P1-contratacion-y-alta.bpmn` | Contratación y alta de licencia | Empresa cliente · Comercial Sulotec · Administrador Universal · Plataforma |
+| `P2-gestion-de-usuarios.bpmn` | Gestión de usuarios de la empresa (crear con cupo, desactivar y liberar) | Administrador General · Producto · Usuario |
+| `P3-consumo-de-tokens.bpmn` | Consumo de tokens (saldo, 80 %, tolerancia, bloqueo) | Usuario · Producto · Administrador General |
+| `P4-renovacion-ampliacion-vencimiento.bpmn` | Renovación, ampliación y vencimiento (aviso, cotizar, pagar, actualizar; solo lectura y suspensión) | Plataforma · Administrador General · Comercial · Administrador Universal |
 
-**Importar en Bizagi Modeler:** *Archivo → Importar → BPMN*. La forma segura es `licencias-sulotec.bpmn` (una sola colaboración con los cuatro pools apilados en un diagrama; luego cada pool se corta y pega en su propio diagrama si se quiere). Los archivos `P1…P4` traen un proceso cada uno (un diagrama por importación). Bizagi dibuja en cada diagrama todas las formas del archivo, por eso no sirve un archivo con varios diagramas.
-
-Flujo completo: contrato → crear empresa (`empresa.sh`) + licencia + invitar al administrador de empresa (`cuentas.sh`) → el administrador crea usuarios y el producto valida el cupo → cada consulta descuenta de la bolsa y queda registrada → avisos al 80 % y al vencer → renovación o ampliación.
+Flujo completo: contrato → crear empresa (`empresa.sh`) + licencia + invitar al Administrador General (`cuentas.sh`) → el administrador crea usuarios y el producto valida el cupo → cada consulta descuenta de la bolsa y queda registrada → avisos al 80 % y al vencer → renovación o ampliación.
 
 ## 7. Etapas
 

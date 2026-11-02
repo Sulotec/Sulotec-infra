@@ -19,7 +19,7 @@
         <bpmn:flowNodeRef>P1_t1</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P1_e0</bpmn:flowNodeRef>
       </bpmn:lane>
-      <bpmn:lane id="P1_carril2" name="Administrador universal">
+      <bpmn:lane id="P1_carril2" name="Administrador Universal">
         <bpmn:flowNodeRef>P1_t3</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P1_t5</bpmn:flowNodeRef>
       </bpmn:lane>
@@ -55,7 +55,7 @@
       <bpmn:incoming>P1_f6</bpmn:incoming>
       <bpmn:outgoing>P1_f7</bpmn:outgoing>
     </bpmn:serviceTask>
-    <bpmn:userTask id="P1_t5" name="Invitar al admin. de empresa">
+    <bpmn:userTask id="P1_t5" name="Invitar al Admin. General">
       <bpmn:incoming>P1_f7</bpmn:incoming>
       <bpmn:outgoing>P1_f8</bpmn:outgoing>
     </bpmn:userTask>
@@ -83,7 +83,7 @@
   </bpmn:process>
   <bpmn:process id="P2_proceso" name="Gestión de usuarios de la empresa" isExecutable="false">
     <bpmn:laneSet id="P2_carriles">
-      <bpmn:lane id="P2_carril0" name="Administrador de empresa">
+      <bpmn:lane id="P2_carril0" name="Administrador General">
         <bpmn:flowNodeRef>P2_s1</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P2_t1</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P2_t4</bpmn:flowNodeRef>
@@ -178,7 +178,7 @@
         <bpmn:flowNodeRef>P3_t4</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P3_t5</bpmn:flowNodeRef>
       </bpmn:lane>
-      <bpmn:lane id="P3_carril2" name="Administrador de empresa">
+      <bpmn:lane id="P3_carril2" name="Administrador General">
         <bpmn:flowNodeRef>P3_t3</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P3_e3</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P3_t6</bpmn:flowNodeRef>
@@ -262,7 +262,7 @@
         <bpmn:flowNodeRef>P4_t7</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P4_e2</bpmn:flowNodeRef>
       </bpmn:lane>
-      <bpmn:lane id="P4_carril1" name="Administrador de empresa">
+      <bpmn:lane id="P4_carril1" name="Administrador General">
         <bpmn:flowNodeRef>P4_s2</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P4_g1</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>P4_t3</bpmn:flowNodeRef>
@@ -270,7 +270,7 @@
       <bpmn:lane id="P4_carril2" name="Comercial Sulotec">
         <bpmn:flowNodeRef>P4_t2</bpmn:flowNodeRef>
       </bpmn:lane>
-      <bpmn:lane id="P4_carril3" name="Administrador universal">
+      <bpmn:lane id="P4_carril3" name="Administrador Universal">
         <bpmn:flowNodeRef>P4_t4</bpmn:flowNodeRef>
       </bpmn:lane>
     </bpmn:laneSet>

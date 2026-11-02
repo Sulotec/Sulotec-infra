@@ -16,7 +16,7 @@
         <bpmn:flowNodeRef>t1</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>e0</bpmn:flowNodeRef>
       </bpmn:lane>
-      <bpmn:lane id="Carril_P1_2" name="Administrador universal">
+      <bpmn:lane id="Carril_P1_2" name="Administrador Universal">
         <bpmn:flowNodeRef>t3</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>t5</bpmn:flowNodeRef>
       </bpmn:lane>
@@ -52,7 +52,7 @@
       <bpmn:incoming>f6</bpmn:incoming>
       <bpmn:outgoing>f7</bpmn:outgoing>
     </bpmn:serviceTask>
-    <bpmn:userTask id="t5" name="Invitar al admin. de empresa">
+    <bpmn:userTask id="t5" name="Invitar al Admin. General">
       <bpmn:incoming>f7</bpmn:incoming>
       <bpmn:outgoing>f8</bpmn:outgoing>
     </bpmn:userTask>

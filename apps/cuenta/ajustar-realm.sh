@@ -12,7 +12,7 @@ kc config credentials --server http://127.0.0.1:8080 --realm master \
 
 cid=$(kc get clients -r sulotec -q clientId=portal --fields id --format csv --noquotes)
 
-# 1) El id_token del portal dice si la persona es administrador general (claim "roles"):
+# 1) El id_token del portal dice si la persona es administrador universal de Sulotec (rol tecnico administrador-general, claim "roles"):
 #    asi sulotec.com/mis-productos le muestra todos los productos.
 if ! kc get "clients/$cid/protocol-mappers/models" -r sulotec --fields name --format csv --noquotes | grep -qx roles; then
   kc create "clients/$cid/protocol-mappers/models" -r sulotec -b '{"name":"roles","protocol":"openid-connect","protocolMapper":"oidc-usermodel-realm-role-mapper","config":{"claim.name":"roles","jsonType.label":"String","multivalued":"true","id.token.claim":"true","access.token.claim":"false","userinfo.token.claim":"false","introspection.token.claim":"false"}}'
@@ -60,7 +60,7 @@ rol_producto producto-dashboard "Clientes - Dashboard Empresarial" "Tiene contra
 kc update roles/producto-auditoria -r sulotec -s "description=Tiene contratado GeoMatrix, antes Auditoria de Visitas (auditoria.sulotec.com)" >/dev/null
 
 # 6) Cliente "auditoria": el panel de Auditoria de Visitas entra con la cuenta Sulotec (OpenID Connect + PKCE, cliente publico).
-#    Su id_token lleva el correo (con el que el panel ubica al usuario) y los roles de producto/administrador general.
+#    Su id_token lleva el correo (con el que el panel ubica al usuario) y los roles de producto/administrador universal (rol tecnico administrador-general).
 if ! kc get clients -r sulotec -q clientId=auditoria --fields id --format csv --noquotes | grep -q .; then
   kc create clients -r sulotec -b '{"clientId":"auditoria","name":"Auditoria de Visitas","description":"Panel web de Auditoria de Visitas (inicio unico con la cuenta Sulotec)","enabled":true,"publicClient":true,"standardFlowEnabled":true,"implicitFlowEnabled":false,"directAccessGrantsEnabled":false,"serviceAccountsEnabled":false,"fullScopeAllowed":false,"rootUrl":"https://auditoria.sulotec.com","baseUrl":"https://auditoria.sulotec.com","redirectUris":["https://auditoria.sulotec.com/sso","http://localhost:5173/sso"],"webOrigins":["https://auditoria.sulotec.com","http://localhost:5173"],"attributes":{"pkce.code.challenge.method":"S256","post.logout.redirect.uris":"https://auditoria.sulotec.com/*"}}' >/dev/null
   echo "Ajuste: cliente auditoria creado"
@@ -96,11 +96,18 @@ for c in "$cid" "$aid"; do
   for a in empresa_uuid empresa_nombre empresa_slug; do mapper_empresa "$c" "$a"; done
 done
 
-# 9) Administradores universales: el acuerdo (2026-10-22) es un maximo de 2 personas en "Administradores Generales".
-gid_adm=$(kc get groups -r sulotec -q search="Administradores Generales" -q exact=true --fields id --format csv --noquotes | head -1)
+# 9) Administradores universales de Sulotec: grupo "Administradores Universales" (hasta el 2026-11-02 "Administradores Generales";
+#    lo renombra renombrar-universales.sh y mientras tanto aqui se acepta el nombre viejo). Rol tecnico: administrador-general.
+#    El acuerdo (2026-10-22) es un maximo de 2 personas.
+gid_adm=""; nombre_adm=""
+for nombre in "Administradores Universales" "Administradores Generales"; do
+  gid_adm=$(kc get groups -r sulotec -q "search=$nombre" -q exact=true --fields id --format csv --noquotes | head -1)
+  [ -z "$gid_adm" ] || { nombre_adm="$nombre"; break; }
+done
 if [ -n "$gid_adm" ]; then
   n_adm=$(kc get "groups/$gid_adm/members" -r sulotec --fields id --format csv --noquotes | grep -c . || true)
-  [ "${n_adm:-0}" -le 2 ] || echo "AVISO: 'Administradores Generales' tiene $n_adm miembros; el acuerdo es un maximo de 2 administradores universales." >&2
+  [ "${n_adm:-0}" -le 2 ] || echo "AVISO: '$nombre_adm' tiene $n_adm miembros; el acuerdo es un maximo de 2 administradores universales." >&2
+  [ "$nombre_adm" = "Administradores Universales" ] || echo "AVISO: el grupo aun se llama '$nombre_adm'; renombralo una vez con: sudo docker exec -i cuenta bash -s < /data/apps/cuenta/renombrar-universales.sh" >&2
 fi
 
 echo "Ajustes aplicados. Registro libre: apagado. Recuperar contrasena: encendido. Inicio unico: cliente auditoria, roles producto-*, grupo Empresas y claims empresa_*."

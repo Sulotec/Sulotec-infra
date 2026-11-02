@@ -14,7 +14,7 @@
         <bpmn:flowNodeRef>t7</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>e2</bpmn:flowNodeRef>
       </bpmn:lane>
-      <bpmn:lane id="Carril_P4_1" name="Administrador de empresa">
+      <bpmn:lane id="Carril_P4_1" name="Administrador General">
         <bpmn:flowNodeRef>s2</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>g1</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>t3</bpmn:flowNodeRef>
@@ -22,7 +22,7 @@
       <bpmn:lane id="Carril_P4_2" name="Comercial Sulotec">
         <bpmn:flowNodeRef>t2</bpmn:flowNodeRef>
       </bpmn:lane>
-      <bpmn:lane id="Carril_P4_3" name="Administrador universal">
+      <bpmn:lane id="Carril_P4_3" name="Administrador Universal">
         <bpmn:flowNodeRef>t4</bpmn:flowNodeRef>
       </bpmn:lane>
     </bpmn:laneSet>

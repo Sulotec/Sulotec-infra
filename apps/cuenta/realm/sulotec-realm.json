@@ -50,13 +50,13 @@
     "realm": [
       {
         "name": "administrador-general",
-        "description": "Personal de Sulotec que administra las cuentas y ve todo el ecosistema"
+        "description": "Administrador universal de Sulotec (grupo Administradores Universales): administra las cuentas y ve todo el ecosistema. Nombre tecnico heredado; no es el Administrador General de una empresa cliente"
       }
     ]
   },
   "groups": [
     {
-      "name": "Administradores Generales",
+      "name": "Administradores Universales",
       "realmRoles": [
         "administrador-general"
       ],

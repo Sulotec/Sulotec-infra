@@ -5,7 +5,7 @@
   </bpmn:collaboration>
   <bpmn:process id="Proceso_P2" name="Gestión de usuarios de la empresa" isExecutable="false">
     <bpmn:laneSet id="Carriles_P2">
-      <bpmn:lane id="Carril_P2_0" name="Administrador de empresa">
+      <bpmn:lane id="Carril_P2_0" name="Administrador General">
         <bpmn:flowNodeRef>s1</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>t1</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>t4</bpmn:flowNodeRef>

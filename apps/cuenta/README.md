@@ -16,7 +16,7 @@ Reglas del realm `sulotec` (en `realm/sulotec-realm.json`):
 - Contraseñas de 10 o más caracteres, con mayúscula, minúscula y número, sin repetir las 3 últimas.
 - 5 intentos fallidos bloquean la cuenta de 1 a 15 minutos.
 - La sesión se cierra tras 30 minutos sin uso y dura 8 horas como máximo.
-- El grupo **Administradores Generales**:
+- El grupo **Administradores Universales** (hasta el 2026-11-02 se llamaba *Administradores Generales*; ese nombre pasa al administrador de cada empresa cliente en el [modelo de licencias](../../docs/licencias/LICENCIAS.md); el rol técnico sigue siendo `administrador-general`):
   - En sulotec.com/mis-productos ve **todos** los productos, incluido el Buscador Interno. El Buscador, además, está protegido por su propia política de Cloudflare Access.
   - Puede crear, editar y desactivar cuentas y ver los eventos, pero no puede cambiar la configuración ni darse más permisos (probado).
   - Quien no está en el grupo solo ve las demos.
@@ -88,14 +88,14 @@ Sulotec es un SaaS: **nadie se crea su cuenta solo**. Quien no tiene cuenta puls
 
 **Dónde:**
 - **La primera vez**, entra con `admin-temporal` a https://cuenta.sulotec.com/admin/master/console/ y cambia arriba a la izquierda al realm **sulotec**.
-- **Después**, quien esté en *Administradores Generales* entra con su propia cuenta a https://cuenta.sulotec.com/admin/sulotec/console/.
+- **Después**, quien esté en *Administradores Universales* entra con su propia cuenta a https://cuenta.sulotec.com/admin/sulotec/console/.
 
 **Crear una cuenta:**
 1. Ve a **Usuarios (Users) → Crear usuario (Create new user)**:
    - **Nombre de usuario:** por ejemplo `jeliases`. Keycloak lo guarda en minúsculas: `AbelCEO` queda `abelceo`, pero al entrar se puede escribir como sea.
    - **Correo electrónico**, **Nombre** y **Apellido**. El correo puede ser Gmail, Outlook o el de su empresa.
    - **Correo electrónico verificado:** déjalo **apagado**; la persona lo confirma con la invitación.
-   - **Unirse a grupos:** `Administradores Generales`, **solo** si debe ver todos los productos (incluido el Buscador) y poder crear cuentas. Hoy: el CEO y quien administre cuentas. Clientes y demás: sin grupo, ven las demos.
+   - **Unirse a grupos:** `Administradores Universales`, **solo** si debe ver todos los productos (incluido el Buscador) y poder crear cuentas. Hoy: el CEO y quien administre cuentas. Clientes y demás: sin grupo, ven las demos.
    - Pulsa **Crear**.
 2. Ve a la pestaña **Credenciales → Restablecimiento de credenciales (Credential reset)**:
    - Elige `Verify Email` y `Update Password`.
@@ -148,9 +148,11 @@ otra contraseña. Si su cuenta no está vinculada, el panel se lo dice y le ofre
 
 ## Modelo de cuentas (acordado el 2026-10-22)
 
+> **Nombres (2026-11-02):** el grupo de Sulotec se llama **Administradores Universales** (antes *Administradores Generales*), porque «Administrador General» es ahora el administrador titular de cada empresa cliente ([modelo de licencias](../../docs/licencias/LICENCIAS.md)). Renombrarlo, una sola vez en el servidor: `sudo docker exec -i cuenta bash -s < /data/apps/cuenta/renombrar-universales.sh`. El rol técnico `administrador-general` no cambia: lo leen el portal y GeoMatrix.
+
 | Quién | En Keycloak | Qué ve |
 |---|---|---|
-| **Administrador universal** (Sulotec; **máximo 2 personas**) | grupo **Administradores Generales** (rol `administrador-general`) | Todos los productos y todos los clientes. |
+| **Administrador universal** (Sulotec; **máximo 2 personas**) | grupo **Administradores Universales** (rol técnico `administrador-general`) | Todos los productos y todos los clientes. |
 | **Empresa** (un cliente de Sulotec: una caja, un negocio) | subgrupo de **Empresas** con los atributos `empresa_uuid`, `empresa_nombre` y `empresa_slug`, y con los roles `producto-*` que tiene contratados | — |
 | **Persona de una empresa** | miembro del subgrupo de su empresa (de **una sola**) | Los productos que su empresa contrató: hereda los roles del grupo. Su rol dentro de cada producto (administrador de la empresa, supervisor, usuario) lo define el producto, no Keycloak. |
 

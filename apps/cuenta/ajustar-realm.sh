@@ -105,7 +105,8 @@ for nombre in "Administradores Universales" "Administradores Generales"; do
   [ -z "$gid_adm" ] || { nombre_adm="$nombre"; break; }
 done
 if [ -n "$gid_adm" ]; then
-  n_adm=$(kc get "groups/$gid_adm/members" -r sulotec --fields id --format csv --noquotes | grep -c . || true)
+  # La cuenta generica 'admin' se queda en el grupo como reserva (decision del usuario, 2026-11-02) y no cuenta como persona.
+  n_adm=$(kc get "groups/$gid_adm/members" -r sulotec --fields username --format csv --noquotes | grep -vx admin | grep -c . || true)
   [ "${n_adm:-0}" -le 2 ] || echo "AVISO: '$nombre_adm' tiene $n_adm miembros; el acuerdo es un maximo de 2 administradores universales." >&2
   [ "$nombre_adm" = "Administradores Universales" ] || echo "AVISO: el grupo aun se llama '$nombre_adm'; renombralo una vez con: sudo docker exec -i cuenta bash -s < /data/apps/cuenta/renombrar-universales.sh" >&2
 fi

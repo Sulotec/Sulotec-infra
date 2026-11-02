@@ -52,7 +52,8 @@ for nombre in "Administradores Universales" "Administradores Generales"; do   # 
   [ -z "$gid_adm" ] || break
 done
 [ -n "$gid_adm" ] || { echo "No existe el grupo 'Administradores Universales' (ni el anterior, 'Administradores Generales')." >&2; exit 1; }
-n_adm=$(kc get "groups/$gid_adm/members" -r sulotec -q max=100 --fields id --format csv --noquotes | grep -c . || true)
+# La cuenta generica 'admin' se queda en el grupo como reserva (decision del usuario, 2026-11-02) y no cuenta como persona.
+n_adm=$(kc get "groups/$gid_adm/members" -r sulotec -q max=100 --fields username --format csv --noquotes | grep -vx admin | grep -c . || true)
 
 # 1) Revision de todo el archivo (no se crea nada si hay una fila mala)
 errores=0; filas=0; nuevos_universales=0; declare -A vistos=()

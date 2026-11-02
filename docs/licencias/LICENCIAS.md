@@ -56,6 +56,8 @@ Modelo de datos mínimo del portal: `planes` (nombre, producto, usuarios_max, to
 | `P3-consumo-de-tokens.bpmn` | Consumo de tokens (saldo, 80 %, tolerancia, bloqueo) | Usuario · Producto · Administrador de empresa |
 | `P4-renovacion-ampliacion-vencimiento.bpmn` | Renovación, ampliación y vencimiento (aviso, cotizar, pagar, actualizar; solo lectura y suspensión) | Plataforma · Administrador de empresa · Comercial · Administrador universal |
 
+**Importar en Bizagi Modeler:** *Archivo → Importar → BPMN*. La forma segura es `licencias-sulotec.bpmn` (una sola colaboración con los cuatro pools apilados en un diagrama; luego cada pool se corta y pega en su propio diagrama si se quiere). Los archivos `P1…P4` traen un proceso cada uno (un diagrama por importación). Bizagi dibuja en cada diagrama todas las formas del archivo, por eso no sirve un archivo con varios diagramas.
+
 Flujo completo: contrato → crear empresa (`empresa.sh`) + licencia + invitar al administrador de empresa (`cuentas.sh`) → el administrador crea usuarios y el producto valida el cupo → cada consulta descuenta de la bolsa y queda registrada → avisos al 80 % y al vencer → renovación o ampliación.
 
 ## 7. Etapas

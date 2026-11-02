@@ -32,7 +32,7 @@ const asunto = encodeURIComponent('Quiero agendar una consulta con Sulotec');
       <div class="anillos" aria-hidden="true"><span></span><span></span><span></span></div>
       <div class="contenedor rejilla-bienvenida">
         <div class="saludo aparecer">
-          <span class="rol solo-admin"><Icon name="shield" size={16} />Administrador General</span>
+          <span class="rol solo-admin"><Icon name="shield" size={16} />Administrador Universal</span>
           <span class="rol solo-no-admin"><Icon name="users" size={16} />Cuenta Sulotec</span>
           <h1>Hola, <span data-cuenta-nombre></span></h1>
           <p class="solo-admin">Tienes acceso a todo el ecosistema Sulotec. Los productos privados te pedirán confirmar tu identidad antes de abrirse.</p>
@@ -42,6 +42,8 @@ const asunto = encodeURIComponent('Quiero agendar una consulta con Sulotec');
               <a class="boton boton-blanco solo-admin" href={abrirDe(buscador)!} target="_blank" rel="noopener"><Icon name="search" size={18} />Abrir Buscador Interno</a>
             )}
             <a class="boton boton-blanco solo-no-admin" href={demos[0]?.demo}>Explorar las demos<Icon name="arrow" size={18} /></a>
+            <a class="boton boton-blanco solo-admin" href="/licencias"><Icon name="gear" size={18} />Licencias</a>
+            <a class="boton linea solo-no-admin" href="/mi-licencia"><Icon name="shield" size={18} />Mi licencia</a>
             <a class="boton linea" href="#productos">Ver todos los productos</a>
           </div>
         </div>

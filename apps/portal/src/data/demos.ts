@@ -10,6 +10,8 @@ export const cuenta = {
   activa: import.meta.env.PUBLIC_CUENTA_ACTIVA === 'true',
   emisor: import.meta.env.PUBLIC_CUENTA_EMISOR || 'https://cuenta.sulotec.com/realms/sulotec',
   cliente: 'portal',
+  // Servicio de licencias (api-licencias.sulotec.com): lo llaman /licencias y /mi-licencia con el token de la cuenta.
+  licenciasApi: import.meta.env.PUBLIC_LICENCIAS_API || 'https://api-licencias.sulotec.com',
 };
 
 // Visitante sin sesion: recorre las demos libremente `segundos` (sumados entre todas las demos);

@@ -1,0 +1,72 @@
+---
+// Mi licencia: el Administrador General de una empresa ve el plan, los usuarios y la bolsa de tokens de cada producto
+// contratado, su consumo del periodo y pide ampliaciones. Los datos vienen del servicio de licencias (public/mi-licencia.js).
+import Base from '../layouts/Base.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import Icon from '../components/Icon.astro';
+import { sitio } from '../data/sitio';
+---
+<Base titulo="Mi licencia | Sulotec" descripcion="Plan, usuarios y consumo de tu empresa en los productos Sulotec." ruta="/mi-licencia">
+  <meta slot="head" name="robots" content="noindex" />
+  <script is:inline slot="head" src="/mi-licencia.js" defer></script>
+  <Header />
+  <main id="contenido" class="contenedor pagina">
+    <nav class="migas" aria-label="Ubicación"><a href="/mis-productos">Mis productos</a><span>/</span><span>Mi licencia</span></nav>
+    <header class="titulo">
+      <span class="kicker"><Icon name="shield" size={16} />Administrador General</span>
+      <h1>Mi licencia</h1>
+      <p>Lo que tu empresa tiene contratado en cada producto: usuarios, tokens del periodo, vencimiento y consumo. Si necesitas más, pide una ampliación desde aquí.</p>
+    </header>
+    <section id="mi-licencia" class="licencias" aria-live="polite"></section>
+    <aside class="ayuda">
+      <Icon name="bell" size={20} />
+      <p>Los avisos (80 % de la bolsa, tolerancia, vencimiento) llegan al correo del titular de la licencia. Dudas: <a href={`mailto:${sitio.correo}`}>{sitio.correo}</a>.</p>
+    </aside>
+  </main>
+  <Footer />
+</Base>
+
+<style>
+  .pagina { padding: 36px 0 60px; }
+  .migas { display: flex; gap: 8px; font-size: .9rem; color: var(--gris); margin-bottom: 18px; }
+  .migas a { color: var(--azul); }
+  .titulo { max-width: 70ch; margin-bottom: 26px; }
+  .titulo h1 { font-size: 2rem; color: var(--azul); margin: 10px 0 8px; }
+  .titulo p { margin: 0; color: var(--gris); }
+  .kicker { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; background: var(--azul-10); color: var(--azul); font-weight: 700; font-size: .85rem; }
+  .licencias { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 22px; }
+  .licencias :global(.licencia) { display: flex; flex-direction: column; gap: 14px; background: #fff; border-radius: var(--radio); padding: 24px; box-shadow: var(--sombra); }
+  .licencias :global(.cabecera) { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .licencias :global(h3) { font-size: 1.25rem; color: var(--azul); }
+  .licencias :global(.plan) { margin: -6px 0 0; color: var(--gris); font-size: .95rem; }
+  .licencias :global(.chip) { padding: 4px 12px; border-radius: 999px; font-size: .8rem; font-weight: 700; background: var(--azul-10); color: var(--azul); white-space: nowrap; }
+  .licencias :global(.chip.ok) { background: #e3f6ea; color: var(--verde); }
+  .licencias :global(.chip.alerta) { background: #fff4d6; color: #9a6a00; }
+  .licencias :global(.chip.mal) { background: #fde4e5; color: var(--rojo); }
+  .licencias :global(.medida .fila), .licencias :global(.detalle .fila) { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: .95rem; }
+  .licencias :global(.barra) { height: 10px; border-radius: 999px; background: var(--azul-10); overflow: hidden; margin: 6px 0; }
+  .licencias :global(.barra span) { display: block; height: 100%; background: var(--azul); border-radius: 999px; transition: width .4s var(--curva); }
+  .licencias :global(.barra.alerta span) { background: #e0a100; }
+  .licencias :global(.barra.mal span) { background: var(--rojo); }
+  .licencias :global(.nota) { margin: 0; font-size: .88rem; color: var(--gris); }
+  .licencias :global(.nota.ok) { color: var(--verde); }
+  .licencias :global(.nota.alerta) { color: #9a6a00; }
+  .licencias :global(.nota.mal) { color: var(--rojo); }
+  .licencias :global(.acciones) { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
+  .licencias :global(.boton) { padding: 10px 18px; font-size: .95rem; }
+  .licencias :global(.secundario) { background: var(--azul-10); color: var(--azul); }
+  .licencias :global(.detalle) { border-top: 1px solid var(--borde); padding-top: 14px; display: grid; gap: 10px; }
+  .licencias :global(.tabla) { overflow-x: auto; }
+  .licencias :global(table) { width: 100%; border-collapse: collapse; font-size: .88rem; }
+  .licencias :global(th), .licencias :global(td) { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--borde); white-space: nowrap; }
+  .licencias :global(tr.anulado td) { color: var(--gris); text-decoration: line-through; }
+  .licencias :global(.form) { display: grid; gap: 10px; }
+  .licencias :global(.form label) { display: grid; gap: 4px; font-size: .9rem; font-weight: 700; color: var(--azul-oscuro); }
+  .licencias :global(.form input), .licencias :global(.form select), .licencias :global(.form textarea), .licencias :global(input[type=month]) { font: inherit; padding: 8px 10px; border: 1px solid var(--borde); border-radius: 10px; }
+  .licencias :global(.vacio) { grid-column: 1 / -1; background: #fff; border-radius: var(--radio); padding: 28px; box-shadow: var(--sombra); color: var(--gris); display: grid; gap: 14px; justify-items: start; }
+  .ayuda { display: flex; gap: 12px; align-items: flex-start; margin-top: 30px; color: var(--gris); font-size: .92rem; }
+  .ayuda :global(svg) { color: var(--azul); flex: none; margin-top: 2px; }
+  .ayuda p { margin: 0; }
+  @media (max-width: 700px) { .titulo h1 { font-size: 1.6rem; } }
+</style>

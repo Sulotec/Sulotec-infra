@@ -111,4 +111,22 @@ if [ -n "$gid_adm" ]; then
   [ "$nombre_adm" = "Administradores Universales" ] || echo "AVISO: el grupo aun se llama '$nombre_adm'; renombralo una vez con: sudo docker exec -i cuenta bash -s < /data/apps/cuenta/renombrar-universales.sh" >&2
 fi
 
+# 10) Servicio de licencias (api-licencias.sulotec.com): las paginas /licencias y /mi-licencia del portal lo llaman con el
+#     ACCESS token de la cuenta. Ese token debe llevar la audiencia "licencias" (el servicio la exige) y el claim "roles"
+#     (hasta ahora solo iba en el id_token). Los claims empresa_* ya van en el access token (paso 8).
+if ! kc get "clients/$cid/protocol-mappers/models" -r sulotec --fields name --format csv --noquotes | grep -qx licencias-audiencia; then
+  kc create "clients/$cid/protocol-mappers/models" -r sulotec -b '{"name":"licencias-audiencia","protocol":"openid-connect","protocolMapper":"oidc-audience-mapper","config":{"included.custom.audience":"licencias","id.token.claim":"false","access.token.claim":"true","introspection.token.claim":"true"}}' >/dev/null
+  echo "Ajuste: audiencia licencias en el access token del portal"
+fi
+mid_roles=$(kc get "clients/$cid/protocol-mappers/models" -r sulotec --fields id,name --format csv --noquotes | grep ',roles$' | head -1 | cut -d, -f1)
+if [ -n "$mid_roles" ]; then
+  kc get "clients/$cid/protocol-mappers/models/$mid_roles" -r sulotec > /tmp/mapper-roles.json
+  if grep -Eq '"access\.token\.claim" *: *"false"' /tmp/mapper-roles.json; then
+    sed -i -E 's/"access\.token\.claim" *: *"false"/"access.token.claim" : "true"/' /tmp/mapper-roles.json
+    kc update "clients/$cid/protocol-mappers/models/$mid_roles" -r sulotec -f /tmp/mapper-roles.json
+    echo "Ajuste: roles tambien en el access token del portal"
+  fi
+  rm -f /tmp/mapper-roles.json
+fi
+
 echo "Ajustes aplicados. Registro libre: apagado. Recuperar contrasena: encendido. Inicio unico: cliente auditoria, roles producto-*, grupo Empresas y claims empresa_*."

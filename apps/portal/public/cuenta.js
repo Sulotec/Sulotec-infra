@@ -75,15 +75,49 @@
     });
     if (!r.ok) throw new Error('No se pudo completar el inicio de sesión. Vuelve a intentarlo en unos minutos.');
     const t = await r.json();
-    const datos = leerJwt(t.id_token);
-    guardar(CLAVE_SESION, {
-      nombre: datos.given_name || datos.name || datos.email,
-      correo: datos.email,
-      roles: Array.isArray(datos.roles) ? datos.roles : [],
-      idToken: t.id_token,
-      expira: Date.now() + (t.refresh_expires_in || t.expires_in) * 1000,
-    });
+    guardarTokens(t, leerJwt(t.id_token));
     location.replace(guardado.volver && guardado.volver !== '/cuenta/callback' ? guardado.volver : '/');
+  }
+
+  // Guarda la sesion con sus tokens: el de acceso dura pocos minutos y con el se llama a los servicios de Sulotec
+  // (api-licencias); el de refresco lo renueva mientras la sesion de cuenta.sulotec.com siga viva (30 min sin uso).
+  const guardarTokens = (t, datos) => guardar(CLAVE_SESION, {
+    nombre: datos.given_name || datos.name || datos.email,
+    correo: datos.email,
+    roles: Array.isArray(datos.roles) ? datos.roles : [],
+    idToken: t.id_token,
+    accessToken: t.access_token,
+    refreshToken: t.refresh_token,
+    accesoExpira: Date.now() + (t.expires_in || 300) * 1000,
+    expira: Date.now() + (t.refresh_expires_in || t.expires_in) * 1000,
+  });
+
+  // Token de acceso vigente para llamar a los servicios de Sulotec. Lo renueva solo si esta por vencer; si no se puede
+  // renovar (la sesion de cuenta.sulotec.com se cerro), borra la sesion y devuelve null: la pagina pide iniciar sesion.
+  let renovando = null;
+  async function token() {
+    const s = sesion();
+    if (!s) return null;
+    if (s.accessToken && s.accesoExpira > Date.now() + 30 * 1000) return s.accessToken;
+    if (!s.refreshToken) return null;
+    renovando ||= (async () => {
+      try {
+        const r = await fetch(`${EMISOR}/protocol/openid-connect/token`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ grant_type: 'refresh_token', client_id: CLIENTE, refresh_token: s.refreshToken }),
+        });
+        if (!r.ok) { guardar(CLAVE_SESION, null); return null; }
+        const t = await r.json();
+        guardarTokens(t, t.id_token ? leerJwt(t.id_token) : { name: s.nombre, email: s.correo, roles: s.roles });
+        return t.access_token;
+      } catch {
+        return s.accessToken || null;
+      } finally {
+        renovando = null;
+      }
+    })();
+    return renovando;
   }
 
   function salir() {
@@ -96,7 +130,7 @@
 
   const esAdmin = () => Boolean(sesion()?.roles?.includes(ROL_TOTAL));
 
-  window.sulotecCuenta = { sesion, esAdmin, ir, salir };
+  window.sulotecCuenta = { sesion, esAdmin, ir, salir, token };
   // Se marca antes de pintar la pagina para no mostrar botones que no corresponden
   document.documentElement.classList.toggle('con-sesion', Boolean(sesion()));
   document.documentElement.classList.toggle('es-admin', esAdmin());

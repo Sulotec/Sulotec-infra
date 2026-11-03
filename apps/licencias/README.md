@@ -10,11 +10,17 @@ Código: [`jeliases-informaDev/Licencias-Backend`](https://github.com/jeliases-i
 | Contenedor | `licencias` (imagen `licencias:latest`, 256 MB, solo lectura) |
 | Base | `licencias` en el PostgreSQL 16 compartido (red `sulotec_data`) |
 | Configuración | `/opt/sulotec/licencias.env` (lo crea `preparar.sh`; no entra al respaldo ni al repositorio) |
-| Kit en el servidor | `/data/apps/licencias` (`docker-compose.yml` + `deploy/*.sh`; el workflow los copia al hacer push, como los demás kits) |
+| Kit en el servidor | `/data/apps/licencias` (`docker-compose.yml` + `deploy/*.sh`; se copian a mano con el comando del paso 0, como los demás kits; si cambia el kit, se vuelve a copiar) |
 
 ## Instalar (una sola vez)
 
-En el servidor (https://ssh.sulotec.com):
+En el servidor (https://ssh.sulotec.com). **Paso 0, copiar el kit** (y cada vez que cambie):
+
+```
+sudo mkdir -p /data/apps/licencias && sudo rm -rf /tmp/sulotec-infra && sudo git clone --depth 1 https://github.com/Sulotec/Sulotec-infra.git /tmp/sulotec-infra && sudo cp /tmp/sulotec-infra/apps/licencias/docker-compose.yml /tmp/sulotec-infra/apps/licencias/deploy/*.sh /data/apps/licencias/ && sudo rm -rf /tmp/sulotec-infra && ls /data/apps/licencias
+```
+
+Luego:
 
 ```
 sudo /opt/sulotec/scripts/new-project-db.sh postgres licencias
@@ -23,7 +29,7 @@ sudo bash /data/apps/licencias/desplegar.sh
 sudo bash /data/apps/licencias/probar.sh
 ```
 
-1. `new-project-db.sh` crea la base y el usuario y muestra la cadena **Node**; `preparar.sh` la pide (no se muestra al pegarla) y guarda el `.env`. Ahí mismo se puede configurar el correo de salida (una credencial SMTP **propia** del servicio en OCI, no la de Keycloak).
+1. `new-project-db.sh` crea la base y el usuario y muestra la cadena **Node** una sola vez (guárdala en el gestor de contraseñas, nunca en un chat; si se filtró, cámbiala con `ALTER ROLE licencias PASSWORD` en el PostgreSQL compartido); `preparar.sh` la pide (no se muestra al pegarla) y guarda el `.env`. Ahí mismo se puede configurar el correo de salida (una credencial SMTP **propia** del servicio en OCI, no la de Keycloak).
 2. `desplegar.sh` clona `main` del repositorio, construye la imagen y la levanta; si no arranca, vuelve a la anterior. El esquema lo aplica el servicio al arrancar.
 3. **Cloudflare:** en el túnel agrega el *Public hostname* `api-licencias.sulotec.com` → `http://licencias:3200`.
 4. **Keycloak:** el workflow *Publicar cuenta* corre `ajustar-realm.sh`, que ya deja el access token del portal con la audiencia `licencias` y el claim `roles` (paso 10). Si no se publicó `apps/cuenta` después de ese cambio, córrelo a mano: `sudo docker exec -i cuenta bash -s < /data/apps/cuenta/ajustar-realm.sh`.

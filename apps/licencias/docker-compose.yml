@@ -1,0 +1,33 @@
+# Servicio de licencias de Sulotec (comun a todos los productos). En el servidor vive en /data/apps/licencias.
+# Cloudflare Tunnel (Public hostname):
+#   api-licencias.sulotec.com -> http://licencias:3200
+# Configuracion y secretos (nunca en el repositorio): /opt/sulotec/licencias.env, lo crea deploy/preparar.sh.
+# La base es la PostgreSQL 16 compartida de la VM (red sulotec_data); no publica puertos. El esquema lo aplica el propio
+# servicio al arrancar (solo crea lo que falta).
+name: licencias
+
+services:
+  licencias:
+    image: licencias:latest
+    container_name: licencias
+    restart: unless-stopped
+    env_file: /opt/sulotec/licencias.env
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    networks: [edge, data]
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3200/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+networks:
+  edge:
+    external: true
+    name: sulotec_edge
+  data:
+    external: true
+    name: sulotec_data

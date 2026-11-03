@@ -1,0 +1,126 @@
+---
+// Licencias (Administrador Universal de Sulotec): licencias de todas las empresas, planes, pedidos de ampliacion,
+// reporte de consumo para facturar, tokens de los productos y reglas. Los datos vienen del servicio de licencias (public/licencias.js).
+import Base from '../layouts/Base.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import Icon from '../components/Icon.astro';
+---
+<Base titulo="Licencias | Sulotec" descripcion="Administración de licencias, planes y consumo de los productos Sulotec." ruta="/licencias">
+  <meta slot="head" name="robots" content="noindex" />
+  <script is:inline slot="head" src="/licencias.js" defer></script>
+  <Header />
+  <main id="contenido" class="contenedor pagina">
+    <nav class="migas" aria-label="Ubicación"><a href="/mis-productos">Mis productos</a><span>/</span><span>Licencias</span></nav>
+    <header class="titulo">
+      <span class="kicker"><Icon name="shield" size={16} />Administrador Universal</span>
+      <h1>Licencias</h1>
+      <p>Planes, cupos de usuarios, bolsas de tokens y consumo de todas las empresas en todos los productos. Todo lo que hagas aquí queda en la bitácora con tu usuario.</p>
+    </header>
+    <p id="mensaje" class="mensaje" hidden></p>
+    <p id="entrar" hidden><button type="button" class="boton boton-azul" data-cuenta="ingresar" data-volver="/licencias">Iniciar sesión</button></p>
+
+    <div id="licencias" class="paneles" hidden>
+      <section class="bloque">
+        <div class="cabecera-bloque">
+          <h2>Licencias por empresa</h2>
+          <div class="filtros">
+            <select id="f-producto" aria-label="Filtrar por producto"><option value="">Todos los productos</option></select>
+            <select id="f-estado" aria-label="Filtrar por estado"><option value="">Todos los estados</option><option value="ACTIVA">Activas</option><option value="SOLO_LECTURA">Solo lectura</option><option value="SUSPENDIDA">Suspendidas</option><option value="CANCELADA">Canceladas</option></select>
+            <button type="button" class="boton boton-azul" id="b-nueva">Nueva licencia</button>
+          </div>
+        </div>
+        <div class="tabla"><table><thead><tr><th>Empresa</th><th>Producto · plan</th><th>Estado</th><th>Usuarios</th><th>Tokens del periodo</th><th>Vence</th><th>Titular</th><th></th></tr></thead><tbody id="t-licencias"></tbody></table></div>
+      </section>
+
+      <section class="bloque">
+        <h2>Pedidos de ampliación pendientes</h2>
+        <div class="tabla" id="t-solicitudes"></div>
+      </section>
+
+      <section class="bloque">
+        <div class="cabecera-bloque"><h2>Planes</h2><button type="button" class="boton secundario" id="b-plan">Nuevo plan</button></div>
+        <div class="tabla" id="t-planes"></div>
+      </section>
+
+      <section class="bloque">
+        <h2>Reporte de consumo (para facturar)</h2>
+        <form id="f-reporte" class="fila-form">
+          <label>Desde <input type="month" name="desde" required></label>
+          <label>Hasta <input type="month" name="hasta" required></label>
+          <button type="submit" class="boton secundario">Ver</button>
+          <button type="button" class="boton boton-azul" id="b-excel">Descargar Excel</button>
+        </form>
+        <div class="tabla" id="t-reporte"></div>
+      </section>
+
+      <section class="bloque">
+        <h2>Productos y sus tokens</h2>
+        <p class="nota">Cada producto habla con este servicio con su propio token. Se muestra una sola vez al generarlo; va en el <code>.env</code> del producto como <code>LICENCIAS_TOKEN</code>.</p>
+        <div class="tabla" id="t-productos"></div>
+      </section>
+
+      <section class="bloque">
+        <h2>Reglas</h2>
+        <p class="nota">Las reglas del modelo como parámetros: cambiarlas aquí no requiere programar y aplica a todos los productos.</p>
+        <form id="f-reglas" class="fila-form"></form>
+      </section>
+    </div>
+  </main>
+  <dialog id="dialogo"><form method="dialog"></form></dialog>
+  <Footer />
+</Base>
+
+<style>
+  .pagina { padding: 36px 0 60px; }
+  .migas { display: flex; gap: 8px; font-size: .9rem; color: var(--gris); margin-bottom: 18px; }
+  .migas a { color: var(--azul); }
+  .titulo { max-width: 76ch; margin-bottom: 22px; }
+  .titulo h1 { font-size: 2rem; color: var(--azul); margin: 10px 0 8px; }
+  .titulo p { margin: 0; color: var(--gris); }
+  .kicker { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; background: var(--azul-10); color: var(--azul); font-weight: 700; font-size: .85rem; }
+  .mensaje { padding: 12px 16px; border-radius: 12px; background: #fde4e5; color: var(--rojo); font-weight: 700; }
+  .mensaje.ok { background: #e3f6ea; color: var(--verde); }
+  .paneles { display: grid; gap: 22px; }
+  .bloque { background: #fff; border-radius: var(--radio); padding: 22px 24px; box-shadow: var(--sombra); display: grid; gap: 14px; }
+  .bloque h2 { font-size: 1.25rem; color: var(--azul); }
+  .cabecera-bloque { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; }
+  .filtros { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .nota, .bloque :global(.nota) { margin: 0; color: var(--gris); font-size: .9rem; }
+  .bloque code { background: var(--azul-10); padding: 1px 6px; border-radius: 6px; }
+  .tabla { overflow-x: auto; }
+  .bloque :global(table) { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  .bloque :global(th), .bloque :global(td) { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--borde); vertical-align: top; }
+  .bloque :global(th) { color: var(--azul-oscuro); font-size: .82rem; text-transform: uppercase; letter-spacing: .03em; white-space: nowrap; }
+  .bloque :global(small) { color: var(--gris); }
+  .bloque :global(.uuid) { font-family: Consolas, monospace; font-size: .75rem; word-break: break-all; }
+  .bloque :global(tr.inactivo td) { color: var(--gris); text-decoration: line-through; }
+  .bloque :global(.chip) { padding: 3px 10px; border-radius: 999px; font-size: .78rem; font-weight: 700; background: var(--azul-10); color: var(--azul); white-space: nowrap; }
+  .bloque :global(.chip.ok) { background: #e3f6ea; color: var(--verde); }
+  .bloque :global(.chip.alerta) { background: #fff4d6; color: #9a6a00; }
+  .bloque :global(.chip.mal) { background: #fde4e5; color: var(--rojo); }
+  .bloque :global(select), .bloque :global(input) { font: inherit; padding: 8px 10px; border: 1px solid var(--borde); border-radius: 10px; background: #fff; }
+  .bloque :global(.boton) { padding: 10px 18px; font-size: .95rem; }
+  .bloque :global(.boton.chico) { padding: 6px 12px; font-size: .85rem; }
+  .bloque :global(.secundario) { background: var(--azul-10); color: var(--azul); box-shadow: none; }
+  .bloque :global(.enlace) { background: none; border: 0; padding: 0; font: inherit; color: var(--azul); cursor: pointer; text-decoration: underline; }
+  .fila-form { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+  .fila-form :global(label) { display: grid; gap: 4px; font-size: .85rem; font-weight: 700; color: var(--azul-oscuro); }
+  dialog { border: 0; border-radius: var(--radio); padding: 0; width: min(560px, 100% - 32px); box-shadow: var(--sombra-alta); }
+  dialog::backdrop { background: rgba(18, 48, 95, .45); }
+  dialog form { display: grid; gap: 12px; padding: 26px; }
+  dialog :global(h3) { font-size: 1.2rem; color: var(--azul); }
+  dialog :global(label) { display: grid; gap: 4px; font-size: .9rem; font-weight: 700; color: var(--azul-oscuro); }
+  dialog :global(input), dialog :global(select) { font: inherit; padding: 9px 10px; border: 1px solid var(--borde); border-radius: 10px; }
+  dialog :global(p) { margin: 0; }
+  dialog :global(.error) { color: var(--rojo); font-weight: 700; }
+  dialog :global(.nota) { color: var(--gris); font-size: .9rem; }
+  dialog :global(.token) { font-family: Consolas, monospace; background: var(--azul-10); padding: 12px; border-radius: 10px; word-break: break-all; user-select: all; }
+  dialog :global(.acciones) { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+  dialog :global(.boton) { padding: 10px 18px; font-size: .95rem; }
+  dialog :global(.secundario) { background: var(--azul-10); color: var(--azul); box-shadow: none; }
+  dialog :global(.tabla) { overflow: auto; max-height: 60vh; }
+  dialog :global(table) { width: 100%; border-collapse: collapse; font-size: .88rem; }
+  dialog :global(th), dialog :global(td) { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--borde); white-space: nowrap; }
+  @media (max-width: 700px) { .titulo h1 { font-size: 1.6rem; } .bloque { padding: 18px; } }
+</style>

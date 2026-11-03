@@ -2,7 +2,8 @@
 
 > Complementa [`LICENCIAS.md`](LICENCIAS.md) (el modelo) con el diseño técnico. Regla de oro: **ningún producto implementa reglas de
 > licencia por su cuenta**. Hay un servicio común que decide, y cada producto solo le pregunta y le reporta. Estado: diseño propuesto
-> el 2026-11-02, pendiente de aprobación del usuario antes de construir.
+> el 2026-11-02 y aprobado ese mismo día («dale»). **Construido:** servicio en `jeliases-informaDev/Licencias-Backend`, kit `apps/licencias`,
+> pantallas del portal y ajuste de Keycloak (rama `licencias` de este repo). Falta instalarlo en el servidor y conectar los productos.
 
 ## 1. Piezas
 
@@ -53,7 +54,7 @@ producto nunca se borran por licencia.
 | `GET /v1/licencias/{empresa_uuid}/cupo` | Justo antes de crear un usuario | `{ puede_crear, activos, usuarios_max }` |
 | `PUT /v1/licencias/{empresa_uuid}/usuarios-activos` `{ activos }` | Después de crear, activar o desactivar un usuario | `{ activos, usuarios_max, puede_crear }` |
 | `POST /v1/licencias/{empresa_uuid}/consumos` `{ clave_idempotente, tipo, cantidad, usuario, hecho_por_sulotec, detalle }` | En el momento de hacer la consulta que cuesta | `{ permitido: true, nivel: "normal" \| "aviso" \| "tolerancia", disponibles }` o `{ permitido: false, motivo: "BOLSA_AGOTADA" \| "SOLO_LECTURA" \| "SUSPENDIDA" \| "SIN_LICENCIA" }` |
-| `DELETE /v1/consumos/{clave_idempotente}` | Si la consulta externa falló después de descontar (p. ej. RENIEC caído) | `204`: el consumo se anula y no se cobra |
+| `DELETE /v1/consumos/{clave_idempotente}` | Si la consulta externa falló después de descontar (p. ej. RENIEC caído) | `200 { anulado: true }`: el consumo se anula y no se cobra |
 
 Reglas que aplica el servicio en `consumos` (las del modelo, en un solo lugar): `permitido` mientras `consumidos < bolsa + extra`;
 al pasar el 80 % responde `nivel: "aviso"` y manda **un** correo al titular; entre el 100 % y el 110 % responde `nivel: "tolerancia"`
@@ -76,7 +77,7 @@ respuesta y **no** descuenta dos veces (reintentos seguros).
 
 ### 4.3 Tareas programadas (dentro del mismo contenedor)
 
-- **Diaria 08:00 (Lima):** licencias que vencen en 7 días → aviso `vence_7`; vencidas → `SOLO_LECTURA` + aviso; 7 días en solo lectura → `SUSPENDIDA` + aviso.
+- **Cada hora (idempotente: los avisos se registran y no se repiten):** licencias que vencen en 7 días o menos → aviso `vence`; vencidas → `SOLO_LECTURA` + aviso; 7 días en solo lectura → `SUSPENDIDA` + aviso. El estado también se calcula por fecha en cada lectura, así que los productos ven la verdad aunque la tarea no haya corrido.
 - **Día 1 de cada mes:** nada que «resetear»: el contador vive por `periodo`, el nuevo mes abre su fila sola. Las `bolsas_extra` vencidas se cierran.
 - **Correos:** por OCI Email Delivery con una credencial SMTP propia del servicio (no la de Keycloak), remitente `no-reply@sulotec.com`.
 
@@ -108,7 +109,7 @@ Configuración en el `.env` del producto: `LICENCIAS_URL`, `LICENCIAS_TOKEN`, `L
 3. **Tokens** (semana 3): MiRadar 360 (RENIEC y ubicar), PLAFT (cliente Spring) y Buscador (en el proxy). Aviso 80 %, tolerancia y bloqueo reales.
 4. **Ciclo completo** (semana 4): tareas de vencimiento, bolsas extra, cambio de plan, reporte Excel para facturar, rotación de tokens.
 
-## 7. Decisiones que necesito del usuario antes de empezar
+## 7. Decisiones tomadas el 2026-11-02 (el usuario aprobó lo propuesto)
 
 1. **Nombre del repositorio** del servicio: propongo `jeliases-informaDev/Licencias-Backend` (kit `apps/licencias` en Sulotec-infra).
 2. **Credencial de los productos:** token por producto (propuesto, como el resto de kits) o cliente de Keycloak por producto (más formal, más trabajo).

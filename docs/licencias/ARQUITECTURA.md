@@ -84,6 +84,8 @@ respuesta y **no** descuenta dos veces (reintentos seguros).
 
 ## 5. El cliente que lleva cada producto (mismo comportamiento en todas las tecnologías)
 
+> Guía paso a paso para el responsable de cada producto (credenciales, las cinco llamadas con JSON de ejemplo, comportamiento obligatorio, pruebas en local y el caso PLAFT): [`INTEGRACION-PRODUCTOS.md`](INTEGRACION-PRODUCTOS.md).
+
 Configuración en el `.env` del producto: `LICENCIAS_URL`, `LICENCIAS_TOKEN`, `LICENCIAS_PRODUCTO`. Comportamiento obligatorio:
 
 1. **Caché por empresa** de `GET /v1/licencias/{empresa}` durante 5 minutos. Si el servicio no responde, **se sigue trabajando con la última licencia conocida** (y se registra el aviso). Nunca se bloquea a un cliente por una caída de Sulotec.

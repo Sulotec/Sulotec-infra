@@ -129,4 +129,14 @@ if [ -n "$mid_roles" ]; then
   rm -f /tmp/mapper-roles.json
 fi
 
+# 11) Cliente "licencias" (servicio de licencias, api-licencias.sulotec.com): con su cuenta de servicio lee y crea las
+#     empresas (subgrupos de "Empresas") y les da los roles producto-* al contratar, como empresa.sh. Su clave NO se
+#     imprime (este script corre en un workflow): la toma preparar.sh del kit apps/licencias directamente del contenedor.
+if ! kc get clients -r sulotec -q clientId=licencias --fields id --format csv --noquotes | grep -q .; then
+  kc create clients -r sulotec -b '{"clientId":"licencias","name":"Servicio de licencias","description":"Cuenta de servicio del servicio de licencias (api-licencias.sulotec.com): lee y crea empresas","enabled":true,"publicClient":false,"serviceAccountsEnabled":true,"standardFlowEnabled":false,"implicitFlowEnabled":false,"directAccessGrantsEnabled":false,"fullScopeAllowed":false}' >/dev/null
+  echo "Ajuste: cliente licencias creado"
+fi
+kc add-roles -r sulotec --uusername service-account-licencias --cclientid realm-management --rolename query-groups --rolename view-users --rolename manage-users >/dev/null 2>&1 \
+  || echo "AVISO: no se pudieron dar los permisos de grupos al cliente licencias (query-groups, view-users, manage-users de realm-management)" >&2
+
 echo "Ajustes aplicados. Registro libre: apagado. Recuperar contrasena: encendido. Inicio unico: cliente auditoria, roles producto-*, grupo Empresas y claims empresa_*."

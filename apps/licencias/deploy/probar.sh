@@ -36,6 +36,7 @@ if [ -r "$ENVFILE" ]; then
   sin="$(consulta "select string_agg(clave, ', ') from productos where token_hash is null")"
   if [ -n "$sin" ] && [ "$sin" != '?' ]; then aviso "productos sin token todavia: $sin (sudo docker exec licencias node scripts/token-producto.js <clave>)"; else ok "todos los productos tienen token"; fi
   if grep -qE '^SMTP_HOST=.+' "$ENVFILE"; then ok "correo de salida configurado"; else aviso "sin correo de salida: los avisos solo quedan en el log (preparar.sh)"; fi
+  if grep -qE '^KEYCLOAK_CLIENT_SECRET=.+' "$ENVFILE"; then ok "cliente de Keycloak configurado (empresas desde el portal)"; else aviso "sin clave del cliente de Keycloak: repite preparar.sh despues de publicar apps/cuenta"; fi
 else
   aviso "no encuentro $ENVFILE; me salto las pruebas de datos"
 fi

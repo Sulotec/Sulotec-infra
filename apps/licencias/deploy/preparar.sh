@@ -76,6 +76,27 @@ if [[ "${r:-}" =~ ^[sS]$ ]]; then
   [ -n "$SMTP_USER" ] && [ -n "$SMTP_PASS" ] || { echo "Faltan el usuario o la clave SMTP." >&2; exit 1; }
 fi
 
+echo
+echo "== Cliente de Keycloak (para leer y crear empresas desde sulotec.com/licencias)"
+SECRETO=""
+if docker ps --format '{{.Names}}' | grep -qx cuenta; then
+  SECRETO="$(docker exec -i cuenta bash -s <<'EOF' 2>/dev/null || true
+kc() { /opt/keycloak/bin/kcadm.sh "$@" --config /tmp/lic.config; }
+kc config credentials --server http://127.0.0.1:8080 --realm master --user "$KC_BOOTSTRAP_ADMIN_USERNAME" --password "$KC_BOOTSTRAP_ADMIN_PASSWORD" >/dev/null
+cid=$(kc get clients -r sulotec -q clientId=licencias --fields id --format csv --noquotes | head -1)
+[ -n "$cid" ] && kc get "clients/$cid/client-secret" -r sulotec --fields value --format csv --noquotes
+rm -f /tmp/lic.config
+EOF
+)"
+fi
+SECRETO="$(limpiar "$SECRETO")"
+if [ -n "$SECRETO" ]; then
+  echo "   OK: clave del cliente 'licencias' tomada de Keycloak (no se muestra)"
+else
+  SECRETO="$(actual KEYCLOAK_CLIENT_SECRET)"
+  if [ -n "$SECRETO" ]; then echo "   se conserva la clave guardada"; else echo "   AVISO: no encontre el cliente 'licencias' en Keycloak (publica apps/cuenta o corre ajustar-realm.sh); las empresas no se podran crear desde el portal hasta repetir preparar.sh"; fi
+fi
+
 install -m 640 -o root -g docker /dev/null "$ENV"
 {
   echo "NODE_ENV=production"
@@ -84,6 +105,9 @@ install -m 640 -o root -g docker /dev/null "$ENV"
   echo "KEYCLOAK_ISSUER=https://cuenta.sulotec.com/realms/sulotec"
   echo "KEYCLOAK_AUDIENCE=licencias"
   echo "ROL_UNIVERSAL=administrador-general"
+  echo "KEYCLOAK_INTERNO=http://cuenta:8080"
+  echo "KEYCLOAK_CLIENT_ID=licencias"
+  echo "KEYCLOAK_CLIENT_SECRET=$SECRETO"
   echo "CORS_ORIGENES=https://sulotec.com"
   echo "PORTAL_URL=https://sulotec.com"
   echo "SMTP_HOST=$SMTP_HOST"

@@ -71,6 +71,7 @@ respuesta y **no** descuenta dos veces (reintentos seguros).
 | `POST /v1/admin/licencias/{id}/bolsas-extra` | Universal | Vender un paquete adicional |
 | `GET /v1/admin/consumos?desde&hasta&producto&empresa` (JSON y Excel) | Universal | Reporte para facturar, con la tolerancia y lo «hecho por Sulotec» separados |
 | `POST /v1/admin/productos/{clave}/token` | Universal | Rotar el token de un producto (se muestra una sola vez) |
+| `GET /v1/admin/empresas`, `POST /v1/admin/empresas` | Universal | Empresas de Keycloak (subgrupos de «Empresas»): listar, y crear una nueva con su UUID desde «Nueva licencia» (el servicio usa su cliente `licencias` con cuenta de servicio, por la dirección interna `http://cuenta:8080`). Al crear una licencia la empresa recibe el rol `producto-*`; al cancelarla lo pierde |
 | `GET /v1/mi-licencia` | Administrador General | Sus licencias (todas sus productos) con consumo del periodo |
 | `GET /v1/mi-licencia/{producto}/consumos?periodo` | Administrador General | Detalle por usuario y tipo |
 | `POST /v1/mi-licencia/{producto}/ampliar` `{ que: "usuarios" \| "tokens" \| "plan", cantidad, comentario }` | Administrador General | Pedido de ampliación: correo a `contacto@sulotec.com` y registro |

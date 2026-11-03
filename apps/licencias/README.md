@@ -29,6 +29,7 @@ sudo bash /data/apps/licencias/desplegar.sh
 sudo bash /data/apps/licencias/probar.sh
 ```
 
+0. **Keycloak:** `ajustar-realm.sh` (lo corre el workflow *Publicar cuenta*) crea el cliente `licencias` con permiso para leer y crear empresas; `preparar.sh` toma su clave del contenedor `cuenta` solo, sin mostrarla. Si publicaste el kit antes que `apps/cuenta`, repite `preparar.sh` (Enter conserva lo demás) y `desplegar.sh`.
 1. `new-project-db.sh` crea la base y el usuario y muestra la cadena **Node** una sola vez (guárdala en el gestor de contraseñas, nunca en un chat; si se filtró, cámbiala con `ALTER ROLE licencias PASSWORD` en el PostgreSQL compartido); `preparar.sh` la pide (no se muestra al pegarla) y guarda el `.env`. Ahí mismo se puede configurar el correo de salida (una credencial SMTP **propia** del servicio en OCI, no la de Keycloak).
 2. `desplegar.sh` clona `main` del repositorio, construye la imagen y la levanta; si no arranca, vuelve a la anterior. El esquema lo aplica el servicio al arrancar.
 3. **Cloudflare:** en el túnel agrega el *Public hostname* `api-licencias.sulotec.com` → `http://licencias:3200`.

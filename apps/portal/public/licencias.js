@@ -157,18 +157,46 @@
     mostrar(`Consumos · ${esc(l.empresa_nombre)} · ${esc(l.producto_nombre)} · ${periodo}`, `<div class="tabla">${filas.length ? `<table><thead><tr><th>Fecha</th><th>Usuario</th><th>Tipo</th><th>Cant.</th><th>Nivel</th></tr></thead><tbody>${filas.map((f) => `<tr class="${f.anulado_en ? 'inactivo' : ''}"><td>${esc(fechaHora(f.creado_en))}</td><td>${esc(f.usuario || '—')}</td><td>${esc(f.tipo)}</td><td>${f.cantidad}</td><td>${f.anulado_en ? 'anulado' : esc(f.nivel)}${f.hecho_por_sulotec ? ' · Sulotec' : ''}</td></tr>`).join('')}</tbody></table>` : '<p class="nota">Sin consumos en este periodo.</p>'}</div>`);
   }
 
-  function nuevaLicencia() {
+  // Identificador corto a partir del nombre: "Caja Piura S.A." -> caja-piura-s-a
+  const slugDe = (nombre) => nombre.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 39);
+
+  async function nuevaLicencia() {
+    // Las empresas viven en Keycloak: se elige una o se crea desde aqui (el servicio la crea con su UUID).
+    let empresas = null;
+    try { empresas = await api('/v1/admin/empresas'); } catch (e) { aviso(`No se pudo leer la lista de empresas de Keycloak (${e.message}). Puedes escribir el UUID a mano.`); }
+    const campoEmpresa = empresas
+      ? campo('Empresa', `<select name="empresa_sel" id="d-empresa" required><option value="">Elige una empresa…</option>${empresas.map((e) => `<option value="${esc(e.uuid)}" data-nombre="${esc(e.nombre)}">${esc(e.nombre)} (${esc(e.slug)})${e.productos.length ? ` · tiene: ${esc(e.productos.join(', '))}` : ''}</option>`).join('')}<option value="__nueva__">+ Empresa nueva (se crea en la cuenta Sulotec)</option></select>`)
+        + `<div id="d-nueva" class="nueva-empresa" hidden>${campo('Nombre de la empresa nueva', '<input type="text" name="nueva_nombre" maxlength="120">')}${campo('Identificador corto (minúsculas y guiones; es el nombre del grupo en Keycloak)', '<input type="text" name="nueva_slug" pattern="[a-z0-9][a-z0-9-]{1,38}" placeholder="caja-piura">')}</div>`
+      : campo('UUID de la empresa (el de Keycloak, grupo Empresas)', '<input type="text" name="empresa_uuid" pattern="[0-9a-fA-F-]{36}" required placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">')
+        + campo('Nombre de la empresa', '<input type="text" name="empresa_nombre" required>');
     abrir('Nueva licencia',
-      campo('UUID de la empresa (el de Keycloak, grupo Empresas)', '<input type="text" name="empresa_uuid" pattern="[0-9a-fA-F-]{36}" required placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">')
-      + campo('Nombre de la empresa', '<input type="text" name="empresa_nombre" required>')
+      campoEmpresa
       + campo('Producto', `<select name="producto" id="d-producto">${productos.map((p) => `<option value="${esc(p.clave)}">${esc(p.nombre)}</option>`).join('')}</select>`)
       + campo('Plan (opcional; si eliges uno, toma sus cupos)', '<select name="plan_id" id="d-plan"><option value="">Sin plan</option></select>')
       + campo('Usuarios máximos', '<input type="number" name="usuarios_max" min="0">')
       + campo('Tokens por periodo (solo productos con tokens)', '<input type="number" name="tokens_periodo" min="0">')
       + campo('Inicio', `<input type="date" name="inicio" value="${hoy()}">`) + campo('Vencimiento (por defecto, un mes)', '<input type="date" name="vencimiento">')
       + campo('Correo del Administrador General (titular)', '<input type="email" name="titular_email">') + campo('Nombre del titular', '<input type="text" name="titular_nombre">'),
-      (d) => api('/v1/admin/licencias', { metodo: 'POST', cuerpo: limpio({ empresa_uuid: d.empresa_uuid.trim().toLowerCase(), empresa_nombre: d.empresa_nombre, producto: d.producto, plan_id: num(d.plan_id), usuarios_max: num(d.usuarios_max), tokens_periodo: num(d.tokens_periodo), inicio: d.inicio, vencimiento: d.vencimiento, titular_email: d.titular_email, titular_nombre: d.titular_nombre }) }),
+      async (d) => {
+        let uuid = d.empresa_uuid?.trim().toLowerCase(); let nombre = d.empresa_nombre;
+        if (empresas) {
+          if (d.empresa_sel === '__nueva__') {
+            const creada = await api('/v1/admin/empresas', { metodo: 'POST', cuerpo: { nombre: d.nueva_nombre?.trim(), slug: d.nueva_slug?.trim(), productos: [] } });
+            uuid = creada.uuid; nombre = creada.nombre;
+          } else {
+            uuid = d.empresa_sel; nombre = empresas.find((e) => e.uuid === uuid)?.nombre;
+          }
+        }
+        return api('/v1/admin/licencias', { metodo: 'POST', cuerpo: limpio({ empresa_uuid: uuid, empresa_nombre: nombre, producto: d.producto, plan_id: num(d.plan_id), usuarios_max: num(d.usuarios_max), tokens_periodo: num(d.tokens_periodo), inicio: d.inicio, vencimiento: d.vencimiento, titular_email: d.titular_email, titular_nombre: d.titular_nombre }) });
+      },
       'Crear licencia');
+    const se = form.querySelector('#d-empresa'); const dn = form.querySelector('#d-nueva');
+    if (se) {
+      se.addEventListener('change', () => { dn.hidden = se.value !== '__nueva__'; dn.querySelectorAll('input').forEach((i) => { i.required = !dn.hidden; }); });
+      const nn = form.querySelector('[name=nueva_nombre]'); const ns = form.querySelector('[name=nueva_slug]');
+      nn.addEventListener('input', () => { if (!ns.dataset.manual) ns.value = slugDe(nn.value); });
+      ns.addEventListener('input', () => { ns.dataset.manual = '1'; });
+    }
     const sp = form.querySelector('#d-producto'); const spl = form.querySelector('#d-plan');
     const llenar = () => { spl.innerHTML = `<option value="">Sin plan</option>${planesDe(sp.value).map((p) => `<option value="${p.id}">${esc(p.nombre)} · ${p.usuarios_max} usuarios${p.tokens_periodo ? ` · ${p.tokens_periodo} tokens` : ''}</option>`).join('')}`; };
     sp.addEventListener('change', llenar); llenar();
@@ -191,7 +219,7 @@
     const b = e.target.closest('button');
     if (!b) return;
     try {
-      if (b.id === 'b-nueva') nuevaLicencia();
+      if (b.id === 'b-nueva') await nuevaLicencia();
       else if (b.id === 'b-plan') nuevoPlan();
       else if (b.id === 'b-excel') {
         const d = new FormData($('#f-reporte'));

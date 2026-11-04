@@ -137,6 +137,17 @@ echo
 echo "== Rutas por calles (motor OSRM propio, contenedor auditoria-osrm; primero correr osrm-datos.sh). Vacio = sin rutas por calles: rectas, como antes"
 pregunta OSRM_URL "OSRM_URL" "http://auditoria-osrm:5000"; OSRM="$R"
 
+echo
+echo "== Licencias de Sulotec (servicio comun 'licencias': cupo de usuarios por empresa y estado de la licencia). Token vacio = licencias apagadas, todo sigue como hoy"
+pregunta LICENCIAS_URL "LICENCIAS_URL" "http://licencias:3200"; LIC_URL="$R"
+pregunta LICENCIAS_PRODUCTO "LICENCIAS_PRODUCTO" "geomatrix"; LIC_PROD="$R"
+pregunta LICENCIAS_TOKEN "LICENCIAS_TOKEN (lo da: sudo docker exec licencias node scripts/token-producto.js geomatrix)" "" secreto; LIC_TOKEN="$R"
+# El servicio solo acepta tokens con la forma <producto>.<secreto>: uno de otro producto o pegado a medias daria 401 en cada llamada
+# y la API lo trataria como caida (seguiria sin controlar el cupo). Mejor que falle aqui, a la vista.
+if [ -n "$LIC_TOKEN" ] && [[ "$LIC_TOKEN" != "$LIC_PROD."* ]]; then
+  echo "LICENCIAS_TOKEN debe empezar con '$LIC_PROD.' (lo genera: sudo docker exec licencias node scripts/token-producto.js $LIC_PROD). Vuelve a correr el script y pegalo completo." >&2; exit 1
+fi
+
 install -m 640 -o root -g docker /dev/null "$ENV" 2>/dev/null || install -m 640 /dev/null "$ENV"
 {
   echo "NODE_ENV=production"
@@ -181,6 +192,10 @@ install -m 640 -o root -g docker /dev/null "$ENV" 2>/dev/null || install -m 640 
   echo "GEOCODING_WORKER_ENABLED=$GEO_WORKER"
   echo "GEOCODING_PROVIDER=$GEO_PROV"
   echo "OSRM_URL=$OSRM"
+  # Siempre las tres, aunque el token este vacio: vacio = licencias apagadas, y asi probar.sh y quien lea el env lo ven explicito
+  echo "LICENCIAS_URL=$LIC_URL"
+  echo "LICENCIAS_PRODUCTO=$LIC_PROD"
+  echo "LICENCIAS_TOKEN=$LIC_TOKEN"
   [ -n "$MAPBOX" ] && echo "MAPBOX_ACCESS_TOKEN=$MAPBOX"
 } > "$ENV"
 

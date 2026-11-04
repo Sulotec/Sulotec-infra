@@ -181,6 +181,10 @@ Cuándo: si la acción falló **después** de consumir (por ejemplo el proveedor
 6. **Nada de reglas propias:** el producto no calcula porcentajes ni plazos; las campanas o avisos dentro del producto se derivan de `nivel`,
    `estado` y `dias_para_vencer` al refrescar la licencia, no de contadores propios.
 7. **Log:** cada llamada deja una línea con empresa, llamada, resultado y milisegundos; los fallos de red, en nivel WARN.
+8. **Productos sin tokens** (GeoMatrix, Dashboard): si el servicio responde `404 SIN_LICENCIA` (la empresa no tiene el producto registrado, o su UUID
+   no coincide) **no se bloquea nada** ni se exige cupo; se avisa al administrador de la empresa con una franja y se deja un WARN en el log.
+   El bloqueo solo aplica a los estados explícitos `SOLO_LECTURA`, `SUSPENDIDA` y `CANCELADA`. Así, poner el token antes de registrar la licencia
+   de un cliente no deja a nadie fuera.
 
 ## 6. Cómo probar sin tocar producción
 
@@ -248,8 +252,28 @@ class LicenciasClient(private val url: String, private val token: String) {
 ## 8. Los demás productos
 
 Dónde se engancha cada uno (tecnología, tenant, cupo y tipos) está en la tabla de [`ARQUITECTURA.md` §5](ARQUITECTURA.md#5-el-cliente-que-lleva-cada-producto-mismo-comportamiento-en-todas-las-tecnologías).
-GeoMatrix y MiRadar 360 comparten un cliente Node (lo escribe Sulotec en Huancayo-Backend y se reutiliza en Afacop-Backend); Dashboard lo
+GeoMatrix y MiRadar 360 comparten un cliente Node (ya escrito en Huancayo-Backend, ver abajo; se reutiliza en Afacop-Backend); Dashboard lo
 adapta a NestJS; el Buscador lo pone en su proxy Next.js. Todos cumplen el §5 y la lista del §9.
+
+### GeoMatrix (conectado: PRs Huancayo-Backend#45, CajaHuancayo-Web#50 y CajaHuancayo-App#21)
+
+Es la referencia para MiRadar 360 y Dashboard: el mismo cliente Node y el mismo criterio. GeoMatrix se licencia solo por usuarios (`tokens: null`).
+Kit `apps/auditoria`: `LICENCIAS_URL`, `LICENCIAS_PRODUCTO`, `LICENCIAS_TOKEN`; con el token vacío las licencias están apagadas y nada se consulta.
+Decisiones tomadas (D1 a D9), para que MiRadar 360 y Dashboard copien el criterio:
+
+| Decisión | Cómo quedó en GeoMatrix |
+|---|---|
+| D1 Dónde corre el guard | Al final de la autenticación, ya con el usuario verificado y la empresa que sale del token del servidor (nunca de lo que mande el cliente) |
+| D2 Exentos siempre | `GET`; el rol `UNIVERSAL` (Sulotec nunca se bloquea); las rutas `/api/auth`, `/api/terminos`, `/api/empresas` y `/api/licencia`; la telemetría GPS (`PATCH /api/visitas/ubicacion`: bloquearla apagaría el seguimiento de la app); `POST /api/rutas/trazar` (no escribe); cerrar la jornada (`TERMINAR`); `PUT /api/limpieza/modo-pruebas` |
+| `ACTIVA` | Todo pasa; solo se exige el cupo al crear o reactivar usuarios |
+| D3 `SOLO_LECTURA` → `403 LICENCIA_SOLO_LECTURA` | Se bloquean las escrituras de trabajo. Se permiten editar, desactivar y eliminar usuarios y los ajustes de asignación (el cliente puede ordenar su cuenta); crear o reactivar usuarios, no |
+| D4 `SUSPENDIDA` → `403 LICENCIA_SUSPENDIDA`; `CANCELADA` → `403 LICENCIA_CANCELADA` | Se bloquea todo lo no exento salvo las bajas de usuarios (para que el cliente pueda reducir su consumo). Las lecturas siempre pasan |
+| D5 `404 SIN_LICENCIA` o licencia desconocida | **No se bloquea nada** ni se exige cupo: solo un WARN en el log y una franja para los administradores. Protege el despliegue: el token puede ponerse antes de registrar la licencia |
+| Servicio caído | Caché de 5 minutos por empresa; se sigue con la última licencia conocida (§5.1); tras un fallo se espera 30 s antes de volver a preguntar. Un `401` (token mal puesto) se registra como error y se trata como caída |
+| D8 Formato del bloqueo | `403 { error: <texto para la persona>, code: LICENCIA_*, estado, enlace: https://sulotec.com/mi-licencia, requestId }`; el registro de seguridad lo clasifica como `LICENCIA_BLOQUEO` (aviso), no como intento sin permiso |
+| D6 Cupo (4.2) | Se exige a todos, incluido el `UNIVERSAL` (el cupo es del plan; él lo amplía en `sulotec.com/licencias`). Sin cupo: `409` con `code: LICENCIA_SIN_CUPO` y `enlace` = `https://sulotec.com/mi-licencia` (`https://sulotec.com/licencias` si quien crea es el universal) |
+| D7 Usuario activo (4.3) | Fila de `usuarios` con `estado = 'ACTIVO'` de la empresa, de cualquier rol; se reporta tras crear, activar, desactivar o eliminar |
+| D9 Licencia pública (lo que ven panel y app) | `GET /api/licencia` y el campo `licencia` en `GET /api/auth/me`, `GET /api/empresas/actual`, `GET /api/visitas/config` y `GET /api/asignaciones/mias` (la app la recibe con la muestra, que consulta cada 20 s); `null` = licencias apagadas, sin franja |
 
 ## 9. Lista de verificación antes de dar por conectado un producto
 

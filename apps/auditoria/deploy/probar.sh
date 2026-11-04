@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Pruebas de humo de Auditoria de Visitas despues de publicar. No cambia nada ni sube datos reales.
+# Pruebas de humo de Auditoria de Visitas despues de publicar: salud, bucket, direcciones publicas, CORS, motor de rutas y servicio de licencias.
+# No cambia nada ni sube datos reales.
 #   sudo bash /data/apps/auditoria/probar.sh
 # Las pruebas de direcciones publicas avisan (no fallan) si el tunel de Cloudflare todavia no tiene las rutas.
 set -uo pipefail
@@ -66,6 +67,18 @@ if grep -qE '^OSRM_URL=.+' /opt/sulotec/auditoria.env 2>/dev/null; then
   fi
 else
   aviso "sin OSRM_URL: la app y el panel dibujan rectas (para rutas por calles: osrm-datos.sh y luego preparar.sh)"
+fi
+
+echo "== Licencias de Sulotec"
+if grep -qE '^LICENCIAS_TOKEN=.+' /opt/sulotec/auditoria.env 2>/dev/null; then
+  # El servicio no publica puertos: se prueba desde dentro de la API, por la misma red y la misma LICENCIAS_URL que usa ella
+  if docker exec auditoria-api node -e "fetch(process.env.LICENCIAS_URL+'/health',{signal:AbortSignal.timeout(5000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"; then
+    ok "licencias responde: la API llega al servicio de licencias"
+  else
+    falla "LICENCIAS_TOKEN esta configurado pero el servicio de licencias no responde (¿esta levantado el contenedor 'licencias'? mira: docker logs licencias)"
+  fi
+else
+  aviso "sin LICENCIAS_TOKEN: el cupo de usuarios no se consulta (licencias apagadas)"
 fi
 
 echo

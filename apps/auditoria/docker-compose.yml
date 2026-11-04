@@ -8,6 +8,9 @@
 # Las fotos van al bucket huancayo-archivos (Object Storage, API compatible con S3, llave de svc-auditoria), con prefijo por empresa.
 # El motor de rutas por calles (auditoria-osrm, mapa de Peru de OpenStreetMap) no publica puertos: solo lo llama la API por la red edge
 # (OSRM_URL=http://auditoria-osrm:5000 en el env). Sus datos los prepara deploy/osrm-datos.sh; sin ellos el contenedor no arranca y la API dibuja rectas.
+# Licencias de Sulotec: la API consulta el servicio comun "licencias" (kit apps/licencias, en este mismo servidor) por la red edge
+# (LICENCIAS_URL=http://licencias:3200 en el env) para el cupo de usuarios y el estado de la licencia de cada empresa.
+# Sin LICENCIAS_TOKEN en el env no se consulta nada y todo sigue como hoy; si el servicio cae, la API sigue con la ultima licencia conocida.
 name: auditoria
 
 services:

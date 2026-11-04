@@ -10,7 +10,8 @@ App Android / navegador ──▶ Cloudflare Tunnel ──▶ auditoria-web  (ng
                                              └──▶ auditoria-api  (Node 24 + Socket.IO)
                                                       ├──▶ MySQL 8.4 de la VM (base "auditoria", red sulotec_data)
                                                       ├──▶ Bucket huancayo-archivos (Object Storage, llave de svc-auditoria)
-                                                      └──▶ auditoria-osrm  (motor de rutas por calles: mapa de Perú de OpenStreetMap; sin puertos)
+                                                      ├──▶ auditoria-osrm  (motor de rutas por calles: mapa de Perú de OpenStreetMap; sin puertos)
+                                                      └──▶ licencias  (servicio común de licencias de Sulotec: cupo de usuarios y estado; sin puertos, red sulotec_edge)
 ```
 
 | Dirección | Va a |
@@ -26,10 +27,10 @@ El servidor **construye** las imágenes desde GitHub (`desplegar.sh`); las bases
 | Archivo | Para qué |
 |---|---|
 | `docker-compose.yml` | API y panel: solo lectura, sin privilegios, sin puertos publicados |
-| `deploy/preparar.sh` | Crea `/opt/sulotec/auditoria.env` (claves y reglas; solo root y docker pueden leerlo) |
+| `deploy/preparar.sh` | Crea `/opt/sulotec/auditoria.env` (claves y reglas; solo root y docker pueden leerlo). Lo **reescribe completo** cada vez: lo agregado a mano fuera de sus preguntas se pierde |
 | `deploy/migrar-datos.sh` | Copia la base de Aiven a la MySQL de la VM y compara tabla por tabla (`SOLO_COMPARAR=1` solo compara) |
 | `deploy/desplegar.sh` | Baja el código, construye, levanta y vuelve a la versión anterior si algo falla |
-| `deploy/probar.sh` | Pruebas de humo: salud, bucket, direcciones públicas y CORS |
+| `deploy/probar.sh` | Pruebas de humo: salud, bucket, direcciones públicas, CORS, motor de rutas y servicio de licencias |
 | `deploy/rotar-s3.sh` | Cambia la clave S3 de `svc-auditoria`, prueba el bucket y vuelve a la anterior si falla |
 | `deploy/osrm-datos.sh` | Baja el mapa de Perú (OpenStreetMap) y lo prepara para el motor de rutas por calles; se repite para renovarlo |
 
@@ -77,9 +78,14 @@ sudo /opt/sulotec/scripts/new-project-db.sh mysql auditoria
 
 **4. Configuración:** `sudo bash /data/apps/auditoria/preparar.sh`.
 Pide la cadena de la base (y comprueba que entra), la `MFA_ENCRYPTION_KEY` **de Render** (debe ser la misma: si cambia, nadie podrá usar
-su verificación en dos pasos), el nombre de la primera empresa, el administrador universal (opcional) y las claves de `svc-auditoria`.
+su verificación en dos pasos), el nombre de la primera empresa, el administrador universal (opcional), las claves de `svc-auditoria`, la
+dirección del motor de rutas (`OSRM_URL`) y las tres variables de **Licencias de Sulotec** (`LICENCIAS_URL`, `LICENCIAS_PRODUCTO` y
+`LICENCIAS_TOKEN`; Enter deja el token vacío = licencias apagadas; ver la sección «Licencias de Sulotec»).
 Al decir que la base ya tiene datos, deja vacía la clave del administrador inicial a propósito: con un administrador existente que nunca
 inició sesión, el arranque le **cambiaría la contraseña y le borraría la verificación en dos pasos**.
+Se puede repetir cuando haga falta (Enter conserva cada valor), pero **reescribe el archivo completo** con sus preguntas: lo que se haya
+agregado a mano en `/opt/sulotec/auditoria.env` fuera de ellas (`FIRMA_AUDITOR_OBLIGATORIA`, las variables de Google…) se pierde y hay que
+volver a ponerlo.
 
 **5. Datos de la base actual (Aiven), antes de levantar la API:** `sudo bash /data/apps/auditoria/migrar-datos.sh`.
 Pide la *Service URI* de Aiven (o la `DATABASE_URL` del servicio en Render). Saldrán asteriscos. Solo lee del origen, guarda el volcado en
@@ -123,7 +129,8 @@ Sin el motor nada se rompe: la API responde «no disponible» y la app y el pane
 4. `sudo bash /data/apps/auditoria/desplegar.sh` y `sudo bash /data/apps/auditoria/probar.sh` (comprueba que la API llega al motor).
 
 **Renovar el mapa** (calles nuevas; cada 1-3 meses basta): volver a correr `osrm-datos.sh`; construye aparte y recién al final reemplaza el mapa
-anterior. **Apagarlo:** `OSRM_URL` vacío en `preparar.sh` y `desplegar.sh`; el contenedor puede quedar parado (`docker compose stop osrm`).
+anterior. **Apagarlo:** dejar `OSRM_URL=` vacío **a mano** en `/opt/sulotec/auditoria.env` (`sudo nano /opt/sulotec/auditoria.env`; `preparar.sh`
+no puede vaciar un valor ya guardado: Enter lo conserva) y `desplegar.sh`; el contenedor puede quedar parado (`docker compose stop osrm`).
 
 | Recurso | Cuánto |
 |---|---|
@@ -138,10 +145,11 @@ anterior. **Apagarlo:** `OSRM_URL` vacío en `preparar.sh` y `desplegar.sh`; el 
 | Ver registros | `docker logs -f auditoria-api` |
 | Versión publicada | `docker images auditoria-api` (la etiqueta es el commit) |
 | Volver a una versión anterior | `docker tag auditoria-api:<commit> auditoria-api:latest && cd /data/apps/auditoria && docker compose up -d --force-recreate` |
-| Cambiar una clave o una regla | `sudo bash /data/apps/auditoria/preparar.sh` (Enter conserva) y luego `desplegar.sh` |
+| Cambiar una clave o una regla | `sudo bash /data/apps/auditoria/preparar.sh` (Enter conserva; reescribe el archivo completo: lo agregado a mano fuera de sus preguntas hay que volver a ponerlo) y luego `desplegar.sh`. Para **vaciar** un valor (`OSRM_URL`, `LICENCIAS_TOKEN`): editar `/opt/sulotec/auditoria.env` a mano y `desplegar.sh` |
 | Comparar con Aiven antes de apagarlo | `SOLO_COMPARAR=1 sudo -E bash /data/apps/auditoria/migrar-datos.sh` |
 | Respaldo | La base entra en el respaldo diario de la VM (`mysqldump`); el bucket tiene versionado y llave propia en Oracle |
 | Renovar el mapa de rutas por calles | `sudo bash /data/apps/auditoria/osrm-datos.sh` (construye aparte y recién al final reemplaza; los datos del motor no entran al respaldo: se regeneran) |
+| Licencias de Sulotec: encender, comprobar o apagar | Encender: sección «Licencias de Sulotec» (licencia → token → `preparar.sh` → `desplegar.sh`). Comprobar: `sudo bash /data/apps/auditoria/probar.sh` (bloque «Licencias de Sulotec»: la API llega al servicio) y la franja del panel. Apagar: `LICENCIAS_TOKEN=` vacío a mano en `/opt/sulotec/auditoria.env` y `desplegar.sh` |
 
 ## Rotar claves
 
@@ -151,6 +159,7 @@ anterior. **Apagarlo:** `OSRM_URL` vacío en `preparar.sh` y `desplegar.sh`; el 
 | Clave S3 de `svc-auditoria` (cada 90 días o si se expone) | 1) Cloud Shell: `USR=$(oci iam user list --all --query "data[?name=='svc-auditoria'].id \| [0]" --raw-output); oci iam customer-secret-key create --user-id "$USR" --display-name auditoria-api-2 --query 'data.{ACCESO:id,SECRETO:key}' --output table` (Oracle permite 2 claves por usuario). 2) Servidor: `sudo bash /data/apps/auditoria/rotar-s3.sh` (pide ACCESO y SECRETO, prueba el bucket y vuelve a la anterior si falla). 3) Cloud Shell: borrar la clave anterior (el script imprime el comando exacto). |
 | `MFA_ENCRYPTION_KEY` | **No rotar**: si cambia, nadie puede usar su verificación en dos pasos. Guardarla en el gestor de contraseñas. |
 | `JWT_SECRET` | Se puede cambiar en `/opt/sulotec/auditoria.env` y `desplegar.sh`; cierra todas las sesiones abiertas (los auditores vuelven a entrar). |
+| `LICENCIAS_TOKEN` (token de GeoMatrix en el servicio de licencias) | 1) `sudo docker exec licencias node scripts/token-producto.js geomatrix`: genera uno nuevo y **el anterior deja de valer en ese momento** (hasta terminar, la API no puede consultar el servicio y sigue con la última licencia conocida). 2) `sudo bash /data/apps/auditoria/preparar.sh` (Enter en todo; en «Licencias de Sulotec» pegar el token nuevo) y `desplegar.sh`. 3) `sudo bash /data/apps/auditoria/probar.sh`. |
 
 ## Reglas de seguridad de este producto
 
@@ -177,7 +186,7 @@ anterior. **Apagarlo:** `OSRM_URL` vacío en `preparar.sh` y `desplegar.sh`; el 
 El panel acepta la cuenta de sulotec.com (Keycloak, `cuenta.sulotec.com`): desde **Mis productos**, el botón «Abrir» de Auditoría lleva a
 `https://auditoria.sulotec.com/sso`, el panel canjea el código con Keycloak y emite su propia sesión. **La cuenta Sulotec solo identifica a la
 persona**: el rol y la empresa salen siempre del usuario local de Auditoría que tenga **el mismo correo** (con el correo confirmado en Keycloak).
-Un universal local además necesita que la cuenta Sulotec sea de *Administrador General*. Los auditores de campo siguen entrando solo por la app.
+Un universal local además necesita que la cuenta Sulotec sea de *Administrador Universal* (grupo «Administradores Universales», rol técnico `administrador-general`). Los auditores de campo siguen entrando solo por la app.
 
 | Qué | Dónde |
 |---|---|
@@ -185,6 +194,60 @@ Un universal local además necesita que la cuenta Sulotec sea de *Administrador 
 | Cliente y roles en Keycloak | Los crea `apps/cuenta/ajustar-realm.sh` (workflow *Publicar cuenta*): cliente público `auditoria` (PKCE, redirect `https://auditoria.sulotec.com/sso`), rol `producto-auditoria` y grupo **Clientes - Auditoria de Visitas** |
 | Dar acceso a una persona | 1) En el panel de Auditoría, su usuario debe tener su **correo**. 2) En la consola de cuentas (`cuenta.sulotec.com/admin`), crear o abrir su cuenta con **ese mismo correo** y ponerla en el grupo **Clientes - Auditoria de Visitas** (así el portal le muestra «Abrir»). |
 | Comprobar | `curl -s https://api-auditoria.sulotec.com/api/auth/sso/config` debe responder `{"activo":true,...}`; en sulotec.com → Mis productos → Abrir Auditoría de Visitas entra sin pedir otra contraseña |
+
+## Licencias de Sulotec (cupo de usuarios y estado de la licencia)
+
+GeoMatrix se licencia **por usuarios** (sin tokens). La API consulta el **servicio común de licencias** de Sulotec (contenedor `licencias`, kit
+[`apps/licencias`](../licencias/README.md), en este mismo servidor; solo lo llama la API por la red `sulotec_edge`): antes de crear o reactivar un
+usuario pregunta si hay cupo (si el plan está lleno responde `409 LICENCIA_SIN_CUPO` con el enlace a `sulotec.com/mi-licencia`; el cupo se exige a
+todos, también al administrador universal), reporta cuántos usuarios activos tiene cada empresa (estado `ACTIVO`, de cualquier rol), guarda la
+licencia 5 minutos y bloquea las escrituras de trabajo según el estado: `SOLO_LECTURA` (`403 LICENCIA_SOLO_LECTURA`: se puede consultar, no
+registrar; sí se pueden editar, desactivar o eliminar usuarios y cambiar los ajustes de asignación), `SUSPENDIDA` y `CANCELADA` (todo bloqueado
+salvo las bajas de usuarios). Las lecturas, la cuenta universal de Sulotec, la telemetría GPS de la app, el trazado de rutas y cerrar la jornada
+pasan siempre. El panel y la app muestran la licencia (`GET /api/licencia`; también viene como campo `licencia` en `/api/auth/me`,
+`/api/empresas/actual`, `/api/visitas/config` y `/api/asignaciones/mias`). El criterio completo, para que los demás productos lo copien, está en
+[`docs/licencias/INTEGRACION-PRODUCTOS.md` §8](../../docs/licencias/INTEGRACION-PRODUCTOS.md#8-los-demás-productos).
+
+**Sin el servicio nada se rompe:** si `licencias` no responde, la API sigue con la última licencia conocida. Si la empresa no tiene una licencia
+registrada (`404 SIN_LICENCIA`) **no se bloquea nada** ni se exige cupo: queda un aviso en el log y el administrador ve una franja en el panel.
+Y con `LICENCIAS_TOKEN` vacío las licencias están **apagadas**: no se consulta nada y todo sigue como hoy.
+
+| Variable (`/opt/sulotec/auditoria.env`) | Valor |
+|---|---|
+| `LICENCIAS_URL` | `http://licencias:3200` (el servicio no publica puertos: se llega por la red `sulotec_edge`) |
+| `LICENCIAS_PRODUCTO` | `geomatrix` (clave del producto en el servicio) |
+| `LICENCIAS_TOKEN` | `geomatrix.<secreto>`; lo genera el administrador universal en el servidor (paso 3). **Vacío = apagado** |
+
+**Ponerlo en marcha (una vez), en este orden:**
+
+1. **Comprobar que la empresa es la misma en los tres lados.** El UUID de la empresa en GeoMatrix (tabla `empresas`, columna `id_empresa`) tiene que
+   ser el `empresa_uuid` de su subgrupo en «Empresas» de Keycloak y el que muestra `sulotec.com/licencias`; si no coincide, el servicio responde
+   `SIN_LICENCIA` y el cupo nunca se controla. En GeoMatrix se ve en la pantalla **Empresas** (`/empresas`) del administrador universal, o en la MySQL
+   compartida:
+
+   ```
+   sudo bash -c 'cd /opt/sulotec && docker compose exec -T -e MYSQL_PWD="$(grep "^MYSQL_ROOT_PASSWORD=" .env | cut -d= -f2-)" mysql mysql -uroot auditoria -e "select id_empresa, nombre, slug, estado from empresas"'
+   ```
+
+   En Keycloak: `sudo bash /data/apps/cuenta/empresa.sh --listar` (segunda columna, `empresa_uuid`). Si la empresa todavía no está en Keycloak, se crea
+   con el mismo UUID de GeoMatrix: `sudo bash /data/apps/cuenta/empresa.sh "Caja Huancayo" caja-huancayo auditoria --uuid <id_empresa>`. Si ya está
+   con **otro** UUID, no sigas: `empresa.sh` nunca cambia un UUID ya creado, así que primero hay que decidir cuál de los dos se conserva.
+2. **Registrar la licencia:** `sulotec.com/licencias` → **Nueva licencia**: empresa **Caja Huancayo**, producto **GeoMatrix** y un plan cuyo máximo de
+   usuarios (`usuarios_max`) sea **mayor o igual** a los usuarios activos de hoy (si es menor, nadie podrá crear ni reactivar usuarios hasta ampliarlo).
+3. **Token del producto** (se muestra **una sola vez**: guárdalo en el gestor de contraseñas, nunca en un chat):
+
+   ```
+   sudo docker exec licencias node scripts/token-producto.js geomatrix
+   ```
+
+4. **Configurar la API:** copiar el kit al servidor (paso 2 de la puesta en marcha) y `sudo bash /data/apps/auditoria/preparar.sh`: Enter en todo; en
+   «Licencias de Sulotec» aceptar `http://licencias:3200` y `geomatrix`, y pegar el token (salen asteriscos; el script comprueba que empiece con
+   `geomatrix.`).
+5. `sudo bash /data/apps/auditoria/desplegar.sh` y `sudo bash /data/apps/auditoria/probar.sh` (comprueba que la API llega al servicio de licencias).
+
+**Apagarlo:** dejar `LICENCIAS_TOKEN=` vacío **a mano** en `/opt/sulotec/auditoria.env` (`sudo nano /opt/sulotec/auditoria.env`) y `desplegar.sh`.
+`preparar.sh` no sirve para esto: Enter conserva el valor guardado y no hay forma de vaciarlo desde la pregunta. Y al revés, ojo: `preparar.sh`
+**reescribe el archivo completo** con sus preguntas, así que lo agregado a mano fuera de ellas se pierde y hay que volver a ponerlo.
 
 ## Código en repositorios privados (opcional)
 

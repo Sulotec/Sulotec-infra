@@ -40,7 +40,7 @@
       : '<p class="nota">Este producto se licencia solo por usuarios.</p>';
     return `<article class="licencia" data-producto="${esc(l.producto)}">
       <div class="cabecera"><h3>${esc(l.producto_nombre)}</h3><span class="chip ${estadoClase}">${esc(estadoTexto)}</span></div>
-      <p class="plan">${l.plan ? `Plan ${esc(l.plan)} · ` : ''}${esc(vence)}</p>
+      <p class="plan">${l.plan ? `${/^plan/i.test(l.plan) ? '' : 'Plan '}${esc(l.plan)} · ` : ''}${esc(vence)}</p>
       <div class="medida"><div class="fila"><strong>Usuarios activos</strong><span>${l.usuarios_activos} de ${l.usuarios_max}</span></div>${barra(l.usuarios_activos, l.usuarios_max, l.puede_crear_usuarios ? 'ok' : 'alerta')}
         <p class="nota">${l.puede_crear_usuarios ? 'Puedes crear más sub-usuarios en el producto.' : l.estado === 'ACTIVA' ? 'Llegaste al máximo de usuarios de tu plan.' : 'La licencia no está activa.'}</p></div>
       ${tokens}

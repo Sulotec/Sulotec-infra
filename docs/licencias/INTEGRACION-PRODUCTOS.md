@@ -122,16 +122,20 @@ Cuándo: en el momento de la acción que cuesta, **antes** de ejecutarla (si no 
 - `clave_idempotente` (obligatoria, hasta 200 caracteres): única por acción, `<producto>:<empresa_uuid>:<tipo>:<id de la acción>`. Repetir la
   misma clave devuelve **la misma respuesta** con `"repetido": true` y **no descuenta dos veces**: por eso reintentar es seguro.
 - `tipo` (obligatorio, hasta 60): qué se consumió, en minúsculas con guion bajo. Sale en los reportes de Sulotec y en `/mi-licencia`.
-- `cantidad` (1 a 1000; por defecto 1): la tarifa del producto para esa acción.
+- `cantidad` (1 a 1000; por defecto 1): solo se usa si Sulotec no tiene tarifa para ese `tipo` (ver «Tarifas» abajo).
 - `usuario` (opcional): quién lo hizo, para el detalle por usuario.
 - `hecho_por_sulotec`: `true` cuando quien actúa es el Administrador Universal (rol `administrador-general` de Keycloak o su equivalente local; en
   PLAFT, `ADMINISTRADOR`). Nunca se bloquea y se cuenta aparte.
 - `detalle` (opcional, JSON): lo que el producto quiera guardar.
+- **Tarifas: las pone Sulotec, no el producto.** El costo de cada acción lo decide Sulotec con una **tabla de tarifas** por producto, que el administrador universal edita en `sulotec.com/licencias`. El producto manda el `tipo` de la acción; si hay tarifa para ese tipo, Sulotec descuenta lo que diga la tarifa e ignora la `cantidad` que mande el producto. Si no hay tarifa para ese tipo, se usa la `cantidad` enviada (compatibilidad).
+- La respuesta permitida trae `cobrado` (tokens descontados, puede ser 0). Una tarifa en 0 significa que la acción no descuenta.
+- Una tarifa puede marcarse como «no bloquea»: si se acaban los tokens, la acción pasa igual sin descontar y la respuesta trae `sin_descuento: true` (se usa para el canal de denuncias de PLAFT).
+- `GET /v1/licencias/{uuid}` trae `tarifas: [{ tipo, nombre, tokens, bloquea }]` para que el producto pueda mostrar al cliente qué descuenta tokens. El producto nunca debe escribir costos en su código.
 
 Respuesta `200` permitido:
 
 ```json
-{ "permitido": true, "nivel": "normal", "disponibles": 378, "porcentaje": 24, "capacidad": 500, "usados": 122, "periodo": "2026-11" }
+{ "permitido": true, "cobrado": 1, "nivel": "normal", "disponibles": 378, "porcentaje": 24, "capacidad": 500, "usados": 122, "periodo": "2026-11" }
 ```
 
 Respuesta `200` no permitido (la acción **no** se ejecuta):
@@ -154,7 +158,7 @@ Cuándo: si la acción falló **después** de consumir (por ejemplo el proveedor
 | Producto | `tipo` | `cantidad` |
 |---|---|---|
 | MiRadar 360 | `consulta_reniec`, `ubicar_direccion` | 1 |
-| PLAFT | `busqueda_listas` (solo la primera página), `scoring`, `mensaje_indira` | 1 |
+| PLAFT | Diez tipos: `busqueda_listas`, `lista_pdf`, `scoring`, `matriz_registrar`, `matriz_pdf`, `denuncia_crear`, `denuncia_documentos`, `operacion_registrar`, `operacion_pdf`, `mensaje_indira` (detalle en §7) | 1 |
 | Buscador Interno | `busqueda` | 1 |
 | GeoMatrix | `ubicacion_google` (solo si se enciende Google) | 1 |
 | Dashboard Empresarial | ninguno (solo usuarios) | |
@@ -203,9 +207,24 @@ Cuándo: si la acción falló **después** de consumir (por ejemplo el proveedor
 4. En producción, el Administrador Universal crea la licencia real en `sulotec.com/licencias`, genera el token del producto y lo pone en
    `/opt/sulotec/<kit>.env`.
 
+## Cuentas y acceso: lo decide Sulotec
+
+Todo el manejo de licencias, cuentas, accesos y tokens es exclusivo de Sulotec. El producto solo avisa qué acción se hizo.
+
+- Al crear una licencia con titular en `sulotec.com/licencias`, Sulotec crea la cuenta Sulotec del titular (si no existe) y le manda la invitación para crear su contraseña. No hay que correr scripts en el servidor. En licencias que ya existían, la acción «Invitar al titular» hace lo mismo.
+- Todo producto debe ofrecer el inicio único con la cuenta Sulotec (OpenID Connect + PKCE contra `cuenta.sulotec.com`, un cliente público por producto) además de su login propio.
+- Regla del titular: la primera vez que el titular de la licencia entra por inicio único, el producto crea solo su empresa (con el UUID que da Sulotec) y su usuario administrador de empresa. El producto sabe quién es el titular porque `GET /v1/licencias/{uuid}` trae `titular: { email, nombre }`. El titular nunca queda fuera por falta de cupo.
+- **Todos los usuarios de una empresa entran con cuenta Sulotec.** El titular los agrega desde el producto, donde elige su rol; el producto pide a Sulotec que cree la cuenta y Sulotec manda la invitación al correo. El producto no guarda contraseñas de las cuentas nuevas.
+- El producto llama a `POST /v1/licencias/{uuid}/cuentas` con `{ "correo", "nombre", "reinvitar" }` (token de producto). Responde siempre 200 con `{ "estado", "invitacion", "clave_temporal"?, "mensaje" }`: `estado` es `creada`, `existente`, `otra_empresa`, `sin_empresa`, `sin_keycloak` o `error`; `invitacion` es `correo`, `clave_temporal` o `ninguna`. Con `creada` o `existente` el producto guarda su usuario; con cualquier otro estado no lo guarda y muestra el `mensaje`. Si la empresa no tiene licencia de ese producto responde 404 `SIN_LICENCIA`.
+- El cupo se sigue pidiendo antes, con el endpoint de cupo de siempre.
+- Una persona pertenece a una sola empresa: si el correo ya es de otra empresa, Sulotec responde `otra_empresa`.
+- Las cuentas que ya existían en el producto con contraseña propia siguen entrando con ella hasta que se migren.
+- Los administradores universales de Sulotec (rol `administrador-general` en el token) entran a cualquier producto.
+- **Estado:** implementado en PLAFT (PRs en curso el 2026-11-05); **pendiente en GeoMatrix** (sus auditores de campo entran por la app móvil con usuario y clave propios).
+
 ## 7. PLAFT (conectado: mismo criterio que GeoMatrix, más tokens)
 
-PLAFT se licencia por usuarios y por tokens. Se conecta con el mismo criterio que GeoMatrix (§8) y suma tres acciones que consumen tokens.
+PLAFT se licencia por usuarios y por tokens. Se conecta con el mismo criterio que GeoMatrix (§8) y suma diez acciones que consumen tokens.
 Sulotec es la única verdad: PLAFT no guarda saldos ni decide bolsas.
 
 **Qué se retiró:** el módulo propio de créditos de prueba (Security-Backend `modules/creditos` y Security-FrontEnd `modules/licencias`): el descuento
@@ -214,19 +233,24 @@ avisos), los correos de 80 % y de exceso, el cron de vencimientos y las pantalla
 `licencias_empresa`, `movimientos_credito`, `tarifas_credito` y `avisos_licencia` se quitan de la base con `apps/plaft/deploy/quitar-creditos-prueba.sh`
 (respalda antes).
 
-**Las tres acciones que consumen (1 token cada una)**, pidiendo permiso **antes** de ejecutar la acción:
+**Las diez acciones que consumen tokens**, pidiendo permiso **antes** de ejecutar cada acción. El costo vive en Sulotec y se cambia desde el portal `sulotec.com/licencias`; los números de la tabla son los iniciales:
 
-| Acción | `tipo` | Cuándo |
-|---|---|---|
-| Búsqueda en listas negativas | `busqueda_listas` | Solo la primera página (pagina 0) |
-| Evaluación de scoring | `scoring` | Antes de evaluar |
-| Mensaje a Indira | `mensaje_indira` | Antes de llamar al modelo |
+| tipo | Acción | Tokens (inicial) | Si se acaban |
+|---|---|:---:|---|
+| `busqueda_listas` | Búsqueda en listas negativas (solo la primera página) | 1 | se bloquea |
+| `lista_pdf` | PDF de una coincidencia de listas | 1 | se bloquea |
+| `scoring` | Evaluación de scoring | 2 | se bloquea |
+| `matriz_registrar` | Registrar una matriz de riesgo (los borradores no) | 3 | se bloquea |
+| `matriz_pdf` | PDF de una matriz | 1 | se bloquea |
+| `denuncia_crear` | Registrar una denuncia | 2 | pasa sin descontar |
+| `denuncia_documentos` | Archivos de una denuncia (por lote) | 1 | pasa sin descontar |
+| `operacion_registrar` | Registrar una operación | 2 | se bloquea |
+| `operacion_pdf` | PDF de una operación | 1 | se bloquea |
+| `mensaje_indira` | Mensaje a Indira | 1 | se bloquea |
 
-Nada más consume: ni PDF, ni matrices, ni denuncias, ni operaciones, ni la búsqueda de personas del ML.
+Esta tabla es la que definió el equipo de PLAFT (Henry) para sus cinco módulos, más el mensaje a Indira. PLAFT entra además con la cuenta Sulotec (variables `SSO_ISSUER`, `SSO_CLIENT_ID`, `SSO_REDIRECT_URI` del kit `apps/plaft`).
 
-**Clave idempotente (4.4).** Scoring e Indira: `plaft:<empresa_uuid>:<tipo>:<UUID aleatorio>`. La búsqueda es determinista para que una misma
-búsqueda no cobre dos veces: `plaft:<empresa_uuid>:busqueda_listas:<SHA-256 en hex (32 primeros) de usuario y criterios normalizados>:<ventana de
-dos minutos>`. Un doble clic o recargar la misma búsqueda dentro de la ventana repite la clave y el servicio responde lo mismo con `"repetido": true`.
+**Clave idempotente (4.4).** Es determinista con ventana de dos minutos en las acciones que un reintento del navegador repetiría igual: la búsqueda (`busqueda_listas`) y los tres PDF (`lista_pdf`, `matriz_pdf`, `operacion_pdf`). Un doble clic o recargar dentro de la ventana repite la clave y el servicio responde lo mismo con `"repetido": true`. En los registros la clave es única por petición: scoring, matriz (`matriz_registrar`), denuncia (`denuncia_crear`), archivos de denuncia (`denuncia_documentos`), operación (`operacion_registrar`) y mensaje a Indira. Si la acción falla después de avisar, el aviso se anula con 4.5.
 
 **Sin el servicio (§5.3).** Si no responde (tiempo agotado, red o 5xx), PLAFT permite la acción y encola el consumo con la **misma** clave para
 reintentarlo cada minuto. Si la última licencia conocida está en `SOLO_LECTURA`, `SUSPENDIDA` o `CANCELADA`, responde el 403 que corresponda; si su

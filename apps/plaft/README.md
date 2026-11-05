@@ -182,6 +182,22 @@ ni se exige cupo, y queda un aviso en el registro. Y con `LICENCIAS_TOKEN` vací
 **Apagarlo:** dejar `LICENCIAS_TOKEN=` vacío **a mano** en `/opt/sulotec/plaft.env` (`sudo nano /opt/sulotec/plaft.env`) y correr `sudo bash /data/apps/plaft/desplegar.sh`.
 `preparar.sh` no sirve para esto: Enter conserva el valor guardado. Y al revés, ojo: `preparar.sh` **reescribe el archivo completo** con sus preguntas, así que lo agregado a mano fuera de ellas se pierde y hay que volver a ponerlo.
 
+## Inicio único con la cuenta Sulotec
+
+Se entra a PLAFT con la cuenta de sulotec.com, sin segunda contraseña. El login propio de PLAFT sigue funcionando al lado.
+
+Tres variables en `/opt/sulotec/plaft.env`:
+
+| Variable | Valor por defecto |
+|---|---|
+| `SSO_ISSUER` | `https://cuenta.sulotec.com/realms/sulotec` |
+| `SSO_CLIENT_ID` | `plaft` |
+| `SSO_REDIRECT_URI` | `https://plaft.sulotec.com/sso` |
+
+`preparar.sh` las pregunta y las deja puestas. Con `SSO_ISSUER` vacío el inicio único queda apagado.
+
+La primera vez que entra el titular de la licencia PLAFT, PLAFT crea sola su empresa y su usuario administrador.
+
 ## Carga masiva de listas (PEP, sanciones, investigados, noticias, fraudes)
 
 **La estructura que PLAFT necesita** está en la plantilla [`plantillas/PLANTILLA-Carga-Listas-PLAFT.xlsx`](plantillas/PLANTILLA-Carga-Listas-PLAFT.xlsx). Es lo que se le da a quien provee datos: **una fila = una persona o empresa en una lista**, con 19 columnas (la hoja DICCIONARIO dice en qué tabla de PLAFT cae cada una). PLAFT guarda cada persona una sola vez (por tipo y número de documento) y cada aparición en una lista con su detalle, fechas y, si es PEP, cargo, institución y tipo.

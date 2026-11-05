@@ -63,6 +63,7 @@ export const soluciones: Solucion[] = [
     subdominio: 'plaft.sulotec.com',
     demo: '/demo/plaft',
     publicado: true, // en Oracle (plaft.sulotec.com); el boton del portal lleva alli desde 2026-10-18
+    acceso: 'https://plaft.sulotec.com/sso', // entra con la cuenta Sulotec, ya identificado con su empresa
   },
   {
     clave: 'dashboard',

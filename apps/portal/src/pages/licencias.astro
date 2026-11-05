@@ -60,6 +60,12 @@ import Icon from '../components/Icon.astro';
         <div class="tabla" id="t-productos"></div>
       </section>
 
+      <section class="bloque" id="s-tarifas" hidden>
+        <h2>Tarifas de tokens</h2>
+        <p class="nota">El producto solo avisa qué acción se hizo; aquí se decide cuánto cuesta. El cambio rige para todas las empresas desde ese momento.</p>
+        <div class="tabla" id="t-tarifas"></div>
+      </section>
+
       <section class="bloque">
         <h2>Reglas</h2>
         <p class="nota">Las reglas del modelo como parámetros: cambiarlas aquí no requiere programar y aplica a todos los productos.</p>
@@ -81,6 +87,9 @@ import Icon from '../components/Icon.astro';
   .kicker { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; background: var(--azul-10); color: var(--azul); font-weight: 700; font-size: .85rem; }
   .mensaje { padding: 12px 16px; border-radius: 12px; background: #fde4e5; color: var(--rojo); font-weight: 700; }
   .mensaje.ok { background: #e3f6ea; color: var(--verde); }
+  .mensaje.alerta { background: #fff4d6; color: #9a6a00; }
+  .bloque :global(h3) { font-size: 1rem; color: var(--azul-oscuro); margin: 8px 0 4px; }
+  .bloque[hidden] { display: none; }
   .paneles { display: grid; gap: 22px; }
   .bloque { background: #fff; border-radius: var(--radio); padding: 22px 24px; box-shadow: var(--sombra); display: grid; gap: 14px; }
   .bloque h2 { font-size: 1.25rem; color: var(--azul); }

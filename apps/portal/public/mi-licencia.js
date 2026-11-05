@@ -38,12 +38,17 @@
       ? `<div class="medida"><div class="fila"><strong>Tokens del periodo ${esc(l.periodo)}</strong><span>${t.usados} de ${t.capacidad}</span></div>${barra(t.usados, t.capacidad, nivel[1])}
          <p class="nota ${nivel[1]}">${esc(nivel[0])}${t.extra ? ` · incluye ${t.extra} de paquetes extra` : ''}${t.tolerancia ? ` · ${t.tolerancia} consumidos en tolerancia` : ''}</p></div>`
       : '<p class="nota">Este producto se licencia solo por usuarios.</p>';
+    const costo = (n) => (Number(n) === 0 ? 'sin costo' : `${Number(n)} ${Number(n) === 1 ? 'token' : 'tokens'}`);
+    const tarifas = t && Array.isArray(l.tarifas) && l.tarifas.length
+      ? `<div class="medida"><strong>Qué descuenta tokens</strong><ul class="nota">${l.tarifas.map((x) => `<li>${esc(x.nombre)}: ${esc(costo(x.tokens))}</li>`).join('')}</ul></div>`
+      : '';
     return `<article class="licencia" data-producto="${esc(l.producto)}">
       <div class="cabecera"><h3>${esc(l.producto_nombre)}</h3><span class="chip ${estadoClase}">${esc(estadoTexto)}</span></div>
       <p class="plan">${l.plan ? `${/^plan/i.test(l.plan) ? '' : 'Plan '}${esc(l.plan)} · ` : ''}${esc(vence)}</p>
       <div class="medida"><div class="fila"><strong>Usuarios activos</strong><span>${l.usuarios_activos} de ${l.usuarios_max}</span></div>${barra(l.usuarios_activos, l.usuarios_max, l.puede_crear_usuarios ? 'ok' : 'alerta')}
         <p class="nota">${l.puede_crear_usuarios ? 'Puedes crear más sub-usuarios en el producto.' : l.estado === 'ACTIVA' ? 'Llegaste al máximo de usuarios de tu plan.' : 'La licencia no está activa.'}</p></div>
       ${tokens}
+      ${tarifas}
       <div class="acciones">
         ${t ? `<button type="button" class="boton secundario" data-consumo="${esc(l.producto)}">Ver consumo</button>` : ''}
         <button type="button" class="boton boton-azul" data-ampliar="${esc(l.producto)}">Pedir ampliación</button>

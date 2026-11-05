@@ -116,6 +116,13 @@ else
   aviso "sin LICENCIAS_TOKEN: el cupo de usuarios no se consulta (licencias apagadas)"
 fi
 
+echo "== Inicio unico con la cuenta Sulotec"
+if docker exec plaft-api wget -qO- http://127.0.0.1:8081/api/auth/sso/config 2>/dev/null | grep -q '"activo":true'; then
+  ok "inicio unico con la cuenta Sulotec: activo"
+else
+  aviso "inicio unico apagado: faltan SSO_ISSUER/SSO_CLIENT_ID/SSO_REDIRECT_URI, corre preparar.sh"
+fi
+
 echo
 if [ "$fallos" -eq 0 ]; then echo "TODO BIEN ($avisos aviso(s))."; exit 0; fi
 echo "$fallos prueba(s) fallaron."

@@ -92,6 +92,10 @@ LIC_TOKEN="$(limpiar "${V:-}")"; LIC_TOKEN="${LIC_TOKEN:-$act_lic}"
 if [ -n "$LIC_TOKEN" ] && [[ "$LIC_TOKEN" != "$LIC_PROD."* ]]; then
   echo "LICENCIAS_TOKEN debe empezar con '$LIC_PROD.' (lo genera: sudo docker exec licencias node scripts/token-producto.js $LIC_PROD). Vuelve a correr el script y pegalo completo." >&2; exit 1
 fi
+echo "== Inicio unico con la cuenta Sulotec (cuenta.sulotec.com). Enter = valores de Sulotec"
+pregunta SSO_ISSUER "SSO_ISSUER (emisor del realm)" "https://cuenta.sulotec.com/realms/sulotec"; SSO_ISSUER="$R"
+pregunta SSO_CLIENT_ID "SSO_CLIENT_ID (cliente de Keycloak)" "plaft"; SSO_CLIENT_ID="$R"
+pregunta SSO_REDIRECT_URI "SSO_REDIRECT_URI (vuelta del inicio unico)" "https://plaft.sulotec.com/sso"; SSO_REDIRECT_URI="$R"
 
 if [ ! -f "$OCI_DIR/config" ] || [ ! -f "$OCI_DIR/key.pem" ]; then
   echo "Falta la llave de Oracle en $OCI_DIR. Primero corre:  sudo bash /data/apps/plaft/crear-llave-oci.sh" >&2
@@ -129,6 +133,10 @@ install -m 640 -o root -g docker /dev/null "$ENV" 2>/dev/null || install -m 640 
   echo "LICENCIAS_URL=$LIC_URL"
   echo "LICENCIAS_PRODUCTO=$LIC_PROD"
   echo "LICENCIAS_TOKEN=$LIC_TOKEN"
+  # Inicio unico con la cuenta Sulotec. SSO_ISSUER vacio = apagado
+  echo "SSO_ISSUER=$SSO_ISSUER"
+  echo "SSO_CLIENT_ID=$SSO_CLIENT_ID"
+  echo "SSO_REDIRECT_URI=$SSO_REDIRECT_URI"
   echo "STORAGE_PROVIDER=oracle"
   echo "OCI_REGION=sa-santiago-1"
   echo "OCI_NAMESPACE=axkjo5bh8iys"

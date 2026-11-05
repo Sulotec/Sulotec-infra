@@ -14,7 +14,7 @@
   const periodoActual = () => hoy().slice(0, 7);
   const ESTADOS = { ACTIVA: ['Activa', 'ok'], SOLO_LECTURA: ['Solo lectura', 'alerta'], SUSPENDIDA: ['Suspendida', 'mal'], CANCELADA: ['Cancelada', 'mal'] };
   const REGLAS = { aviso_porcentaje: 'Aviso al % de la bolsa', tolerancia_porcentaje: 'Tolerancia (% sobre la capacidad)', vencimiento_aviso_dias: 'Avisar días antes de vencer', solo_lectura_dias: 'Días en solo lectura', bolsa_extra_vigencia_meses: 'Meses de vigencia de un paquete extra' };
-  let productos = []; let planes = []; let licencias = []; let solicitudes = []; let reglas = [];
+  let productos = []; let planes = []; let licencias = []; let solicitudes = []; let reglas = []; let tarifas = [];
 
   const api = async (ruta, { metodo = 'GET', cuerpo, crudo } = {}) => {
     const t = await window.sulotecCuenta?.token?.();
@@ -56,7 +56,7 @@
         <td><small>${esc(l.titular?.email || '—')}</small></td>
         <td><select data-accion-de="${l.id}" aria-label="Acción sobre la licencia">
           <option value="">Acción…</option><option value="ampliar">Ampliar</option>${t ? '<option value="bolsa_extra">Paquete extra</option>' : ''}
-          <option value="renovar">Renovar</option><option value="cambiar_plan">Cambiar plan</option><option value="titular">Cambiar titular</option>
+          <option value="renovar">Renovar</option><option value="cambiar_plan">Cambiar plan</option><option value="titular">Cambiar titular</option>${l.titular?.email ? '<option value="invitar">Invitar al titular</option>' : ''}
           ${inactiva ? '<option value="reactivar">Reactivar</option>' : '<option value="suspender">Suspender</option>'}<option value="cancelar">Cancelar</option>
           ${t ? '<option value="consumos">Ver consumos</option>' : ''}<option value="ver">Ver como la empresa</option></select></td>
       </tr>`;
@@ -71,6 +71,30 @@
   function pintarProductos() {
     $('#t-productos').innerHTML = `<table><thead><tr><th>Producto</th><th>Licencia por</th><th>Token</th><th></th></tr></thead><tbody>${productos.map((p) => `<tr><td>${esc(p.nombre)} <small class="uuid">${esc(p.clave)}</small></td><td>${p.usa_tokens ? 'usuarios y tokens' : 'usuarios'}</td><td>${p.tiene_token ? `generado ${p.token_rotado_en ? esc(fechaHora(p.token_rotado_en)) : ''}` : '<span class="chip alerta">sin token</span>'}</td><td><button type="button" class="boton secundario chico" data-token="${esc(p.clave)}">${p.tiene_token ? 'Rotar token' : 'Generar token'}</button></td></tr>`).join('')}</tbody></table>`;
   }
+  // Tarifas por accion: si el servicio es viejo (404) o no hay tarifas, la seccion no aparece.
+  function pintarTarifas() {
+    const sec = $('#s-tarifas');
+    if (!sec) return;
+    sec.hidden = !tarifas.length;
+    if (!tarifas.length) return;
+    const grupos = [];
+    tarifas.forEach((t) => { let g = grupos.find((x) => x.producto === t.producto); if (!g) { g = { producto: t.producto, nombre: t.producto_nombre || t.producto, filas: [] }; grupos.push(g); } g.filas.push(t); });
+    $('#t-tarifas').innerHTML = grupos.map((g) => `<h3>${esc(g.nombre)}</h3><table><thead><tr><th>Acción</th><th>Tokens</th><th>Si se acaban los tokens</th><th></th></tr></thead><tbody>${g.filas.sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0)).map((t) => `<tr><td>${esc(t.nombre)} <small class="uuid">${esc(t.tipo)}</small></td><td>${esc(t.tokens)}</td><td>${t.bloquea ? 'Se bloquea' : 'Pasa sin descontar'}</td><td><button type="button" class="boton secundario chico" data-tarifa-prod="${esc(t.producto)}" data-tarifa-tipo="${esc(t.tipo)}">Editar</button></td></tr>`).join('')}</tbody></table>`).join('');
+  }
+  function editarTarifa(prod, tipo) {
+    const t = tarifas.find((x) => x.producto === prod && x.tipo === tipo);
+    if (!t) return;
+    abrir(`Tarifa · ${esc(t.producto_nombre || t.producto)} · ${esc(t.tipo)}`,
+      campo('Nombre de la acción', `<input type="text" name="nombre" maxlength="120" value="${esc(t.nombre)}" required>`)
+      + campo('Tokens que descuenta (0 a 1000; 0 = no descuenta)', `<input type="number" name="tokens" min="0" max="1000" step="1" value="${esc(t.tokens)}" required>`)
+      + campo('Si se acaban los tokens', `<select name="bloquea"><option value="1" ${t.bloquea ? 'selected' : ''}>Se bloquea</option><option value="0" ${t.bloquea ? '' : 'selected'}>Pasa sin descontar</option></select>`)
+      + '<p class="nota">El cambio rige para todas las empresas desde que lo guardes.</p>',
+      (d) => {
+        const n = Number(d.tokens);
+        if (!Number.isInteger(n) || n < 0 || n > 1000) throw new Error('Los tokens deben ser un número entero de 0 a 1000.');
+        return api(`/v1/admin/tarifas/${encodeURIComponent(prod)}/${encodeURIComponent(tipo)}`, { metodo: 'PUT', cuerpo: { nombre: d.nombre.trim(), tokens: n, bloquea: d.bloquea === '1' } });
+      });
+  }
   function pintarReglas() {
     $('#f-reglas').innerHTML = `${reglas.map((r) => campo(esc(REGLAS[r.clave] || r.clave), `<input type="number" min="0" max="1000" name="${esc(r.clave)}" value="${r.valor}" title="${esc(r.descripcion || '')}">`)).join('')}<button type="submit" class="boton boton-azul">Guardar reglas</button>`;
   }
@@ -84,7 +108,9 @@
     try {
       [productos, planes, licencias, solicitudes, reglas] = await Promise.all([api('/v1/admin/productos'), api('/v1/admin/planes'), api('/v1/admin/licencias'), api('/v1/admin/solicitudes?pendientes=1'), api('/v1/admin/reglas')]);
       $('#f-producto').innerHTML = `<option value="">Todos los productos</option>${productos.map((p) => `<option value="${esc(p.clave)}">${esc(p.nombre)}</option>`).join('')}`;
-      pintarLicencias(); pintarSolicitudes(); pintarPlanes(); pintarProductos(); pintarReglas();
+      // Las tarifas son opcionales: con el servicio viejo (404) o cualquier fallo, la seccion simplemente no sale.
+      try { const t = await api('/v1/admin/tarifas'); tarifas = Array.isArray(t) ? t : []; } catch { tarifas = []; }
+      pintarLicencias(); pintarSolicitudes(); pintarPlanes(); pintarProductos(); pintarTarifas(); pintarReglas();
       raiz.hidden = false;
     } catch (e) {
       raiz.hidden = true;
@@ -106,15 +132,34 @@
     dialogo.showModal();
   }
   form.addEventListener('click', (e) => { if (e.target.closest('[data-cerrar]')) dialogo.close(); });
+  // El dialogo de la clave temporal no se cierra con Esc: solo con el boton.
+  let sinEsc = false;
+  dialogo.addEventListener('cancel', (e) => { if (sinEsc) e.preventDefault(); });
+  dialogo.addEventListener('close', () => { sinEsc = false; });
+
+  // Resultado de la cuenta Sulotec del titular (viene al crear/editar una licencia o al invitar).
+  function mostrarTitular(tc) {
+    if (!tc) return;
+    if (tc.invitacion === 'clave_temporal' && tc.clave_temporal) {
+      mostrar('Cuenta del titular creada',
+        `<p>${esc(tc.mensaje || 'Se creó la cuenta Sulotec del titular.')}</p><p class="token">${esc(tc.clave_temporal)}</p><p class="nota">Se muestra una sola vez. Entrégala por un canal seguro; la persona la cambia al entrar.</p>`);
+      sinEsc = true;
+      return;
+    }
+    if (!tc.mensaje) return;
+    const alerta = ['otra_empresa', 'sin_empresa', 'sin_keycloak', 'error'].includes(tc.estado);
+    aviso(alerta ? `La licencia sí quedó guardada, pero: ${tc.mensaje}` : tc.mensaje, alerta ? 'alerta' : 'ok');
+  }
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!alEnviar) return dialogo.close();
     const boton = form.querySelector('button[type=submit]'); const error = form.querySelector('.error');
     boton.disabled = true; error.hidden = true;
     try {
-      await alEnviar(Object.fromEntries(new FormData(form)));
+      const res = await alEnviar(Object.fromEntries(new FormData(form)));
       dialogo.close();
       await cargarTodo();
+      mostrarTitular(res?.titular_cuenta);
     } catch (err) { error.textContent = err.message; error.hidden = false; }
     finally { boton.disabled = false; }
   });
@@ -140,6 +185,7 @@
       case 'titular': return abrir(`Titular · ${esc(l.empresa_nombre)} · ${esc(l.producto_nombre)}`,
         campo('Correo del Administrador General', `<input type="email" name="email" value="${esc(l.titular?.email || '')}" required>`) + campo('Nombre', `<input type="text" name="nombre" value="${esc(l.titular?.nombre || '')}">`),
         (d) => api(`/v1/admin/licencias/${base.id}`, { metodo: 'PATCH', cuerpo: limpio({ accion: 'titular', email: d.email, nombre: d.nombre }) }));
+      case 'invitar': return api(`/v1/admin/licencias/${base.id}/titular/invitar`, { metodo: 'POST' }).then((r) => mostrarTitular(r?.titular_cuenta));
       case 'suspender': return abrir(`Suspender · ${esc(l.empresa_nombre)} · ${esc(l.producto_nombre)}`, '<p>El producto quedará suspendido para esa empresa (los datos se conservan). ¿Seguro?</p>',
         () => api(`/v1/admin/licencias/${base.id}`, { metodo: 'PATCH', cuerpo: { accion: 'suspender' } }), 'Suspender');
       case 'cancelar': return abrir(`Cancelar · ${esc(l.empresa_nombre)} · ${esc(l.producto_nombre)}`, '<p>La licencia queda cancelada (fin del contrato). ¿Seguro?</p>',
@@ -226,6 +272,7 @@
         const r = await api(`/v1/admin/consumos?periodo_desde=${d.get('desde')}&periodo_hasta=${d.get('hasta')}&formato=xlsx`, { crudo: true });
         const url = URL.createObjectURL(await r.blob()); const a = document.createElement('a'); a.href = url; a.download = `consumo-${d.get('desde')}-${d.get('hasta')}.xlsx`; a.click(); URL.revokeObjectURL(url);
       } else if (b.dataset.atender) { await api(`/v1/admin/solicitudes/${b.dataset.atender}`, { metodo: 'PATCH' }); solicitudes = await api('/v1/admin/solicitudes?pendientes=1'); pintarSolicitudes(); }
+      else if (b.dataset.tarifaProd) editarTarifa(b.dataset.tarifaProd, b.dataset.tarifaTipo);
       else if (b.dataset.planActivo) { await api(`/v1/admin/planes/${b.dataset.planActivo}`, { metodo: 'PATCH', cuerpo: { activo: b.dataset.valor === '1' } }); planes = await api('/v1/admin/planes'); pintarPlanes(); }
       else if (b.dataset.token) {
         abrir(`${productos.find((p) => p.clave === b.dataset.token)?.tiene_token ? 'Rotar' : 'Generar'} el token de ${esc(b.dataset.token)}`, '<p>El token anterior deja de valer en cuanto se genera el nuevo. Pégalo en el .env del producto como LICENCIAS_TOKEN y reinícialo.</p>',

@@ -194,7 +194,9 @@ Tres variables en `/opt/sulotec/plaft.env`:
 | `SSO_CLIENT_ID` | `plaft` |
 | `SSO_REDIRECT_URI` | `https://plaft.sulotec.com/sso` |
 
-`preparar.sh` las pregunta y las deja puestas. Con `SSO_ISSUER` vacío el inicio único queda apagado.
+`preparar.sh` las pregunta y las deja puestas: con los valores por defecto el inicio único queda **encendido**. Para apagarlo, hay que dejar `SSO_ISSUER=` vacío a mano en `/opt/sulotec/plaft.env` y volver a desplegar con `sudo bash /data/apps/plaft/desplegar.sh`.
+
+Con el inicio único encendido, las cuentas nuevas no llevan contraseña de PLAFT: Sulotec les manda la invitación al correo.
 
 La primera vez que entra el titular de la licencia PLAFT, PLAFT crea sola su empresa y su usuario administrador.
 

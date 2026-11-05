@@ -75,6 +75,22 @@ for rol in administrador-general producto-auditoria; do
   kc create "clients/$aid/scope-mappings/realm" -r sulotec -b "[{\"id\":\"$id\",\"name\":\"$rol\"}]" >/dev/null 2>&1 || true
 done
 
+# 6b) Cliente "plaft": PLAFT entra con la cuenta Sulotec igual que GeoMatrix (OpenID Connect + PKCE, cliente publico).
+#     Su id_token lleva el correo, los roles (producto-plaft y administrador universal) y la empresa de la persona: con eso PLAFT
+#     reconoce al titular de la licencia la primera vez que entra y le crea su empresa y su usuario.
+if ! kc get clients -r sulotec -q clientId=plaft --fields id --format csv --noquotes | grep -q .; then
+  kc create clients -r sulotec -b '{"clientId":"plaft","name":"PLAFT","description":"Panel web de PLAFT (inicio unico con la cuenta Sulotec)","enabled":true,"publicClient":true,"standardFlowEnabled":true,"implicitFlowEnabled":false,"directAccessGrantsEnabled":false,"serviceAccountsEnabled":false,"fullScopeAllowed":false,"rootUrl":"https://plaft.sulotec.com","baseUrl":"https://plaft.sulotec.com","redirectUris":["https://plaft.sulotec.com/sso","http://localhost:3000/sso"],"webOrigins":["https://plaft.sulotec.com","http://localhost:3000"],"attributes":{"pkce.code.challenge.method":"S256","post.logout.redirect.uris":"https://plaft.sulotec.com/*"}}' >/dev/null
+  echo "Ajuste: cliente plaft creado"
+fi
+plid=$(kc get clients -r sulotec -q clientId=plaft --fields id --format csv --noquotes)
+if ! kc get "clients/$plid/protocol-mappers/models" -r sulotec --fields name --format csv --noquotes | grep -qx roles; then
+  kc create "clients/$plid/protocol-mappers/models" -r sulotec -b '{"name":"roles","protocol":"openid-connect","protocolMapper":"oidc-usermodel-realm-role-mapper","config":{"claim.name":"roles","jsonType.label":"String","multivalued":"true","id.token.claim":"true","access.token.claim":"false","userinfo.token.claim":"false","introspection.token.claim":"false"}}' >/dev/null
+  echo "Ajuste: roles en el token de plaft"
+fi
+for rol in administrador-general producto-plaft; do
+  id=$(kc get "roles/$rol" -r sulotec --fields id --format csv --noquotes)
+  kc create "clients/$plid/scope-mappings/realm" -r sulotec -b "[{\"id\":\"$id\",\"name\":\"$rol\"}]" >/dev/null 2>&1 || true
+done
 # 7) Empresas (clientes de Sulotec). Cada cliente es un subgrupo de "Empresas" con su UUID y sus datos en atributos
 #    (empresa_uuid, empresa_nombre, empresa_slug) y con los roles producto-* que tiene contratados. Los crea y actualiza
 #    empresa.sh (en el servidor); aqui solo se asegura el grupo padre.
@@ -92,7 +108,7 @@ mapper_empresa() {
     echo "Ajuste: claim $attr en el token del cliente $cliente_id"
   fi
 }
-for c in "$cid" "$aid"; do
+for c in "$cid" "$aid" "$plid"; do
   for a in empresa_uuid empresa_nombre empresa_slug; do mapper_empresa "$c" "$a"; done
 done
 
@@ -145,4 +161,4 @@ fi
 kc add-roles -r sulotec --uusername service-account-licencias --cclientid realm-management --rolename query-groups --rolename view-users --rolename manage-users >/dev/null 2>&1 \
   || echo "AVISO: no se pudieron dar los permisos de grupos al cliente licencias (query-groups, view-users, manage-users de realm-management)" >&2
 
-echo "Ajustes aplicados. Registro libre: apagado. Recuperar contrasena: encendido. Inicio unico: cliente auditoria, roles producto-*, grupo Empresas y claims empresa_*."
+echo "Ajustes aplicados. Registro libre: apagado. Recuperar contrasena: encendido. Inicio unico: clientes auditoria y plaft, roles producto-*, grupo Empresas y claims empresa_*."

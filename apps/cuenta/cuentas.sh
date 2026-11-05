@@ -84,7 +84,7 @@ while IFS= read -r linea || [ -n "$linea" ]; do
   fi
 done <<< "$CSV"
 [ "$filas" -gt 1 ] || { echo "El archivo no tiene filas de datos (la primera fila es el encabezado)." >&2; exit 1; }
-if [ $((n_adm + nuevos_universales)) -gt "$MAX_UNIVERSALES" ]; then
+if [ "$nuevos_universales" -gt 0 ] && [ $((n_adm + nuevos_universales)) -gt "$MAX_UNIVERSALES" ]; then
   echo "  administradores universales: hay $n_adm y el archivo agrega $nuevos_universales; el maximo es $MAX_UNIVERSALES"; errores=$((errores+1))
 fi
 if [ "$errores" -gt 0 ]; then echo "Revisa el archivo: $errores error(es). No se creo nada." >&2; exit 1; fi

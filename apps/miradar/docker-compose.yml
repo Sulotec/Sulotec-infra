@@ -12,11 +12,35 @@ services:
     container_name: miradar-api
     restart: unless-stopped
     env_file: /opt/sulotec/miradar.env
+    environment:
+      # Cache de consultas (RRCC-API y personas). Va aqui y no en miradar.env porque preparar.sh reescribe ese archivo.
+      REDIS_URL: redis://redis:6379
     read_only: true
     tmpfs: [/tmp]
     security_opt: ["no-new-privileges:true"]
-    networks: [edge, data]
+    networks: [edge, data, cache]
     mem_limit: 768m
+    depends_on:
+      redis:
+        condition: service_started
+
+  # Cache en memoria para no repetir consultas a la RRCC-API (SQL Server de la oficina) cuando varios clientes piden lo mismo.
+  # Sin disco ni puertos publicados; solo la API la alcanza (red interna "cache"). Si se llena (128 MB) borra lo mas antiguo.
+  redis:
+    image: redis:7-alpine
+    container_name: miradar-redis
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    read_only: true
+    tmpfs: [/tmp, /data]
+    security_opt: ["no-new-privileges:true"]
+    networks: [cache]
+    mem_limit: 192m
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
 
   web:
     image: miradar-web:latest
@@ -35,3 +59,6 @@ networks:
   data:
     external: true
     name: sulotec_data
+  # Solo API <-> Redis; "internal" = sin salida a Internet ni acceso desde otros productos.
+  cache:
+    internal: true

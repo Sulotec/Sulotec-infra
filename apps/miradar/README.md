@@ -23,7 +23,7 @@ desde GitHub (`desplegar.sh`); las bases y las claves nunca van en el repositori
 
 | Archivo | Para qué |
 |---|---|
-| `docker-compose.yml` | API y web: solo lectura, sin privilegios, sin puertos publicados |
+| `docker-compose.yml` | API, web y Redis (cache de la RRCC-API y personas, 128 MB, sin disco, red privada `cache`; la API recibe `REDIS_URL` desde aquí): solo lectura, sin privilegios, sin puertos publicados |
 | `deploy/preparar.sh` | Crea `/opt/sulotec/miradar.env` (claves; solo root y docker pueden leerlo) |
 | `deploy/migrar-datos.sh` | Copia la base de Aiven a la PostgreSQL de la VM y compara tabla por tabla |
 | `deploy/migrar-archivos.sh` | Copia fotos y firmas de Backblaze B2 al bucket de Oracle, con las mismas rutas |

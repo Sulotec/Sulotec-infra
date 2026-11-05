@@ -133,8 +133,14 @@ fi
 #     empresas (subgrupos de "Empresas") y les da los roles producto-* al contratar, como empresa.sh. Su clave NO se
 #     imprime (este script corre en un workflow): la toma preparar.sh del kit apps/licencias directamente del contenedor.
 if ! kc get clients -r sulotec -q clientId=licencias --fields id --format csv --noquotes | grep -q .; then
-  kc create clients -r sulotec -b '{"clientId":"licencias","name":"Servicio de licencias","description":"Cuenta de servicio del servicio de licencias (api-licencias.sulotec.com): lee y crea empresas","enabled":true,"publicClient":false,"serviceAccountsEnabled":true,"standardFlowEnabled":false,"implicitFlowEnabled":false,"directAccessGrantsEnabled":false,"fullScopeAllowed":false}' >/dev/null
+  kc create clients -r sulotec -b '{"clientId":"licencias","name":"Servicio de licencias","description":"Cuenta de servicio del servicio de licencias (api-licencias.sulotec.com): lee y crea empresas","enabled":true,"publicClient":false,"serviceAccountsEnabled":true,"standardFlowEnabled":false,"implicitFlowEnabled":false,"directAccessGrantsEnabled":false,"fullScopeAllowed":true}' >/dev/null
   echo "Ajuste: cliente licencias creado"
+fi
+# El cliente debe tener el alcance completo: con fullScopeAllowed=false el token de su cuenta de servicio NO lleva los roles de
+# realm-management y Keycloak responde 403 al listar los grupos (asi quedo creado al principio; aqui se corrige si ya existia).
+cid_lic=$(kc get clients -r sulotec -q clientId=licencias --fields id --format csv --noquotes | head -1)
+if [ -n "$cid_lic" ]; then
+  kc update "clients/$cid_lic" -r sulotec -s fullScopeAllowed=true >/dev/null && echo "Ajuste: cliente licencias con alcance completo (su token lleva los permisos de grupos)"
 fi
 kc add-roles -r sulotec --uusername service-account-licencias --cclientid realm-management --rolename query-groups --rolename view-users --rolename manage-users >/dev/null 2>&1 \
   || echo "AVISO: no se pudieron dar los permisos de grupos al cliente licencias (query-groups, view-users, manage-users de realm-management)" >&2

@@ -104,6 +104,18 @@ if [ "$permitido" = "$WEB_PUBLICA" ]; then ok "CORS: la web puede llamar a la AP
 ajeno="$(cors "https://sitio-ajeno.example")"
 if [ -z "$ajeno" ]; then ok "CORS: un sitio ajeno NO puede llamar a la API"; else falla "CORS permite un origen ajeno: $ajeno"; fi
 
+echo "== Licencias de Sulotec"
+if grep -qE '^LICENCIAS_TOKEN=.+' /opt/sulotec/plaft.env 2>/dev/null; then
+  # El servicio no publica puertos: se prueba desde dentro de la API, por la misma red y la misma LICENCIAS_URL que usa ella
+  if docker exec plaft-api sh -c 'wget -q -O /dev/null "$LICENCIAS_URL/health"'; then
+    ok "licencias responde: la API llega al servicio de licencias"
+  else
+    falla "LICENCIAS_TOKEN esta configurado pero el servicio de licencias no responde (¿esta levantado el contenedor 'licencias'? mira: docker logs licencias)"
+  fi
+else
+  aviso "sin LICENCIAS_TOKEN: el cupo de usuarios no se consulta (licencias apagadas)"
+fi
+
 echo
 if [ "$fallos" -eq 0 ]; then echo "TODO BIEN ($avisos aviso(s))."; exit 0; fi
 echo "$fallos prueba(s) fallaron."

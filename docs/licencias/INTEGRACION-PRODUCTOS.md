@@ -46,8 +46,9 @@ tolerancia), se cambia una vez en `sulotec.com/licencias → Reglas` y aplica a 
   UUID** en todos los productos y en el servicio de licencias.
 - Dónde verlo: en `sulotec.com/licencias`, debajo del nombre de cada empresa, o con `apps/cuenta/empresa.sh`.
 - Productos con inicio único de Sulotec (GeoMatrix, MiRadar 360, Dashboard): el token de Keycloak trae `empresa_uuid`; se usa tal cual.
-- Productos con login propio (PLAFT hoy): la tabla de empresas del producto necesita una columna `uuid` que el administrador llena una vez por
-  cliente (PLAFT ya la tiene: `Empresa.uuid`, vacía). Sin UUID no hay licencia: el servicio responde 404 `SIN_LICENCIA`.
+- Productos con login propio (PLAFT hoy): cada empresa de PLAFT ya tiene su `uuid` desde que se crea (`Empresa.uuid`, se genera solo). Ese es el
+  UUID que se registra en la cuenta Sulotec con `apps/cuenta/empresa.sh --uuid`, y PLAFT también acepta un UUID al crear o editar la empresa
+  (solo el administrador universal). Sin UUID igual en los dos lados no hay licencia: el servicio responde 404 `SIN_LICENCIA`.
 
 ## 4. Las cinco llamadas (contrato v1)
 
@@ -109,8 +110,8 @@ Cuándo: en el momento de la acción que cuesta, **antes** de ejecutarla (si no 
 
 ```json
 {
-  "clave_idempotente": "plaft:3f1c2a7e-9b1d-4c7a-8e2f-0a1b2c3d4e5f:scoring_evaluar:48213",
-  "tipo": "scoring_evaluar",
+  "clave_idempotente": "plaft:3f1c2a7e-9b1d-4c7a-8e2f-0a1b2c3d4e5f:scoring:48213",
+  "tipo": "scoring",
   "cantidad": 2,
   "usuario": "mperez",
   "hecho_por_sulotec": false,
@@ -153,7 +154,7 @@ Cuándo: si la acción falló **después** de consumir (por ejemplo el proveedor
 | Producto | `tipo` | `cantidad` |
 |---|---|---|
 | MiRadar 360 | `consulta_reniec`, `ubicar_direccion` | 1 |
-| PLAFT | `lista_busqueda` (solo la primera página), `scoring_evaluar`, `matriz_registrar`, `matriz_pdf`, `denuncia_crear`, `denuncia_documentos`, `operacion_registrar`, `operacion_pdf`, `mensaje_indira` | la tarifa del producto (hoy de 1 a 3) |
+| PLAFT | `busqueda_listas` (solo la primera página), `scoring`, `mensaje_indira` | 1 |
 | Buscador Interno | `busqueda` | 1 |
 | GeoMatrix | `ubicacion_google` (solo si se enciende Google) | 1 |
 | Dashboard Empresarial | ninguno (solo usuarios) | |
@@ -164,7 +165,7 @@ Cuándo: si la acción falló **después** de consumir (por ejemplo el proveedor
    en el log. Nunca se bloquea a un cliente por una caída de Sulotec.
 2. **Cupo:** 4.2 antes de crear un usuario. Si `puede_crear` es `false`, el producto responde `409` con «Tu plan llegó al máximo de usuarios» y
    el enlace `https://sulotec.com/mi-licencia`. Después de crear, activar o desactivar: 4.3.
-3. **Consumo:** llamada síncrona con espera máxima de **2 segundos**. Si `permitido` es `false`, la acción no se ejecuta: `BOLSA_AGOTADA` →
+3. **Consumo:** llamada síncrona con espera máxima de **3 segundos**. Si `permitido` es `false`, la acción no se ejecuta: `BOLSA_AGOTADA` →
    `402` con el botón **Ampliar plan** (enlace a `/mi-licencia`); `SOLO_LECTURA`, `SUSPENDIDA` o `SIN_LICENCIA` → `403` con el mensaje del estado.
    Si el servicio **no responde** (tiempo agotado, error de red o 5xx), se **permite** la acción y el consumo entra en una **cola local de
    reintento** con la misma clave idempotente (reintento cada minuto hasta que entre). Si la acción falla después de consumir: 4.5.
@@ -202,52 +203,64 @@ Cuándo: si la acción falló **después** de consumir (por ejemplo el proveedor
 4. En producción, el Administrador Universal crea la licencia real en `sulotec.com/licencias`, genera el token del producto y lo pone en
    `/opt/sulotec/<kit>.env`.
 
-## 7. Caso PLAFT: qué cambia en `modules/creditos` (Security-Backend) y `modules/licencias` (Security-FrontEnd)
+## 7. PLAFT (conectado: mismo criterio que GeoMatrix, más tokens)
 
-**Se queda tal cual:** las tarifas por acción (`AccionCredito`, `tarifas_credito`), el punto donde cada módulo llama a `consumir(...)`, las
-excepciones `SaldoInsuficienteException` (402), `LicenciaVencidaException` (403) y `CupoUsuariosExcedidoException` (409), y las pantallas
-`CreditosWidget`, `LicenciaBanner`, `HistorialConsumosModal`, `NotificacionesBell` y `SaldoInsuficienteModal`.
+PLAFT se licencia por usuarios y por tokens. Se conecta con el mismo criterio que GeoMatrix (§8) y suma tres acciones que consumen tokens.
+Sulotec es la única verdad: PLAFT no guarda saldos ni decide bolsas.
 
-**Cambia:**
+**Qué se retiró:** el módulo propio de créditos de prueba (Security-Backend `modules/creditos` y Security-FrontEnd `modules/licencias`): el descuento
+local, el endpoint que recibía la bolsa (`/api/licencias/sincronizar`), los endpoints `/api/licencias/*` (mi-bolsa, empresas/{id}, movimientos,
+avisos), los correos de 80 % y de exceso, el cron de vencimientos y las pantallas de saldo, banner, historial, campana y recarga. Las tablas
+`licencias_empresa`, `movimientos_credito`, `tarifas_credito` y `avisos_licencia` se quitan de la base con `apps/plaft/deploy/quitar-creditos-prueba.sh`
+(respalda antes).
 
-| Hoy | Debe quedar |
-|---|---|
-| `CreditoService.consumir` descuenta en `licencias_empresa` y decide el 80 % y el exceso | Llama a 4.4 con `cantidad = costo`, `tipo = accion.name.lowercase()`, `clave_idempotente = "plaft:" + uuid + ":" + tipo + ":" + referencia` (la referencia debe ser única por acción: id de la operación, del scoring, de la matriz o de la denuncia; si no hay, un UUID aleatorio generado una sola vez por intento). `permitido = false` → `SaldoInsuficienteException` si `BOLSA_AGOTADA`, `LicenciaVencidaException` en los demás motivos. Sin respuesta en 2 s → permite y encola (tabla `consumos_pendientes` o la misma `movimientos_credito` con estado `PENDIENTE` y un `@Scheduled` cada minuto que reintenta con la misma clave) |
-| El `ADMINISTRADOR` (Sulotec) está exento y no se registra nada | Se llama igual, con `hecho_por_sulotec = true` |
-| La empresa se busca por nombre (`findByNombreIgnoreCase`) | Por `Empresa.uuid` (el UUID de Keycloak, que el administrador llena en Administración → Empresas; sin él no hay licencia) |
-| `POST /api/licencias/sincronizar` recibe la bolsa que Sulotec «empuja» | Se elimina. En su lugar, 4.1 cada 5 minutos (caché en memoria o `licencias_empresa` como copia: `creditos_totales ← tokens.capacidad`, `creditos_consumidos ← tokens.usados`, `cupo_usuarios ← usuarios_max`, `fecha_vencimiento ← vencimiento`, estado ← `estado`) |
-| `GET /api/licencias/mi-bolsa` y `/empresas/{id}` leen `licencias_empresa` | Devuelven la copia de 4.1 con los campos de hoy: `creditosTotales = capacidad`, `creditosConsumidos = usados`, `creditosDisponibles = disponibles`, `porcentajeConsumo = porcentaje`, `enExceso = (nivel == "tolerancia")`, `exceso = tokens.tolerancia`, `toleranciaCreditos = tolerancia_max`, `cupoUsuarios = usuarios_max`, `usuariosActivos = usuarios_activos`, `fechaVencimiento = vencimiento`, `diasParaVencer = dias_para_vencer`, `estado` |
-| `verificarVencimientosProgramados` y los avisos del 80 % y del exceso con correo | Se eliminan: los decide y manda el servicio. La campana (`avisos_licencia`) se alimenta de los cambios de `nivel`, `estado` y `dias_para_vencer` al refrescar, sin correos |
-| `validarCupoUsuarios` cuenta usuarios locales contra `cupo_usuarios` | 4.2 antes de crear; 4.3 después de crear, activar o desactivar |
-| Frontend: `recargarCreditos`, `configurarLicencia` y sus pantallas para el `ADMINISTRADOR` dentro de PLAFT | Se quitan: eso vive en `sulotec.com/licencias`. Las tarifas pueden seguir editables por el `ADMINISTRADOR` porque son del producto. El banner y la campana usan los textos del §5 y el botón «Ampliar plan» abre `https://sulotec.com/mi-licencia` |
-| `docs/CREDITOS-Y-LICENCIAS.md`, tabla 1: «Sulotec Central envía asignación» | Sulotec no envía nada: PLAFT consulta al servicio |
+**Las tres acciones que consumen (1 token cada una)**, pidiendo permiso **antes** de ejecutar la acción:
 
-Configuración en producción (la pone Sulotec en `/opt/sulotec/plaft.env`): `LICENCIAS_URL=http://licencias:3200`, `LICENCIAS_TOKEN=<token>`,
-`LICENCIAS_PRODUCTO=plaft`. Esqueleto del cliente en Kotlin, sin dependencias nuevas (orientativo):
+| Acción | `tipo` | Cuándo |
+|---|---|---|
+| Búsqueda en listas negativas | `busqueda_listas` | Solo la primera página (pagina 0) |
+| Evaluación de scoring | `scoring` | Antes de evaluar |
+| Mensaje a Indira | `mensaje_indira` | Antes de llamar al modelo |
 
-```kotlin
-class LicenciasClient(private val url: String, private val token: String) {
-    private val http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build()
-    private val json = jacksonObjectMapper()
+Nada más consume: ni PDF, ni matrices, ni denuncias, ni operaciones, ni la búsqueda de personas del ML.
 
-    /** null = el servicio no respondió bien: el que llama permite la acción y encola el consumo. */
-    fun consumir(empresaUuid: String, cuerpo: Map<String, Any?>): JsonNode? = try {
-        val req = HttpRequest.newBuilder(URI("$url/v1/licencias/$empresaUuid/consumos"))
-            .timeout(Duration.ofSeconds(2))
-            .header("Authorization", "Bearer $token")
-            .header("Content-Type", "application/json")
-            .POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(cuerpo)))
-            .build()
-        val res = http.send(req, HttpResponse.BodyHandlers.ofString())
-        when (res.statusCode()) {
-            200 -> json.readTree(res.body())                       // permitido true/false
-            404 -> throw LicenciaVencidaException("SIN_LICENCIA", "La empresa no tiene PLAFT contratado en Sulotec.")
-            400 -> throw IllegalArgumentException(json.readTree(res.body())["mensaje"].asText())
-            else -> { log.warn("licencias respondió {} en consumos", res.statusCode()); null }   // 401, 5xx: tratar como caída
-        }
-    } catch (e: IOException) { log.warn("licencias sin respuesta: {}", e.message); null }
-}
-```
+**Clave idempotente (4.4).** Scoring e Indira: `plaft:<empresa_uuid>:<tipo>:<UUID aleatorio>`. La búsqueda es determinista para que una misma
+búsqueda no cobre dos veces: `plaft:<empresa_uuid>:busqueda_listas:<SHA-256 en hex (32 primeros) de usuario y criterios normalizados>:<ventana de
+dos minutos>`. Un doble clic o recargar la misma búsqueda dentro de la ventana repite la clave y el servicio responde lo mismo con `"repetido": true`.
+
+**Sin el servicio (§5.3).** Si no responde (tiempo agotado, red o 5xx), PLAFT permite la acción y encola el consumo con la **misma** clave para
+reintentarlo cada minuto. Si la última licencia conocida está en `SOLO_LECTURA`, `SUSPENDIDA` o `CANCELADA`, responde el 403 que corresponda; si su
+`tokens.nivel` es `bloqueado`, responde 402. Si nunca se conoció una licencia, se trata como activa. Si la acción falla después de consumir, se anula
+con 4.5; si la anulación tampoco responde, se encola. Un `401` se registra como error de configuración (token mal puesto).
+
+**Guard de escrituras (§8 D1 a D5), con las excepciones de PLAFT.** Solo se revisan POST, PUT, PATCH y DELETE. Siempre pasan: las lecturas (GET,
+HEAD, OPTIONS), las peticiones sin autenticar, el rol `ADMINISTRADOR` de Sulotec, `/api/auth/**`, `/api/public/**`, `/api/licencia`, `/api/empresas/**`,
+el canal de denuncias (crear denuncia, consultarla por su código y subir archivos: la licencia nunca lo corta) y los cálculos sin guardar
+(`calcular-inherente` y `calcular-residual`). Con `SOLO_LECTURA` se bloquea el resto con `403 LICENCIA_SOLO_LECTURA`, salvo desactivar usuarios e
+invitar. Con `SUSPENDIDA` (`403 LICENCIA_SUSPENDIDA`) o `CANCELADA` (`403 LICENCIA_CANCELADA`) se bloquea el resto, salvo desactivar usuarios.
+Sin licencia registrada o con licencias apagadas, todo pasa. La búsqueda en listas es un GET: la bloquea el propio consumo (403 si no está permitido).
+
+**Cupo de usuarios (4.2 y 4.3, §8 D6 y D7).** Se exige a todos, también al `ADMINISTRADOR`. Antes de crear una cuenta, reactivar una inactiva,
+mover una cuenta activa a otra empresa y en la carga masiva (las cuentas válidas del lote no pueden pasar del cupo libre). Sin cupo: `409
+LICENCIA_SIN_CUPO` con `activos`, `usuarios_max` y `enlace`. Después de crear, activar, desactivar, mover o cargar en lote, reporta los activos de
+cada empresa afectada (después de guardar y sin demorar la respuesta), y al arrancar, de todas las empresas activas con UUID. Usuario activo =
+fila de `usuarios` con `activo = true` de esa empresa, de cualquier rol.
+
+**Licencia pública (C1).** `GET /api/licencia` (cualquier rol; `?refrescar=1` fuerza leer) devuelve `exento`, `empresa` y `licencia`. Si `licencia`
+es `null`, las licencias están apagadas o no hay información y el front no muestra nada.
+
+**Errores (C2).** El JSON de siempre (`timestamp`, `status`, `error`, `message`, `path`) más, cuando aplica, `code`, `enlace`, `estado`, `activos` y
+`usuarios_max`: `402 LICENCIA_BOLSA_AGOTADA`; `403 LICENCIA_SOLO_LECTURA`, `LICENCIA_SUSPENDIDA` o `LICENCIA_CANCELADA`; `409 LICENCIA_SIN_CUPO`. El
+`enlace` (`https://sulotec.com/mi-licencia`, o `https://sulotec.com/licencias` si quien actúa es el administrador de Sulotec) va en los tres.
+
+**UUID de la empresa (§3).** Se toma de `Empresa.uuid` de PLAFT, buscando la empresa por su nombre (la cuenta del usuario lleva la empresa como
+texto). Sin UUID no se consulta ni se consume nada. El administrador de Sulotec sin empresa no consulta ni consume nada tampoco. Sus consumos
+(cuando tiene empresa) van con `hecho_por_sulotec = true` y nunca se bloquean. `POST /api/empresas` y `PUT /api/empresas/{id}` aceptan un `uuid`
+opcional (solo administrador universal) para igualarlo al de la cuenta Sulotec.
+
+**Configuración** (la pone `apps/plaft/deploy/preparar.sh` en `/opt/sulotec/plaft.env`): `LICENCIAS_URL=http://licencias:3200`,
+`LICENCIAS_PRODUCTO=plaft` y `LICENCIAS_TOKEN=plaft.<secreto>` (vacío = apagado). La puesta en marcha está en
+[`apps/plaft/README.md`](../../apps/plaft/README.md#licencias-de-sulotec-usuarios-y-tokens).
 
 ## 8. Los demás productos
 

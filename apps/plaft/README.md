@@ -29,7 +29,7 @@ pantallas responden "servicio no disponible". Se instala con el paso 8 y `desple
 | `deploy/crear-llave-oci.sh` | Crea en el servidor la llave de API de `svc-plaft` (la privada no sale de aquí) y prueba el bucket |
 | `deploy/preparar.sh` | Crea `/opt/sulotec/plaft.env` (claves; solo root y docker lo leen) |
 | `deploy/desplegar.sh` | Baja el código, construye, levanta y vuelve a la versión anterior si algo falla |
-| `deploy/probar.sh` | Pruebas de humo: salud, rutas cerradas, base, IA (si está instalada), almacenamiento, direcciones públicas y CORS |
+| `deploy/probar.sh` | Pruebas de humo: salud, rutas cerradas, base, IA (si está instalada), almacenamiento, direcciones públicas, CORS y servicio de licencias |
 | `deploy/preparar-ml.sh` | Crea `/opt/sulotec/plaft-ml.env` de la IA (usa la misma clave interna que ya tiene `plaft.env`) |
 | `deploy/restaurar-ml.sh` | Carga en la base `plaft_ml` un respaldo `pg_dump -Fc` de `security_ml` (todo o nada) |
 | `deploy/cargar-datos.sh` | Carga las listas (colorimetría), las sancionadas de la SBS (Excel) y las figuras políticas con sus casos en prensa (base de la IA); simula por defecto y respalda antes de escribir |
@@ -41,6 +41,7 @@ pantallas responden "servicio no disponible". Se instala con el paso 8 y `desple
 | `deploy/cargar-operaciones-demo.sh` | Carga 10 registros ficticios en Operaciones (el script de demostración del backend) para probar ese módulo |
 | `deploy/asignar-empresa.sh` | Pone empresa a los usuarios que no tienen (o a los que se le indiquen): Operaciones filtra por la empresa del usuario y sin empresa no deja entrar; es solo para pruebas. Desde que la web tiene la pantalla **Administración** (lista de empresas y cuentas), cada cuenta nueva se crea ya con su empresa; este script queda para dejar de una vez a las cuentas viejas |
 | `deploy/limpiar-cuentas-prueba.sh` | Borra las cuentas de prueba (todas menos `superadmin` y las de `CONSERVAR`) con sus registros ligados, para volver a crearlas limpias con la carga masiva; simula por defecto y con `--aplicar` respalda antes de borrar |
+| `deploy/quitar-creditos-prueba.sh` | Quita de la base las cuatro tablas del módulo de créditos de prueba retirado (`licencias_empresa`, `movimientos_credito`, `tarifas_credito`, `avisos_licencia`); simula por defecto y con `--aplicar` respalda la base antes de borrar. Ver «Licencias de Sulotec» |
 | `deploy/resetear-clave.sh` | Pone una clave nueva a una cuenta (por ejemplo la del administrador inicial `superadmin` si no se guardó): `sudo bash /data/apps/plaft/resetear-clave.sh superadmin`. La genera en el servidor, la canjea contra la propia API (que la guarda cifrada) y la muestra **una sola vez** en pantalla; no pasa por el correo ni queda en archivos |
 | `deploy/ejemplos-para-probar.sh` | Muestra ejemplos reales de lo cargado (qué buscar, qué cuentas, denuncias, operaciones, matrices) para probar cada módulo de la web |
 | `deploy/importar-dev.sh` | Trae a este servidor la base de desarrollo de Aiven (el respaldo) en bases `aiven_*` y la compara con producción, sin tocarla |
@@ -120,6 +121,67 @@ las relaciones con identificadores nuevos. **No pasa** las cuentas que usan una 
 (`docs/operaciones-demo.sql` del backend; no se repite si ya hay). Operaciones muestra solo los registros de la **empresa del usuario** que entró, y los de demostración quedan a nombre del usuario de menor id: si al abrir el módulo dice que no tienes empresa, o sale vacío, `sudo bash /data/apps/plaft/asignar-empresa.sh` (o con los nombres: `... asignar-empresa.sh admin001 lavado_pru`) les asigna la misma empresa (con la pantalla **Administración** de la web, solo para administradores, también se hace desde ahí: Cuentas → Editar). Para pasar **toda** la base de desarrollo (incluidas las personas y listas de demostración, las cuentas de prueba y las
 denuncias de prueba): `sudo env CON_DENUNCIAS=1 bash /data/apps/plaft/pasar-dev-a-produccion.sh --aplicar`. Antes de salir con clientes reales hay que desactivar las cuentas de prueba.
 
+## Licencias de Sulotec (usuarios y tokens)
+
+PLAFT se licencia por **usuarios** y por **tokens**. La API consulta el **servicio común de licencias** de Sulotec (contenedor `licencias`, kit
+[`apps/licencias`](../licencias/README.md), en este mismo servidor; solo lo llama la API por la red `sulotec_edge`) con el mismo criterio que GeoMatrix, más los tokens:
+
+- **Cupo de usuarios:** antes de crear o reactivar una cuenta, de mover una cuenta activa a otra empresa y en la carga masiva, pregunta si hay cupo.
+  Si el plan está lleno responde `409 LICENCIA_SIN_CUPO` con el enlace a `sulotec.com/mi-licencia`. El cupo se exige a todos, también al administrador
+  de Sulotec. Reporta cuántos usuarios activos tiene cada empresa.
+- **Tokens:** tres acciones consumen **1 token** cada una y piden permiso antes de ejecutarse: la búsqueda en listas negativas (solo la primera página),
+  la evaluación de scoring y el mensaje a Indira. Nada más consume: ni PDF, ni matrices, ni denuncias, ni operaciones, ni la búsqueda de personas.
+  Si se acaba la bolsa del mes (incluida la tolerancia), responde `402 LICENCIA_BOLSA_AGOTADA` con el enlace a `sulotec.com/mi-licencia`.
+- **Estados:** `SOLO_LECTURA` (`403 LICENCIA_SOLO_LECTURA`: se puede consultar, no registrar; sí se pueden desactivar usuarios e invitarlos),
+  `SUSPENDIDA` y `CANCELADA` (`403`: todo bloqueado salvo desactivar usuarios). Nunca se cortan las lecturas, el canal de denuncias (crear una denuncia,
+  consultarla por su código y subir sus archivos), el cálculo de matrices sin guardar, el inicio de sesión ni el administrador de Sulotec.
+
+**Sin el servicio nada se rompe:** si `licencias` no responde, PLAFT sigue con la última licencia conocida y **encola** los consumos para mandarlos
+después con la misma clave, así que no se cobran dos veces. Si la empresa no tiene una licencia registrada (`404 SIN_LICENCIA`), no se bloquea nada
+ni se exige cupo, y queda un aviso en el registro. Y con `LICENCIAS_TOKEN` vacío las licencias están **apagadas**: no se consulta nada.
+
+| Variable (`/opt/sulotec/plaft.env`) | Valor |
+|---|---|
+| `LICENCIAS_URL` | `http://licencias:3200` (el servicio no publica puertos: se llega por la red `sulotec_edge`) |
+| `LICENCIAS_PRODUCTO` | `plaft` (clave del producto en el servicio) |
+| `LICENCIAS_TOKEN` | `plaft.<secreto>`; lo genera el administrador universal en el servidor (paso 3). **Vacío = apagado** |
+
+**Ponerlo en marcha (una vez), en este orden:**
+
+1. **Ver el UUID de cada empresa en PLAFT.** Ese UUID es el que hay que registrar en la cuenta Sulotec. La consulta lee la base con la clave que
+   ya guarda `plaft.env`:
+
+   ```
+   sudo bash -c 'DB_PASSWORD="$(grep "^DB_PASSWORD=" /opt/sulotec/plaft.env | cut -d= -f2-)"; MYSQL_PWD="$DB_PASSWORD" docker run --rm --network sulotec_data -e MYSQL_PWD mysql:8.4 mysql -h mysql -uplaft -e "select id, nombre, uuid, activa from empresas order by nombre" plaft'
+   ```
+
+   Después registra cada empresa en la cuenta Sulotec con ese **mismo** UUID (si la empresa ya existe en Keycloak, `empresa.sh` deja el UUID que tiene):
+
+   ```
+   sudo bash /data/apps/cuenta/empresa.sh "Caja Piura" caja-piura plaft --uuid <uuid de la empresa>
+   sudo bash /data/apps/cuenta/empresa.sh --listar
+   ```
+
+   Si una empresa ya está en Keycloak con **otro** UUID, no sigas: `empresa.sh` nunca cambia un UUID ya creado, así que primero hay que decidir cuál de los dos se conserva.
+2. **Registrar la licencia:** en `sulotec.com/licencias` crear el **plan de PLAFT** (usuarios máximos y tokens por mes) y la **licencia** de cada empresa.
+   El máximo de usuarios tiene que ser **mayor o igual** a los usuarios activos de hoy; si es menor, nadie podrá crear ni reactivar cuentas hasta ampliarlo.
+3. **Token del producto** (se muestra **una sola vez**: guárdalo en el gestor de contraseñas, nunca en un chat):
+
+   ```
+   sudo docker exec licencias node scripts/token-producto.js plaft
+   ```
+
+4. **Configurar la API:** copiar el kit al servidor (paso 1 de la puesta en marcha) y `sudo bash /data/apps/plaft/preparar.sh`. Enter en todo; en
+   «Licencias de Sulotec» aceptar `http://licencias:3200` y `plaft`, y pegar el token (salen asteriscos; el script comprueba que empiece con `plaft.`).
+5. `sudo bash /data/apps/plaft/desplegar.sh` y `sudo bash /data/apps/plaft/probar.sh` (bloque «Licencias de Sulotec»: comprueba que la API llega al servicio).
+6. **Quitar los créditos de prueba:** la simulación `sudo bash /data/apps/plaft/quitar-creditos-prueba.sh` muestra qué tablas se borrarían; si se ve bien,
+   `sudo bash /data/apps/plaft/quitar-creditos-prueba.sh --aplicar` respalda la base y las quita.
+
+**Cambiar el token:** repetir los pasos 3, 4 y 5. El token anterior deja de valer en cuanto se genera el nuevo; mientras tanto la API sigue con la última licencia conocida.
+
+**Apagarlo:** dejar `LICENCIAS_TOKEN=` vacío **a mano** en `/opt/sulotec/plaft.env` (`sudo nano /opt/sulotec/plaft.env`) y correr `sudo bash /data/apps/plaft/desplegar.sh`.
+`preparar.sh` no sirve para esto: Enter conserva el valor guardado. Y al revés, ojo: `preparar.sh` **reescribe el archivo completo** con sus preguntas, así que lo agregado a mano fuera de ellas se pierde y hay que volver a ponerlo.
+
 ## Carga masiva de listas (PEP, sanciones, investigados, noticias, fraudes)
 
 **La estructura que PLAFT necesita** está en la plantilla [`plantillas/PLANTILLA-Carga-Listas-PLAFT.xlsx`](plantillas/PLANTILLA-Carga-Listas-PLAFT.xlsx). Es lo que se le da a quien provee datos: **una fila = una persona o empresa en una lista**, con 19 columnas (la hoja DICCIONARIO dice en qué tabla de PLAFT cae cada una). PLAFT guarda cada persona una sola vez (por tipo y número de documento) y cada aparición en una lista con su detalle, fechas y, si es PEP, cargo, institución y tipo.
@@ -154,6 +216,8 @@ sudo bash si/apps/plaft/deploy/cargar-listas.sh --aplicar    # respalda la base 
 | Cambiar una clave | `sudo bash /data/apps/plaft/preparar.sh` (Enter conserva) y luego `desplegar.sh` |
 | Rotar la clave de la base | `sudo /opt/sulotec/scripts/rotar-claves.sh` rota `postgres` y `mysql`; para el usuario `plaft` de MySQL: `ALTER USER` y `preparar.sh` |
 | Rotar la llave de Oracle | Borrar `/opt/sulotec/plaft-oci/config`, correr `crear-llave-oci.sh` y `desplegar.sh`; después borrar la llave vieja en Oracle |
+| Rotar el token de licencias | `sudo docker exec licencias node scripts/token-producto.js plaft` (el anterior deja de valer), luego `sudo bash /data/apps/plaft/preparar.sh` (pegar el token nuevo) y `desplegar.sh` |
+| Licencias de Sulotec: encender, comprobar o apagar | Encender: sección «Licencias de Sulotec». Comprobar: `probar.sh` (bloque «Licencias de Sulotec») y la franja de licencia en la web. Apagar: `LICENCIAS_TOKEN=` vacío a mano en `/opt/sulotec/plaft.env` y `desplegar.sh` |
 
 ## Reglas de seguridad de este producto
 

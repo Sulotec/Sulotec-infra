@@ -83,6 +83,15 @@ else
   echo "   La base ya tiene datos: no se crea ningun usuario inicial."
 fi
 pregunta APP_SEED_ADMIN_EMAIL "Correo del administrador inicial" "serviciosdigitales@informaperu.com"; ADMIN_MAIL="$R"
+echo "== Licencias de Sulotec (cupo de usuarios y estado de la licencia de PLAFT). Token vacio = licencias apagadas"
+pregunta LICENCIAS_URL "LICENCIAS_URL" "http://licencias:3200"; LIC_URL="$R"
+pregunta LICENCIAS_PRODUCTO "LICENCIAS_PRODUCTO" "plaft"; LIC_PROD="$R"
+act_lic="$(actual LICENCIAS_TOKEN)"
+leer_secreto "LICENCIAS_TOKEN (lo da: sudo docker exec licencias node scripts/token-producto.js plaft) [Enter = $([ -n "$act_lic" ] && echo conservar || echo vacio)]: "
+LIC_TOKEN="$(limpiar "${V:-}")"; LIC_TOKEN="${LIC_TOKEN:-$act_lic}"
+if [ -n "$LIC_TOKEN" ] && [[ "$LIC_TOKEN" != "$LIC_PROD."* ]]; then
+  echo "LICENCIAS_TOKEN debe empezar con '$LIC_PROD.' (lo genera: sudo docker exec licencias node scripts/token-producto.js $LIC_PROD). Vuelve a correr el script y pegalo completo." >&2; exit 1
+fi
 
 if [ ! -f "$OCI_DIR/config" ] || [ ! -f "$OCI_DIR/key.pem" ]; then
   echo "Falta la llave de Oracle en $OCI_DIR. Primero corre:  sudo bash /data/apps/plaft/crear-llave-oci.sh" >&2
@@ -116,6 +125,10 @@ install -m 640 -o root -g docker /dev/null "$ENV" 2>/dev/null || install -m 640 
   echo "ML_BASE_URL=http://plaft-ml:8000"
   echo "ML_API_KEY=$MLKEY"
   [ -z "$MLT" ] || echo "ML_CHATTIMEOUTSECONDS=$MLT"
+  # Siempre las tres, aunque el token este vacio: vacio = licencias apagadas, y asi probar.sh y quien lea el env lo ven explicito
+  echo "LICENCIAS_URL=$LIC_URL"
+  echo "LICENCIAS_PRODUCTO=$LIC_PROD"
+  echo "LICENCIAS_TOKEN=$LIC_TOKEN"
   echo "STORAGE_PROVIDER=oracle"
   echo "OCI_REGION=sa-santiago-1"
   echo "OCI_NAMESPACE=axkjo5bh8iys"

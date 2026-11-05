@@ -9,6 +9,9 @@
 # No tiene ruta en Cloudflare ni puertos publicados: solo plaft-api lo llama, con la clave interna, por la red sulotec_data.
 # Indira y la deteccion de casos en prensa usan un modelo de lenguaje local (Ollama, perfil "ia"): corre en este servidor, ningun dato sale a terceros.
 # Ollama solo comparte la red "ia" con plaft-ml (ninguna otra aplicacion puede usarlo). Se instala con deploy/activar-indira.sh.
+# Licencias de Sulotec (cupo de usuarios y tokens): plaft-api llama a LICENCIAS_URL (http://licencias:3200) por la red edge
+# (sulotec_edge; el servicio licencias no publica puertos). Con LICENCIAS_TOKEN vacío las licencias están apagadas: no se consulta
+# ni se bloquea nada. Las tres variables LICENCIAS_* las escribe deploy/preparar.sh en /opt/sulotec/plaft.env.
 name: plaft
 
 services:

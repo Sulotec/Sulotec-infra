@@ -32,6 +32,7 @@ Cuenta: `informaperu2@gmail.com` (pendiente: 2FA). Plan **Free**; Zero Trust Fre
 | `api-auditoria.sulotec.com` | `http://auditoria-api:4100` | Auditoría de Visitas (API, con WebSockets) |
 | `dashboards.sulotec.com` | `http://dashboard-web:3000` | Dashboard Empresarial (web) |
 | `api-dashboards.sulotec.com` | `http://dashboard-api:3100` | Dashboard Empresarial (API) |
+| `api-indira.sulotec.com` | `http://indira:3300` | Indira, la asistente del portal (API con SSE; **agregar al instalar `apps/indira`**) |
 
 **Agregar una aplicación nueva:**
 1. Su contenedor debe estar en la red `sulotec_edge`, con un `container_name`.

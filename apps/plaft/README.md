@@ -198,6 +198,14 @@ Tres variables en `/opt/sulotec/plaft.env`:
 
 Con el inicio único encendido, las cuentas nuevas no llevan contraseña de PLAFT: Sulotec les manda la invitación al correo.
 
+### Oficial de Cumplimiento: clave de cifrado
+
+El módulo Oficial de Cumplimiento guarda **cifrados** los códigos secretos que entrega la UIF al comunicar la designación (nunca se vuelven a mostrar). La clave que los cifra es `OC_CLAVE_CIFRADO` en `/opt/sulotec/plaft.env` (AES-256: 64 caracteres hexadecimales).
+
+- **Se crea sola:** `desplegar.sh` la genera la primera vez que no la encuentra (y `preparar.sh` la conserva o la crea). No hay que escribir nada a mano.
+- **No se cambia ni se pierde:** si se perdiera o se cambiara, los códigos ya guardados no se podrían leer. Guárdala también en el gestor de contraseñas (los `*.env` no entran en el respaldo).
+- **Sin la clave** el módulo funciona igual, pero guardar códigos de la UIF responde 409 y no se guarda nada; `probar.sh` lo avisa.
+
 La primera vez que entra el titular de la licencia PLAFT, PLAFT crea sola su empresa y su usuario administrador.
 
 ## Carga masiva de listas (PEP, sanciones, investigados, noticias, fraudes)

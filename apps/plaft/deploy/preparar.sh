@@ -105,6 +105,7 @@ fi
 JWT="$(actual JWT_SECRET)"; [ -n "$JWT" ] || JWT="$(aleatorio 32)"
 MLKEY="$(actual ML_API_KEY)"; [ -n "$MLKEY" ] || MLKEY="$(aleatorio 24)"
 MLT="$(actual ML_CHATTIMEOUTSECONDS)"      # lo pone activar-indira.sh (cuanto espera el backend a Indira); se conserva
+OCKEY="$(actual OC_CLAVE_CIFRADO)"; [ -n "$OCKEY" ] || OCKEY="$(aleatorio 32)"   # cifra los codigos de la UIF (Oficial de Cumplimiento): una vez creada NO se cambia
 
 install -m 640 -o root -g docker /dev/null "$ENV" 2>/dev/null || install -m 640 /dev/null "$ENV"
 {
@@ -137,6 +138,8 @@ install -m 640 -o root -g docker /dev/null "$ENV" 2>/dev/null || install -m 640 
   echo "SSO_ISSUER=$SSO_ISSUER"
   echo "SSO_CLIENT_ID=$SSO_CLIENT_ID"
   echo "SSO_REDIRECT_URI=$SSO_REDIRECT_URI"
+  # Oficial de Cumplimiento: clave que cifra los codigos secretos de la UIF. NO cambiarla ni perderla: los codigos guardados no se podrian leer
+  echo "OC_CLAVE_CIFRADO=$OCKEY"
   echo "STORAGE_PROVIDER=oracle"
   echo "OCI_REGION=sa-santiago-1"
   echo "OCI_NAMESPACE=axkjo5bh8iys"

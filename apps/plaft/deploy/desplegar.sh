@@ -32,6 +32,19 @@ salud() { docker inspect -f '{{.State.Health.Status}}' "$1" 2>/dev/null || echo 
 espera_sano() { local c="$1" i; for i in $(seq 1 "${2:-120}"); do [ "$(salud "$c")" = healthy ] && return 0; sleep 3; done; return 1; }
 poner() { local k="$1" v="$2" tmp; tmp="$(mktemp "$ENVFILE.XXXXXX")"; awk -v k="$k" -v v="$v" 'BEGIN{FS=OFS="="} $1==k {print k "=" v; next} {print}' "$ENVFILE" > "$tmp"; cat "$tmp" > "$ENVFILE"; rm -f "$tmp"; }
 
+# Clave que cifra los codigos secretos de la UIF (modulo Oficial de Cumplimiento). Se crea sola la primera vez y despues NO se toca:
+# si se perdiera o se cambiara, los codigos ya guardados no se podrian leer. Un valor ya puesto se conserva siempre.
+if ! grep -q '^OC_CLAVE_CIFRADO=.' "$ENVFILE"; then
+  oc_clave="$(openssl rand -hex 32)"
+  if grep -q '^OC_CLAVE_CIFRADO=' "$ENVFILE"; then
+    poner OC_CLAVE_CIFRADO "$oc_clave"
+  else
+    [ -z "$(tail -c1 "$ENVFILE")" ] || echo >> "$ENVFILE"
+    echo "OC_CLAVE_CIFRADO=$oc_clave" >> "$ENVFILE"
+  fi
+  echo "   se creo la clave de cifrado del Oficial de Cumplimiento (OC_CLAVE_CIFRADO) en $ENVFILE; guardala tambien en el gestor de contrasenas"
+fi
+
 # Baja o actualiza un repositorio y devuelve el commit. $1 = carpeta, $2 = url, $3 = rama
 bajar() {
   if [ -d "$1/.git" ]; then git -C "$1" fetch -q origin "$3"; else git clone -q "$2" "$1"; git -C "$1" fetch -q origin "$3"; fi

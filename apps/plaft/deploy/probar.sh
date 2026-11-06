@@ -123,6 +123,14 @@ else
   aviso "inicio unico apagado: faltan SSO_ISSUER/SSO_CLIENT_ID/SSO_REDIRECT_URI, corre preparar.sh"
 fi
 
+echo "== Oficial de Cumplimiento"
+# Solo se mira que la clave exista (nunca se imprime): sin ella el modulo funciona, pero no puede guardar los codigos secretos de la UIF
+if grep -qE '^OC_CLAVE_CIFRADO=.{32,}' /opt/sulotec/plaft.env 2>/dev/null; then
+  ok "clave de cifrado de los codigos de la UIF: configurada"
+else
+  aviso "falta OC_CLAVE_CIFRADO en /opt/sulotec/plaft.env: guardar codigos de la UIF respondera 409 (se crea sola al correr desplegar.sh)"
+fi
+
 echo
 if [ "$fallos" -eq 0 ]; then echo "TODO BIEN ($avisos aviso(s))."; exit 0; fi
 echo "$fallos prueba(s) fallaron."

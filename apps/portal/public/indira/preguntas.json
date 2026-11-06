@@ -1,0 +1,7 @@
+{
+  "/": { "id": "inicio-1", "texto": "Hola, soy Indira. ¿Te ayudo a encontrar el producto que buscas?", "opciones": ["¿Qué es Sulotec?", "¿Qué demos puedo probar?"] },
+  "/demo/plaft": { "id": "demo-plaft-1", "texto": "Esta demo usa datos de ejemplo. ¿Quieres saber cómo se contrata?", "opciones": ["¿Cómo contrato?"] },
+  "/demo/miradar360": { "id": "demo-miradar-1", "texto": "Estás en la demo de MiRadar360. ¿Te cuento qué otras demos hay?", "opciones": ["¿Qué demos puedo probar?"] },
+  "/demo/auditoria": { "id": "demo-auditoria-1", "texto": "Estás en la demo de GeoMatrix. ¿Te cuento qué otras demos hay?", "opciones": ["¿Qué demos puedo probar?"] },
+  "/mis-productos": { "id": "mis-productos-1", "texto": "¿Necesitas ayuda con tus productos?", "opciones": ["¿Cómo contrato?"] }
+}

@@ -23,10 +23,12 @@ jobs:
 
       # "Iniciar sesion" (cuenta.sulotec.com) esta encendido por defecto. Para apagarlo en una emergencia:
       # GitHub > Settings > Secrets and variables > Actions > Variables > CUENTA_ACTIVA=false y volver a correr.
+      # Indira (el asistente) esta APAGADA por defecto: se enciende con la variable INDIRA_ACTIVA=true.
       - name: Compilar el sitio (Node en Docker)
         run: |
           docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
             -e PUBLIC_CUENTA_ACTIVA="${{ vars.CUENTA_ACTIVA || 'true' }}" \
+            -e PUBLIC_INDIRA_ACTIVA="${{ vars.INDIRA_ACTIVA || 'false' }}" \
             -v "$PWD/apps/portal:/app" -w /app node:24-alpine \
             sh -c "npm ci --no-audit --no-fund && npm run build"
 

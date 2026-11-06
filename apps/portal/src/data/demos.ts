@@ -14,6 +14,15 @@ export const cuenta = {
   licenciasApi: import.meta.env.PUBLIC_LICENCIAS_API || 'https://api-licencias.sulotec.com',
 };
 
+// ---------- Indira (asistente del portal, servicio api-indira.sulotec.com) ----------
+// Apagada por defecto: variable INDIRA_ACTIVA en GitHub (ver .github/workflows/portal.yml).
+// Sin sesion no llama a la API: responde con public/indira/invitado.json.
+// Para probar en local: PUBLIC_INDIRA_ACTIVA=true PUBLIC_INDIRA_API=http://localhost:8000 npm run build
+export const indira = {
+  activa: import.meta.env.PUBLIC_INDIRA_ACTIVA === 'true',
+  api: import.meta.env.PUBLIC_INDIRA_API || 'https://api-indira.sulotec.com',
+};
+
 // Visitante sin sesion: recorre las demos libremente `segundos` (sumados entre todas las demos);
 // despues debe iniciar sesion para seguir. Cada `acciones` opciones bloqueadas se le invita antes.
 // Con sesion: tras `consulta` segundos se le recomienda agendar una consulta (una vez por visita).

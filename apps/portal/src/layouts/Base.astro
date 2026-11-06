@@ -1,7 +1,7 @@
 ---
 import '../styles/global.css';
 import { sitio } from '../data/sitio';
-import { cuenta } from '../data/demos';
+import { cuenta, indira } from '../data/demos';
 
 interface Props {
   titulo?: string;
@@ -31,6 +31,13 @@ const { titulo = sitio.titulo, descripcion = sitio.descripcion, ruta = '/' } = A
         <meta name="cuenta-cliente" content={cuenta.cliente} />
         <meta name="licencias-api" content={cuenta.licenciasApi} />
         <script is:inline src="/cuenta.js"></script>
+      </>
+    )}
+    {indira.activa && !ruta.startsWith('/cuenta/') && (
+      <>
+        <meta name="indira-api" content={indira.api} />
+        <script is:inline src="/indira/titere.js" defer></script>
+        <script is:inline src="/indira.js" defer></script>
       </>
     )}
     <slot name="head" />

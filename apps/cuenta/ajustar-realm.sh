@@ -161,4 +161,12 @@ fi
 kc add-roles -r sulotec --uusername service-account-licencias --cclientid realm-management --rolename query-groups --rolename view-users --rolename manage-users >/dev/null 2>&1 \
   || echo "AVISO: no se pudieron dar los permisos de grupos al cliente licencias (query-groups, view-users, manage-users de realm-management)" >&2
 
+# 12) Indira (api-indira.sulotec.com): el widget del portal la llama con el ACCESS token de la cuenta, que debe llevar la
+#     audiencia "indira" (el servicio la exige, como licencias en el paso 10). No hace falta un cliente nuevo.
+#     Si el token del portal no trae "sub", tambien hace falta el scope "basic" (ver apps/indira/README.md).
+if ! kc get "clients/$cid/protocol-mappers/models" -r sulotec --fields name --format csv --noquotes | grep -qx indira-audiencia; then
+  kc create "clients/$cid/protocol-mappers/models" -r sulotec -b '{"name":"indira-audiencia","protocol":"openid-connect","protocolMapper":"oidc-audience-mapper","config":{"included.custom.audience":"indira","id.token.claim":"false","access.token.claim":"true","introspection.token.claim":"true"}}' >/dev/null
+  echo "Ajuste: audiencia indira en el access token del portal"
+fi
+
 echo "Ajustes aplicados. Registro libre: apagado. Recuperar contrasena: encendido. Inicio unico: clientes auditoria y plaft, roles producto-*, grupo Empresas y claims empresa_*."

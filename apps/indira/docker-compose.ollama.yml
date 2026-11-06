@@ -1,0 +1,13 @@
+# OPCIONAL, solo con permiso del dueno: Indira usa el Ollama de PLAFT (contenedor plaft-ollama, red interna plaft_ia).
+# Comparte CPU y memoria con PLAFT: una respuesta puede tardar ~160 s y mientras tanto PLAFT espera.
+# Se activa con INDIRA_PROVEEDOR=ollama (preparar.sh) y lo usa desplegar.sh si existe /data/apps/indira/usar-ollama.
+#   sudo touch /data/apps/indira/usar-ollama && sudo bash /data/apps/indira/desplegar.sh
+# Para volver atras: sudo rm /data/apps/indira/usar-ollama, INDIRA_PROVEEDOR=falso con preparar.sh y desplegar.sh.
+services:
+  indira:
+    networks: [edge, data, ia]
+
+networks:
+  ia:
+    external: true
+    name: plaft_ia

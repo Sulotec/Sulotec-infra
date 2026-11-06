@@ -1,0 +1,35 @@
+# Indira, la asistente de Sulotec (servicio propio). En el servidor vive en /data/apps/indira.
+# Cloudflare Tunnel (Public hostname):
+#   api-indira.sulotec.com -> http://indira:3300
+# Configuracion y secretos (nunca en el repositorio): /opt/sulotec/indira.env, lo crea deploy/preparar.sh.
+# La base es la PostgreSQL 16 compartida (red sulotec_data); no publica puertos. El esquema lo aplica el servicio al arrancar.
+# Un solo proceso uvicorn: la cola y los eventos de cada turno viven en memoria (no escalar a 2 replicas).
+# Para usar el Ollama de PLAFT (solo con permiso del dueno) se suma docker-compose.ollama.yml.
+name: indira
+
+services:
+  indira:
+    image: indira:latest
+    container_name: indira
+    restart: unless-stopped
+    env_file: /opt/sulotec/indira.env
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    networks: [edge, data]
+    mem_limit: 512m
+    stop_grace_period: 20s
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:3300/health', timeout=4)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+networks:
+  edge:
+    external: true
+    name: sulotec_edge
+  data:
+    external: true
+    name: sulotec_data

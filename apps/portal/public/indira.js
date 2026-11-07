@@ -431,14 +431,14 @@
         if (cortado || actual) return;
         if (!cola.length) { if (cerrado) termina(); return; }
         actual = cola.shift(); prepara(actual);
-        /* Pide las dos siguientes por adelantado: el servicio las atiende en orden y asi no hay silencios largos. */
-        cola.slice(0, 2).forEach(prepara);
+        /* Pide la siguiente por adelantado (una sola, asi llegan en orden): se genera mientras suena esta. */
+        if (cola.length) prepara(cola[0]);
         if (alFrase) alFrase(actual);
         if (!yo.cuerpo) { cortado = true; termina(); return; }
         yo.cuerpo.hablarAudio(actual.el).then(function () { actual = null; sigue(); });
       }
       return {
-        encola: function (f) { if (cortado) return; cola.push(f); if (!actual) sigue(); else if (cola.length <= 2) prepara(f); },
+        encola: function (f) { if (cortado) return; cola.push(f); if (!actual) sigue(); else if (cola.length === 1) prepara(f); },
         cierra: function () { cerrado = true; if (!actual && !cola.length) termina(); },
         corta: function () { cortado = true; cola = []; termina(); },
         cerrado: function () { return cerrado || cortado; },

@@ -83,11 +83,11 @@
 .indira-nota { margin: 8px 2px 0; color: var(--suave); font-size: 12.5px; overflow-wrap: anywhere; }
 
 @media (min-width: 900px) {
-  .indira-panel { width: min(600px, calc(100vw - 48px)); }
-  .indira-lado { display: block; flex: none; width: 180px; height: 300px; margin-right: -14px; }
+  .indira-panel.con-lado { width: min(600px, calc(100vw - 48px)); }
+  .indira-panel.con-lado .indira-lado { display: block; flex: none; width: 180px; height: 300px; margin-right: -14px; }
   .indira-lado .indira-figura { width: 100%; height: 100%; border-radius: 90px 90px 0 0; background: none; }
   /* Cuerpo completo: de pie junto al panel, casi de su alto */
-  .indira-lado:has(.indira-completa) { width: 210px; height: min(600px, 100%); margin-right: -6px; }
+  .indira-panel.con-lado .indira-lado:has(.indira-completa) { width: 210px; height: min(600px, 100%); margin-right: -6px; }
   .indira-lado .indira-completa { border-radius: 0; overflow: visible; }
   .indira-completa svg { overflow: visible; }
 }
@@ -117,3 +117,11 @@
 .indira-producto .indira-globo { bottom: 74px; }
 .indira-producto .indira-mini { width: 46px; height: 46px; }
 .indira-esqueleto { display: block; width: 100%; height: 100%; }
+
+/* Indira dentro de la cabecera (vista por defecto en sulotec.com): de la cintura para arriba, con sus gestos */
+.indira-cabeza:has(.indira-encabezado) { align-items: flex-end; padding-top: 8px; padding-bottom: 0; }
+.indira-cabeza .indira-encabezado { flex: none; width: 120px; height: 133px; background: none; }
+.indira-cabeza:has(.indira-encabezado) .indira-titulo { align-self: center; padding-bottom: 6px; }
+.indira-vista { align-self: center; min-height: 36px; padding: 4px 12px; border: 1px solid var(--borde); border-radius: 18px; background: #fff; font-size: 13px !important; white-space: nowrap; }
+.indira-vista:hover { background: #e6eeff; border-color: var(--azul-claro); }
+@media (max-width: 520px) { .indira-cabeza .indira-encabezado { width: 92px; height: 102px; } }

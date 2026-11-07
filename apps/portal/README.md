@@ -52,8 +52,9 @@ herramientas/limpiar-indira.mjs  quita el fondo de un SVG exportado de Figma
 - Prueba local: `PUBLIC_INDIRA_ACTIVA=true PUBLIC_INDIRA_API=http://localhost:8000 npm run build`.
 
 ### Modos de Indira
-- **sulotec** (por defecto, en este portal): desde 900 px de ancho Indira aparece de cuerpo completo junto al panel y
-  hace el gesto del momento (saluda, piensa, celebra, mueve las manos al hablar). Mas angosto: su carita en la cabecera.
+- **sulotec** (por defecto, en este portal): Indira animada, de la cintura para arriba dentro de la cabecera del chat,
+  haciendo el gesto del momento (saluda, piensa, celebra, mueve las manos al hablar). Desde 900 px de ancho el boton
+  "Cuerpo completo" la pone de pie junto al panel, y "Llevar al chat" la regresa. La eleccion se guarda en el navegador.
 - **producto** (PLAFT y los demas): solo el chat, con la carita redonda quieta y mas pequena (58 px), sin cuerpo ni poses.
   Se activa con `<script src=".../indira.js" data-modo="producto" defer></script>` o `<indira-asistente modo="producto">`.
   No hace falta cargar `cuerpo.js` ni `cuerpo-trazos.js`.

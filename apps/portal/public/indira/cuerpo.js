@@ -21,7 +21,9 @@
   var HOMBRO_I = [266, 668], HOMBRO_D = [614, 668];
   var BRAZO = 282, ANTEBRAZO = 240;
   var OJO_I = [339, 343], OJO_D = [511, 343], BOCA_C = [426, 441];
-  var ENCUADRES = { completo: '-80 -160 1000 2880', medio: '-40 -40 920 1300', busto: '80 20 680 860' };
+  var ENCUADRES = { completo: '-80 -160 1000 2880', medio: '-40 -40 920 1300', cabecera: '20 -30 820 910', busto: '80 20 680 860' };
+  /* Altura de los ojos dentro de cada encuadre: de ahi se mide hacia donde mirar al cursor. */
+  var OJOS = { completo: .18, medio: .3, cabecera: .4, busto: .4 };
 
   var TORSO = 'M380 548C380 538 384 534 392 534L478 534C486 534 490 538 490 548L490 568C492 596 520 610 566 610C612 608 660 616 666 652' +
     'C670 690 656 744 648 796C640 862 630 960 622 1018C618 1040 600 1046 560 1048C500 1051 380 1050 300 1036C298 960 294 880 288 806' +
@@ -442,7 +444,7 @@
     function alMover(ev) {
       var rc = svg.getBoundingClientRect();
       if (!rc.width) return;
-      var cx = rc.left + rc.width / 2, cy = rc.top + rc.height * .18;
+      var cx = rc.left + rc.width / 2, cy = rc.top + rc.height * (OJOS[opciones.encuadre] || OJOS.completo);
       cursor.x = acota((ev.clientX - cx) / (global.innerWidth * .5), -1, 1);
       cursor.y = acota((ev.clientY - cy) / (global.innerHeight * .5), -1, 1);
       cursor.hasta = reloj + 2.5;

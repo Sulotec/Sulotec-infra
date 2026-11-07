@@ -3,8 +3,9 @@
  *
  * - El dibujo, las expresiones y el mapa unico de poses viven en /indira/titere.js (window.IndiraTitere).
  * - Dos modos:
- *     sulotec (por defecto): desde 900 px, Indira de cuerpo completo y animada junto al panel
- *       (/indira/cuerpo.js, window.IndiraCuerpo). Si ese archivo no esta, usa el busto de siempre.
+ *     sulotec (por defecto): Indira animada con esqueleto (/indira/cuerpo.js, window.IndiraCuerpo), de la cintura
+ *       para arriba dentro de la cabecera del chat. Desde 900 px un boton la pasa a cuerpo completo junto al panel
+ *       y de vuelta; la eleccion se guarda. Si cuerpo.js no esta, usa el busto de siempre.
  *     producto: para los demas productos. Solo el chat y la carita redonda, quieta y mas pequena; sin cuerpo ni poses.
  *       Se elige con <indira-asistente modo="producto"> o con data-modo="producto" en la etiqueta de este script.
  * - Sin sesion no se llama a la API: responde con textos fijos de /indira/invitado.json y ofrece "Entrar".
@@ -249,38 +250,39 @@
       panel.setAttribute('aria-modal', 'false');
       panel.setAttribute('aria-labelledby', 'indira-titulo');
 
-      /* Desde 900 px Indira va junto al panel (de cuerpo completo si esta IndiraCuerpo); en pantallas menores y
-       * en modo producto, solo su carita en la cabecera. */
+      /* Con IndiraCuerpo: dentro de la cabecera o, desde 900 px y si se eligio, de cuerpo completo junto al panel.
+       * Sin el (o en modo producto): el titere de siempre; en modo producto, quieto. */
       var ancho = !this.producto && window.matchMedia('(min-width: 900px)').matches;
-      var deCuerpo = ancho && !!this.C;
-      var lado = el('div', 'indira-lado');
+      var deCuerpo = !this.producto && !!this.C;
+      var lado = this.lado = el('div', 'indira-lado');
       lado.setAttribute('aria-hidden', 'true');
-      var figura = el('span', 'indira-marco indira-figura' + (ancho ? '' : ' indira-mini') + (deCuerpo ? ' indira-completa' : ''));
-      figura.setAttribute('aria-hidden', 'true');
-      if (ancho) lado.appendChild(figura);
-      if (deCuerpo) {
-        /* El cuerpo responde a los mismos llamados que el titere: expresion, hablar, callar y destruir. */
-        var c = this.cuerpo = this.C.crear(figura, { encuadre: 'completo', etiqueta: 'Indira' });
-        this.titere = {
-          expresion: function (e) { c.expresion(e === 'reposo' ? null : e); },
-          hablar: function (t) { return c.hablar(t); },
-          callar: function () { c.callar(); },
-          destruir: function () { c.destruir(); }
-        };
-      } else {
-        this.titere = T.crear(figura, { encuadre: ancho ? 'medio' : 'cara', etiqueta: 'Indira', sinMovimiento: this.producto });
-      }
 
       var cuerpo = el('div', 'indira-cuerpo');
       var cabeza = this.cabeza = el('div', 'indira-cabeza');
-      if (!ancho) cabeza.appendChild(figura);
       var titulo = el('div', 'indira-titulo');
       var h = el('h2', '', 'Indira'); h.id = 'indira-titulo';
       titulo.appendChild(h);
       titulo.appendChild(el('p', '', 'Asistente de Sulotec · IA'));
       cabeza.appendChild(titulo);
-      var bv = this.cuerpo || this.producto ? null : T.botonVoz(this.titere);
-      if (bv) cabeza.appendChild(bv);
+      if (deCuerpo) {
+        if (ancho) {
+          var vb = this.botonVista = boton('indira-vista', '');
+          vb.addEventListener('click', function () {
+            var vista = yo.vista === 'completa' ? 'chat' : 'completa';
+            guarda({ vista: vista });
+            yo.montaCuerpo(vista);
+          });
+          cabeza.appendChild(vb);
+        }
+        this.montaCuerpo(ancho && leeGuardado().vista === 'completa' ? 'completa' : 'chat');
+      } else {
+        var figura = el('span', 'indira-marco indira-figura' + (ancho ? '' : ' indira-mini'));
+        figura.setAttribute('aria-hidden', 'true');
+        if (ancho) { lado.appendChild(figura); panel.classList.add('con-lado'); } else cabeza.insertBefore(figura, titulo);
+        this.titere = T.crear(figura, { encuadre: ancho ? 'medio' : 'cara', etiqueta: 'Indira', sinMovimiento: this.producto });
+        var bv = this.producto ? null : T.botonVoz(this.titere);
+        if (bv) cabeza.appendChild(bv);
+      }
       var x = boton('indira-cerrar', '×', 'Cerrar conversación');
       x.addEventListener('click', function () { yo.cierra(); });
       cabeza.appendChild(x);
@@ -337,9 +339,35 @@
         });
       });
     }
+    /* Pone a Indira (el esqueleto) en la cabecera ('chat') o junto al panel ('completa'), sin perder su estado. */
+    montaCuerpo(vista) {
+      if (this.cuerpo) { this.cuerpo.callar(); this.cuerpo.destruir(); }
+      if (this.figura) this.figura.remove();
+      var completa = vista === 'completa';
+      this.vista = vista;
+      var figura = this.figura = el('span', 'indira-marco indira-figura ' + (completa ? 'indira-completa' : 'indira-encabezado'));
+      figura.setAttribute('aria-hidden', 'true');
+      if (completa) this.lado.appendChild(figura); else this.cabeza.insertBefore(figura, this.cabeza.firstChild);
+      this.panel.classList.toggle('con-lado', completa);
+      /* El cuerpo responde a los mismos llamados que el titere: expresion, hablar, callar y destruir. */
+      var c = this.cuerpo = this.C.crear(figura, { encuadre: completa ? 'completo' : 'cabecera', etiqueta: 'Indira' });
+      c.estado(this._estado || 'reposo');
+      this.titere = {
+        expresion: function (e) { c.expresion(e === 'reposo' ? null : e); },
+        hablar: function (t) { return c.hablar(t); },
+        callar: function () { c.callar(); },
+        destruir: function () { c.destruir(); }
+      };
+      if (this.botonVista) {
+        this.botonVista.textContent = completa ? 'Llevar al chat' : 'Cuerpo completo';
+        this.botonVista.setAttribute('aria-pressed', completa ? 'true' : 'false');
+        this.botonVista.setAttribute('aria-label', completa ? 'Mostrar a Indira dentro del chat' : 'Mostrar a Indira de cuerpo completo');
+      }
+    }
     cierra() {
       clearTimeout(this._vuelta); this.quitaPose(); this.turno++;
-      if (this.titere) { this.titere.callar(); this.titere.destruir(); this.titere = null; this.cuerpo = null; }
+      if (this.titere) { this.titere.callar(); this.titere.destruir(); this.titere = null; }
+      this.cuerpo = this.figura = this.botonVista = this._estado = null;
       if (this.panel) { this.panel.remove(); this.panel = this.mensajes = this.cabeza = this.envio = this.anuncio = this.entrada = null; }
       this.burbuja.hidden = false;
       this.burbuja.setAttribute('aria-expanded', 'false');
@@ -360,11 +388,12 @@
     estado(e) {
       var def = this.T.ESTADOS[e] || this.T.ESTADOS.reposo, yo = this;
       clearTimeout(this._vuelta);
+      this._estado = e;
       if (this.cuerpo) {
         /* De cuerpo completo el gesto lo hace ella misma: sin poses sueltas. */
         var c = this.cuerpo;
         c.estado(e);
-        if (e !== 'pensando') this._vuelta = setTimeout(function () { if (yo.cuerpo === c) c.estado('reposo'); }, VUELTA_MS);
+        if (e !== 'pensando') this._vuelta = setTimeout(function () { yo._estado = 'reposo'; if (yo.cuerpo) yo.cuerpo.estado('reposo'); }, VUELTA_MS);
         return;
       }
       if (this.titere) this.titere.expresion(def.expresion);

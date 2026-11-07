@@ -6,6 +6,10 @@
  *     sulotec (por defecto): Indira animada con esqueleto (/indira/cuerpo.js, window.IndiraCuerpo), de la cintura
  *       para arriba dentro de la cabecera del chat. Desde 900 px un boton la pasa a cuerpo completo junto al panel
  *       y de vuelta; la eleccion se guarda. Si cuerpo.js no esta, usa el busto de siempre.
+ *       Voz: los textos fijos que tienen audio en /indira/voz/voces.json (texto -> archivo) se dicen con su voz y la
+ *       boca sigue el sonido. Con <meta name="indira-voz" content="URL del servicio de voz"> (o el atributo voz) dice
+ *       ademas CUALQUIER texto, tambien las respuestas del modelo: frase por frase, pidiendo la siguiente mientras dice
+ *       la actual (GET {voz}/v1/voz?texto=...). Boton "Voz" para silenciarla (se recuerda). Sin servicio: boca muda.
  *     producto: para los demas productos. Solo el chat y la carita redonda, quieta y mas pequena; sin cuerpo ni poses.
  *       Se elige con <indira-asistente modo="producto"> o con data-modo="producto" en la etiqueta de este script.
  * - Sin sesion no se llama a la API: responde con textos fijos de /indira/invitado.json y ofrece "Entrar".
@@ -122,6 +126,7 @@
       this.producto = (this.getAttribute('modo') || MODO_SCRIPT) === 'producto';
       this.C = this.producto ? null : window.IndiraCuerpo || null;
       this.api = (this.getAttribute('api') || meta('indira-api') || '').replace(/\/+$/, '');
+      this.vozBase = (this.getAttribute('voz') || meta('indira-voz') || '').replace(/\/+$/, '') || (meta('indira-voz') === '/' ? '/' : '');
       this.turno = 0;
       this.turnoActivo = false;
       this.yo = null;
@@ -153,9 +158,10 @@
       };
       document.addEventListener('keydown', this._esc);
 
-      this.datos = Promise.all([cargaJson('invitado.json'), cargaJson('preguntas.json')]).then(function (r) {
+      this.datos = Promise.all([cargaJson('invitado.json'), cargaJson('preguntas.json'), this.C ? cargaJson('voz/voces.json') : null]).then(function (r) {
         yo.invitado = r[0] || { saludo: 'Hola, soy Indira.', respuestas: [], libre: '' };
         yo.preguntas = r[1] || {};
+        yo.voces = r[2] || {};
       });
 
       /* Entra a los 4 s, con guino de 1,2 s. Sin movimiento si el usuario lo pidio (lo resuelve el CSS). */
@@ -323,6 +329,7 @@
 
       this.datos.then(function () {
         if (!yo.panel) return;
+        if (deCuerpo && (yo.vozBase || Object.keys(yo.voces).length)) yo.ponBotonVoz();
         yo.pintaChips();
         if (!conSesion()) {
           yo.nota.textContent = 'Sin sesión te respondo con información general. Para consultar tu empresa, entra con tu cuenta.';
@@ -341,6 +348,7 @@
     }
     /* Pone a Indira (el esqueleto) en la cabecera ('chat') o junto al panel ('completa'), sin perder su estado. */
     montaCuerpo(vista) {
+      var yo = this;
       if (this.cuerpo) { this.cuerpo.callar(); this.cuerpo.destruir(); }
       if (this.figura) this.figura.remove();
       var completa = vista === 'completa';
@@ -355,13 +363,143 @@
       this.titere = {
         expresion: function (e) { c.expresion(e === 'reposo' ? null : e); },
         hablar: function (t) { return c.hablar(t); },
-        callar: function () { c.callar(); },
+        callar: function () { if (yo.locutor) { yo.locutor.corta(); yo.locutor = null; } yo.bufferVoz = ''; c.callar(); },
         destruir: function () { c.destruir(); }
       };
       if (this.botonVista) {
         this.botonVista.textContent = completa ? 'Llevar al chat' : 'Cuerpo completo';
         this.botonVista.setAttribute('aria-pressed', completa ? 'true' : 'false');
         this.botonVista.setAttribute('aria-label', completa ? 'Mostrar a Indira dentro del chat' : 'Mostrar a Indira de cuerpo completo');
+      }
+    }
+    /* ------- Voz ------- */
+    conVoz() { return leeGuardado().voz !== false; }
+    ponBotonVoz() {
+      var yo = this, b = boton('indira-voz indira-vozpropia', '');
+      function pinta() {
+        var si = yo.conVoz();
+        b.textContent = si ? '\ud83d\udd0a Voz' : '\ud83d\udd07 Voz';
+        b.setAttribute('aria-pressed', si ? 'true' : 'false');
+        b.setAttribute('aria-label', si ? 'Silenciar la voz de Indira' : 'Activar la voz de Indira');
+      }
+      b.addEventListener('click', function () {
+        var si = !yo.conVoz();
+        guarda({ voz: si });
+        if (!si && yo.titere) yo.titere.callar();
+        pinta();
+      });
+      pinta();
+      this.cabeza.insertBefore(b, this.cabeza.querySelector('.indira-cerrar'));
+    }
+    vozViva() { return !!(this.vozBase && this.cuerpo && this.conVoz()); }
+    urlVoz(frase) { return (this.vozBase === '/' ? '' : this.vozBase) + '/v1/voz?texto=' + encodeURIComponent(frase); }
+    audioPara(url) {
+      var a = new Audio();
+      /* Otro origen: hace falta CORS para que el analizador de la boca pueda leer el sonido. */
+      try { if (new URL(url, location.href).origin !== location.origin) a.crossOrigin = 'anonymous'; } catch (e) {}
+      a.preload = 'auto';
+      a.src = url;
+      return a;
+    }
+    /* Corta un texto en frases para el servicio de voz: ni muy cortas (suenan entrecortadas) ni de mas de 380 letras. */
+    frasesDe(texto) {
+      var partes = String(texto).match(/[^\n]*?(?:[.!?\u2026]+(?=\s|$)|\n|$)\s*/g) || [], frases = [], acc = '';
+      partes.forEach(function (p) {
+        acc += p;
+        if (acc.trim().length >= 24) { frases.push(acc); acc = ''; }
+      });
+      if (acc.trim()) { if (frases.length && acc.trim().length < 24) frases[frases.length - 1] += acc; else frases.push(acc); }
+      var cortas = [];
+      frases.forEach(function (f) {
+        while (f.length > 380) {
+          var i = f.lastIndexOf(', ', 380); if (i < 120) i = f.lastIndexOf(' ', 380);
+          cortas.push(f.slice(0, i + 1)); f = f.slice(i + 1);
+        }
+        cortas.push(f);
+      });
+      return cortas.filter(function (f) { return /[\wáéíóúñ]/i.test(f); });
+    }
+    /*
+     * Locutor: dice frases en orden. Mientras suena una, ya pide la siguiente (asi no hay silencios largos) y
+     * solo una a la vez, para que el servicio las genere en orden. alFrase(f) avisa cuando empieza cada una.
+     */
+    crearLocutor(alFrase) {
+      var yo = this, cola = [], actual = null, cerrado = false, cortado = false, termina;
+      var listo = new Promise(function (ok) { termina = ok; });
+      function prepara(f) { if (!f.el) f.el = yo.audioPara(f.url || yo.urlVoz(f.texto)); }
+      function sigue() {
+        if (cortado || actual) return;
+        if (!cola.length) { if (cerrado) termina(); return; }
+        actual = cola.shift(); prepara(actual);
+        /* Pide las dos siguientes por adelantado: el servicio las atiende en orden y asi no hay silencios largos. */
+        cola.slice(0, 2).forEach(prepara);
+        if (alFrase) alFrase(actual);
+        if (!yo.cuerpo) { cortado = true; termina(); return; }
+        yo.cuerpo.hablarAudio(actual.el).then(function () { actual = null; sigue(); });
+      }
+      return {
+        encola: function (f) { if (cortado) return; cola.push(f); if (!actual) sigue(); else if (cola.length <= 2) prepara(f); },
+        cierra: function () { cerrado = true; if (!actual && !cola.length) termina(); },
+        corta: function () { cortado = true; cola = []; termina(); },
+        cerrado: function () { return cerrado || cortado; },
+        listo: listo
+      };
+    }
+    /* Dice un texto con su voz (audio fijo o servicio de voz): las palabras aparecen al ritmo del audio. */
+    escribeConVoz(texto, fuentes) {
+      var m = this.agrega('', 'ella'), mio = ++this.turno, yo = this, mostrado = '';
+      m.setAttribute('aria-hidden', 'true');
+      if (this.locutor) this.locutor.corta();
+      var loc = this.locutor = this.crearLocutor(function (f) {
+        if (mio !== yo.turno) return;
+        var base = mostrado, palabras = f.texto.match(/\S+\s*/g) || [];
+        mostrado += f.texto;
+        m.textContent = base;
+        function avanza() {
+          if (mio !== yo.turno || !f.el.duration || !yo.mensajes) return;
+          var n = Math.min(palabras.length, Math.ceil(palabras.length * f.el.currentTime / (f.el.duration * .92)));
+          m.textContent = base + palabras.slice(0, n).join('');
+          yo.mensajes.scrollTop = yo.mensajes.scrollHeight;
+        }
+        f.el.addEventListener('timeupdate', avanza);
+        f.el.addEventListener('ended', function () { m.textContent = base + f.texto; });
+      });
+      fuentes.forEach(function (f) { loc.encola(f); });
+      loc.cierra();
+      return loc.listo.then(function () {
+        if (yo.locutor === loc) yo.locutor = null;
+        m.textContent = texto;
+        m.removeAttribute('aria-hidden');
+        if (mio === yo.turno) yo.anuncia(texto);
+        if (yo.mensajes) yo.mensajes.scrollTop = yo.mensajes.scrollHeight;
+        return m;
+      });
+    }
+    /* Respuesta del modelo en pedazos: cada frase completa va al locutor apenas termina. */
+    vozDelta(trozo, final) {
+      /* Una respuesta nueva no se mezcla con lo que estaba diciendo: corta lo anterior y usa su propio locutor. */
+      if (!this.locutor || !this.locutor.delta || this.locutor.cerrado()) {
+        if (this.locutor) this.locutor.corta();
+        if (this.cuerpo) this.cuerpo.callar();
+        this.locutor = this.crearLocutor(null);
+        this.locutor.delta = true;
+        this.bufferVoz = '';
+      }
+      this.bufferVoz = (this.bufferVoz || '') + (trozo || '');
+      var corte;
+      while ((corte = this.bufferVoz.search(/[.!?\u2026:;\n]\s/)) >= 0) {
+        var hasta = corte + 1;
+        if (hasta < 24 && !final) { var otro = this.bufferVoz.slice(hasta).search(/[.!?\u2026:;\n]\s/); if (otro < 0) break; hasta += otro + 1; }
+        var frase = this.bufferVoz.slice(0, hasta + 1);
+        this.bufferVoz = this.bufferVoz.slice(hasta + 1);
+        this.frasesDe(frase).forEach(function (f) { this.locutor.encola({ texto: f }); }, this);
+      }
+      if (final) {
+        var yo = this, loc = this.locutor;
+        this.frasesDe(this.bufferVoz).forEach(function (f) { loc.encola({ texto: f }); });
+        this.bufferVoz = '';
+        loc.cierra();
+        loc.listo.then(function () { if (yo.locutor === loc) yo.locutor = null; });
       }
     }
     cierra() {
@@ -425,6 +563,9 @@
     anuncia(texto) { if (this.anuncio) this.anuncio.textContent = texto; }
     /* Texto fijo con efecto de escritura; la boca lo sigue. */
     escribe(texto) {
+      var archivo = this.voces && this.voces[texto];
+      if (archivo && this.cuerpo && this.conVoz()) return this.escribeConVoz(texto, [{ texto: texto, url: BASE + 'voz/' + encodeURIComponent(archivo) }]);
+      if (this.vozViva()) return this.escribeConVoz(texto, this.frasesDe(texto).map(function (f) { return { texto: f }; }));
       var m = this.agrega('', 'ella'), palabras = String(texto).match(/\S+\s*/g) || [], i = 0, mio = ++this.turno, yo = this;
       m.setAttribute('aria-hidden', 'true');
       return new Promise(function (listo) {
@@ -570,13 +711,15 @@
           texto += d.texto || '';
           burbuja().textContent = texto;
           yo.mensajes.scrollTop = yo.mensajes.scrollHeight;
-          if (yo.titere) yo.titere.hablar(d.texto || '');
+          if (yo.vozViva()) yo.vozDelta(d.texto || '', false);
+          else if (yo.titere) yo.titere.hablar(d.texto || '');
         } else if (tipo === 'expresion') {
           yo.estado(POR_EXPRESION[d.valor] || 'reposo');
         } else if (tipo === 'enlace') {
           yo.enlace(burbuja(), d.destino, d.etiqueta);
         } else if (tipo === 'fin') {
           terminado = true;
+          if (yo.locutor && yo.vozViva()) yo.vozDelta('', true);
           var b = burbuja();
           b.removeAttribute('aria-hidden');
           yo.anuncia(texto);

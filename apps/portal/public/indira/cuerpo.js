@@ -4,6 +4,7 @@
  *
  *   var c = IndiraCuerpo.crear(contenedor, { encuadre: 'completo' | 'medio' });
  *   c.gesto('saludo');  c.expresion('feliz');  c.hablar('Hola, soy Indira');  c.mirar(.5, -.2);
+ *   c.hablarAudio(new Audio('voz/hola.mp3'))  -> habla con un audio real: la boca sigue su volumen.
  *
  * Cabeza, pelo, piernas, falda y rasgos son los trazos de Figma. El torso sin mangas y los brazos
  * (manga, antebrazo y mano relajada) estan dibujados aqui para poder doblarlos; la mano abierta es la de Figma.
@@ -88,6 +89,7 @@
 
   var mueveReducido = global.matchMedia && global.matchMedia('(prefers-reduced-motion: reduce)');
   var contador = 0;
+  var IndiraCuerpoAudio = { ctx: null };   /* un solo AudioContext por pagina */
 
   /* ------- Utilidades ------- */
   function acota(v, a, b) { return v < a ? a : v > b ? b : v; }
@@ -275,6 +277,8 @@
     var cursor = { x: 0, y: 0, hasta: -1 }, micro = { x: 0, y: 0, prox: 1 };
     var parpadeo = { prox: 1.5, ini: -1 }, pesoMeta = { v: 0, prox: 4 };
     var vis = null, colaBoca = [], visHasta = 0, hablando = false, promesas = [], ritmo = 0, ademan = { prox: 0, i: null, d: null };
+    /* Audio real: un analizador mide el volumen en cada cuadro y de ahi sale la boca. */
+    var audio = null, analizador = null, muestrasA = null, golpe = 0, audioListo = null;
     var reloj = 0, rafId = 0, ultimo = 0, destruido = false, pausado = false, saltoFase = -1;
 
     function exprActual() { return EXPRESIONES[exprManual || GESTOS[gestoActual].expr || 'reposo'] || EXPRESIONES.reposo; }
@@ -435,8 +439,27 @@
       if (destruido || pausado || document.hidden) return;
       var dt = ultimo ? Math.min((ms - ultimo) / 1000, .05) : .016;
       ultimo = ms; reloj += dt;
+      if (audio) sigueAudio();
       programar(); pinta(dt);
       rafId = global.requestAnimationFrame(cuadro);
+    }
+    function sigueAudio() {
+      analizador.getByteTimeDomainData(muestrasA);
+      var suma = 0;
+      for (var i = 0; i < muestrasA.length; i++) { var v = (muestrasA[i] - 128) / 128; suma += v * v; }
+      var nivel = Math.sqrt(suma / muestrasA.length);
+      /* Cada vez que la voz sube de golpe cambia la vocal: asi la boca no se queda en una sola forma. */
+      if (nivel > .05 && reloj - golpe > .14) golpe = reloj;
+      var ciclo = Math.floor(golpe * 7) % 3;
+      vis = nivel < .015 ? 'm' : nivel < .045 ? ['e', 'i', 'u'][ciclo] : nivel < .09 ? ['e', 'oo', 'a'][ciclo] : 'a';
+      hablando = !audio.paused;
+    }
+    function sueltaAudio() {
+      if (!audio) return;
+      var a = audio; audio = null; vis = null; hablando = false;
+      a.onended = a.onerror = null;
+      try { a.pause(); } catch (e) {}
+      if (audioListo) { var f = audioListo; audioListo = null; f(); }
     }
     function arranca() { if (!rafId && !destruido && !pausado) { ultimo = 0; rafId = global.requestAnimationFrame(cuadro); } }
     function alVisibilidad() { if (!document.hidden) arranca(); }
@@ -478,11 +501,31 @@
         if (!ritmo) ritmo = global.setInterval(avanzaBoca, 30);
         return pr;
       },
-      callar: function () { colaBoca = []; visHasta = 0; avanzaBoca(); },
+      callar: function () { sueltaAudio(); colaBoca = []; visHasta = 0; avanzaBoca(); },
+      /* Reproduce un <audio> (o new Audio()) y mueve la boca con su volumen. Resuelve al terminar o al callar. */
+      hablarAudio: function (el) {
+        sueltaAudio();
+        var Ctx = global.AudioContext || global.webkitAudioContext;
+        if (!Ctx) return el.play().catch(function () {});
+        var ctx = IndiraCuerpoAudio.ctx || (IndiraCuerpoAudio.ctx = new Ctx());
+        if (ctx.state === 'suspended') ctx.resume();
+        var fuente = ctx.createMediaElementSource(el);
+        analizador = ctx.createAnalyser(); analizador.fftSize = 1024;
+        muestrasA = new Uint8Array(analizador.fftSize);
+        fuente.connect(analizador); analizador.connect(ctx.destination);
+        colaBoca = []; visHasta = 0; if (ritmo) avanzaBoca();
+        audio = el;
+        if (!reducido()) ademan.prox = reloj + .3;
+        var pr = new Promise(function (ok) { audioListo = ok; });
+        el.onended = el.onerror = function () { if (audio === el) sueltaAudio(); };
+        el.play().catch(function () { if (audio === el) sueltaAudio(); });
+        return pr;
+      },
       mirar: function (x, y) { cursor.x = acota(x, -1, 1); cursor.y = acota(y, -1, 1); cursor.hasta = reloj + 3; },
       pausar: function () { pausado = true; },
       reanudar: function () { pausado = false; arranca(); },
       destruir: function () {
+        sueltaAudio();
         destruido = true;
         if (rafId) global.cancelAnimationFrame(rafId);
         if (ritmo) global.clearInterval(ritmo);

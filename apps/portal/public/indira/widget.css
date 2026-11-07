@@ -125,3 +125,4 @@
 .indira-vista { align-self: center; min-height: 36px; padding: 4px 12px; border: 1px solid var(--borde); border-radius: 18px; background: #fff; font-size: 13px !important; white-space: nowrap; }
 .indira-vista:hover { background: #e6eeff; border-color: var(--azul-claro); }
 @media (max-width: 520px) { .indira-cabeza .indira-encabezado { width: 92px; height: 102px; } }
+.indira-vozpropia { align-self: center; min-height: 36px; white-space: nowrap; }

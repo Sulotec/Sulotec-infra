@@ -86,6 +86,10 @@
   .indira-panel { width: min(600px, calc(100vw - 48px)); }
   .indira-lado { display: block; flex: none; width: 180px; height: 300px; margin-right: -14px; }
   .indira-lado .indira-figura { width: 100%; height: 100%; border-radius: 90px 90px 0 0; background: none; }
+  /* Cuerpo completo: de pie junto al panel, casi de su alto */
+  .indira-lado:has(.indira-completa) { width: 210px; height: min(600px, 100%); margin-right: -6px; }
+  .indira-lado .indira-completa { border-radius: 0; overflow: visible; }
+  .indira-completa svg { overflow: visible; }
 }
 @media (max-width: 899px) {
   /* Sin columna lateral: el titere animado se ve en la burbuja y las poses en la cabecera */
@@ -107,3 +111,9 @@
   .indira-cabeza { padding-right: 48px; }
   .indira-cabeza .indira-voz { padding: 4px 10px; font-size: 12.5px; }
 }
+
+/* Modo producto (PLAFT y demas): solo el chat, con la carita quieta y mas pequena */
+.indira-producto .indira-boton { width: 58px; height: 58px; border-width: 2px; }
+.indira-producto .indira-globo { bottom: 74px; }
+.indira-producto .indira-mini { width: 46px; height: 46px; }
+.indira-esqueleto { display: block; width: 100%; height: 100%; }

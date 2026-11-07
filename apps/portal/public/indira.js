@@ -2,6 +2,11 @@
  * <indira-asistente>: Indira en sulotec.com. Sin dependencias, con Shadow DOM y sin inline (CSP script-src 'self').
  *
  * - El dibujo, las expresiones y el mapa unico de poses viven en /indira/titere.js (window.IndiraTitere).
+ * - Dos modos:
+ *     sulotec (por defecto): desde 900 px, Indira de cuerpo completo y animada junto al panel
+ *       (/indira/cuerpo.js, window.IndiraCuerpo). Si ese archivo no esta, usa el busto de siempre.
+ *     producto: para los demas productos. Solo el chat y la carita redonda, quieta y mas pequena; sin cuerpo ni poses.
+ *       Se elige con <indira-asistente modo="producto"> o con data-modo="producto" en la etiqueta de este script.
  * - Sin sesion no se llama a la API: responde con textos fijos de /indira/invitado.json y ofrece "Entrar".
  * - Con sesion usa api-indira.sulotec.com: POST /v1/turnos y los eventos SSE del turno, leidos con fetch
  *   (EventSource no admite el encabezado Authorization). Contrato: openapi.json de Indira-Backend.
@@ -14,6 +19,7 @@
   if (window.customElements.get('indira-asistente')) return;
 
   var BASE = '/indira/';
+  var MODO_SCRIPT = (document.currentScript && document.currentScript.getAttribute('data-modo')) || '';
   var CLAVE = 'sulotec.indira.v1';
   var CLAVE_CONVERSACION = 'sulotec.indira.conversacion';
   var DIA = 864e5;
@@ -112,6 +118,8 @@
       var T = window.IndiraTitere;
       if (!T || location.pathname.indexOf('/cuenta/') === 0) { this.hidden = true; return; }
       this.T = T;
+      this.producto = (this.getAttribute('modo') || MODO_SCRIPT) === 'producto';
+      this.C = this.producto ? null : window.IndiraCuerpo || null;
       this.api = (this.getAttribute('api') || meta('indira-api') || '').replace(/\/+$/, '');
       this.turno = 0;
       this.turnoActivo = false;
@@ -122,7 +130,7 @@
         l.rel = 'stylesheet'; l.href = BASE + f;
         raizSombra.appendChild(l);
       });
-      var raiz = this.raiz = el('div', 'indira');
+      var raiz = this.raiz = el('div', 'indira' + (this.producto ? ' indira-producto' : ''));
       raiz.setAttribute('role', 'complementary');
       raiz.setAttribute('aria-label', 'Indira, asistente de Sulotec');
       raizSombra.appendChild(raiz);
@@ -133,7 +141,7 @@
       var marco = el('span', 'indira-marco');
       this.burbuja.appendChild(marco);
       raiz.appendChild(this.burbuja);
-      this.avatar = T.crear(marco, { encuadre: 'cara', voz: false });
+      this.avatar = T.crear(marco, { encuadre: 'cara', voz: false, sinMovimiento: this.producto });
       this.avatar.elemento.setAttribute('aria-hidden', 'true');
 
       var yo = this;
@@ -241,14 +249,27 @@
       panel.setAttribute('aria-modal', 'false');
       panel.setAttribute('aria-labelledby', 'indira-titulo');
 
-      /* Desde 900 px Indira va de cintura para arriba junto al panel; en pantallas menores, en la cabecera. */
-      var ancho = window.matchMedia('(min-width: 900px)').matches;
+      /* Desde 900 px Indira va junto al panel (de cuerpo completo si esta IndiraCuerpo); en pantallas menores y
+       * en modo producto, solo su carita en la cabecera. */
+      var ancho = !this.producto && window.matchMedia('(min-width: 900px)').matches;
+      var deCuerpo = ancho && !!this.C;
       var lado = el('div', 'indira-lado');
       lado.setAttribute('aria-hidden', 'true');
-      var figura = el('span', 'indira-marco indira-figura' + (ancho ? '' : ' indira-mini'));
+      var figura = el('span', 'indira-marco indira-figura' + (ancho ? '' : ' indira-mini') + (deCuerpo ? ' indira-completa' : ''));
       figura.setAttribute('aria-hidden', 'true');
       if (ancho) lado.appendChild(figura);
-      this.titere = T.crear(figura, { encuadre: ancho ? 'medio' : 'cara', etiqueta: 'Indira' });
+      if (deCuerpo) {
+        /* El cuerpo responde a los mismos llamados que el titere: expresion, hablar, callar y destruir. */
+        var c = this.cuerpo = this.C.crear(figura, { encuadre: 'completo', etiqueta: 'Indira' });
+        this.titere = {
+          expresion: function (e) { c.expresion(e === 'reposo' ? null : e); },
+          hablar: function (t) { return c.hablar(t); },
+          callar: function () { c.callar(); },
+          destruir: function () { c.destruir(); }
+        };
+      } else {
+        this.titere = T.crear(figura, { encuadre: ancho ? 'medio' : 'cara', etiqueta: 'Indira', sinMovimiento: this.producto });
+      }
 
       var cuerpo = el('div', 'indira-cuerpo');
       var cabeza = this.cabeza = el('div', 'indira-cabeza');
@@ -258,7 +279,7 @@
       titulo.appendChild(h);
       titulo.appendChild(el('p', '', 'Asistente de Sulotec · IA'));
       cabeza.appendChild(titulo);
-      var bv = T.botonVoz(this.titere);
+      var bv = this.cuerpo || this.producto ? null : T.botonVoz(this.titere);
       if (bv) cabeza.appendChild(bv);
       var x = boton('indira-cerrar', '×', 'Cerrar conversación');
       x.addEventListener('click', function () { yo.cierra(); });
@@ -318,7 +339,7 @@
     }
     cierra() {
       clearTimeout(this._vuelta); this.quitaPose(); this.turno++;
-      if (this.titere) { this.titere.callar(); this.titere.destruir(); this.titere = null; }
+      if (this.titere) { this.titere.callar(); this.titere.destruir(); this.titere = null; this.cuerpo = null; }
       if (this.panel) { this.panel.remove(); this.panel = this.mensajes = this.cabeza = this.envio = this.anuncio = this.entrada = null; }
       this.burbuja.hidden = false;
       this.burbuja.setAttribute('aria-expanded', 'false');
@@ -338,9 +359,16 @@
     /* ------- Estados del titere ------- */
     estado(e) {
       var def = this.T.ESTADOS[e] || this.T.ESTADOS.reposo, yo = this;
-      if (this.titere) this.titere.expresion(def.expresion);
-      this.muestraPose(e);
       clearTimeout(this._vuelta);
+      if (this.cuerpo) {
+        /* De cuerpo completo el gesto lo hace ella misma: sin poses sueltas. */
+        var c = this.cuerpo;
+        c.estado(e);
+        if (e !== 'pensando') this._vuelta = setTimeout(function () { if (yo.cuerpo === c) c.estado('reposo'); }, VUELTA_MS);
+        return;
+      }
+      if (this.titere) this.titere.expresion(def.expresion);
+      if (!this.producto) this.muestraPose(e);
       if (e !== 'pensando') this._vuelta = setTimeout(function () { if (yo.titere) yo.titere.expresion('reposo'); }, VUELTA_MS);
     }
     quitaPose() {

@@ -36,6 +36,8 @@ se enciende con la variable `INDIRA_ACTIVA=true` de GitHub Actions (`PUBLIC_INDI
 ```
 public/indira.js              el elemento, con Shadow DOM y sin dependencias
 public/indira/titere.js       dibujo, expresiones y el UNICO mapa estado -> pose (copia de la demo)
+public/indira/cuerpo.js       Indira de cuerpo completo con esqueleto (gestos, mirada, pelo, peso y boca). Solo en sulotec.com
+public/indira/cuerpo-trazos.js  trazos de Figma INdira (1:48 y 9:240). Generado: no editar a mano
 public/indira/widget.css      estilos del panel (dentro del Shadow DOM)
 public/indira/invitado.json   respuestas fijas: sin sesion y en los botones (no llaman al modelo ni cuestan)
 public/indira/preguntas.json  una pregunta proactiva por pagina, como maximo una cada 24 h
@@ -48,3 +50,10 @@ herramientas/limpiar-indira.mjs  quita el fondo de un SVG exportado de Figma
 - El texto del modelo se pinta solo con `textContent` y los enlaces salen de una lista cerrada de destinos.
 - La CSP de `deploy/nginx.conf` permite `connect-src https://api-indira.sulotec.com`.
 - Prueba local: `PUBLIC_INDIRA_ACTIVA=true PUBLIC_INDIRA_API=http://localhost:8000 npm run build`.
+
+### Modos de Indira
+- **sulotec** (por defecto, en este portal): desde 900 px de ancho Indira aparece de cuerpo completo junto al panel y
+  hace el gesto del momento (saluda, piensa, celebra, mueve las manos al hablar). Mas angosto: su carita en la cabecera.
+- **producto** (PLAFT y los demas): solo el chat, con la carita redonda quieta y mas pequena (58 px), sin cuerpo ni poses.
+  Se activa con `<script src=".../indira.js" data-modo="producto" defer></script>` o `<indira-asistente modo="producto">`.
+  No hace falta cargar `cuerpo.js` ni `cuerpo-trazos.js`.

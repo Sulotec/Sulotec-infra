@@ -9,7 +9,7 @@
  *       Voz: los textos fijos que tienen audio en /indira/voz/voces.json (texto -> archivo) se dicen con su voz y la
  *       boca sigue el sonido. Con <meta name="indira-voz" content="URL del servicio de voz"> (o el atributo voz) dice
  *       ademas CUALQUIER texto, tambien las respuestas del modelo: frase por frase, pidiendo la siguiente mientras dice
- *       la actual (GET {voz}/v1/voz?texto=...). Boton "Voz" para silenciarla (se recuerda). Sin servicio: boca muda.
+ *       la actual (GET {voz}/v1/voz?texto=...[&voz=variante]). Boton "Voz" para silenciarla (se recuerda). Sin servicio: boca muda.
  *     producto: para los demas productos. Solo el chat y la carita redonda, quieta y mas pequena; sin cuerpo ni poses.
  *       Se elige con <indira-asistente modo="producto"> o con data-modo="producto" en la etiqueta de este script.
  * - Sin sesion no se llama a la API: responde con textos fijos de /indira/invitado.json y ofrece "Entrar".
@@ -392,7 +392,11 @@
       this.cabeza.insertBefore(b, this.cabeza.querySelector('.indira-cerrar'));
     }
     vozViva() { return !!(this.vozBase && this.cuerpo && this.conVoz()); }
-    urlVoz(frase) { return (this.vozBase === '/' ? '' : this.vozBase) + '/v1/voz?texto=' + encodeURIComponent(frase); }
+    /* Variante de voz (p. ej. "lima"): atributo voz-variante o <meta name="indira-voz-variante">. Sin ella, la principal. */
+    urlVoz(frase) {
+      var v = this.getAttribute('voz-variante') || meta('indira-voz-variante');
+      return (this.vozBase === '/' ? '' : this.vozBase) + '/v1/voz?texto=' + encodeURIComponent(frase) + (v ? '&voz=' + encodeURIComponent(v) : '');
+    }
     audioPara(url) {
       var a = new Audio();
       /* Otro origen: hace falta CORS para que el analizador de la boca pueda leer el sonido. */

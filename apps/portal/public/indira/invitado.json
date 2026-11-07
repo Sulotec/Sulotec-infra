@@ -1,0 +1,26 @@
+{
+  "saludo": "Hola, soy Indira, la asistente de Sulotec. Puedo contarte qué hacemos y qué demos puedes probar.",
+  "libre": "Para conversar conmigo de tu empresa necesitas entrar con tu cuenta de Sulotec. No hay registro libre: las cuentas las crea nuestro equipo. Si aún no tienes una, escríbenos a contacto@sulotec.com.",
+  "respuestas": [
+    {
+      "pregunta": "¿Qué es Sulotec?",
+      "estado": "presentarse",
+      "texto": "Sulotec reúne productos para empresas: MiRadar360 para equipos en campo, GeoMatrix, Prevención de Lavado de Activos, Dashboard Empresarial y Buscador Interno.",
+      "enlace": { "destino": "demos", "etiqueta": "Ver los productos" }
+    },
+    {
+      "pregunta": "¿Qué demos puedo probar?",
+      "estado": "listo",
+      "texto": "Puedes recorrer las demos de MiRadar360, GeoMatrix y Prevención de Lavado de Activos sin cuenta. Todos los datos de las demos son de ejemplo.",
+      "enlace": { "destino": "demos", "etiqueta": "Ir a las demos" }
+    },
+    {
+      "pregunta": "¿Cómo contrato?",
+      "estado": "nota",
+      "texto": "Las cuentas las crea nuestro equipo: no hay registro libre. Escríbenos a contacto@sulotec.com y te ayudamos a elegir.",
+      "textoConSesion": "Tus productos y tu licencia se ven en Mis productos. Para contratar algo más, escribe a contacto@sulotec.com.",
+      "enlace": { "destino": "mis-productos", "etiqueta": "Mis productos" },
+      "entrar": true
+    }
+  ]
+}

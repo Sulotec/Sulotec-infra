@@ -1,0 +1,25 @@
+/* Titere de Indira. Sin dependencias: en un Shadow DOM, enlazar este archivo dentro de la raiz. */
+.indira-titere{display:block;width:100%;height:100%;overflow:hidden;-webkit-user-select:none;user-select:none}
+.indira-voz{min-height:36px;padding:6px 12px;border:1px solid #c6d4ee;border-radius:999px;background:#fff;color:#1c2740;font:inherit;font-size:13px;cursor:pointer;white-space:normal}
+.indira-voz:hover{background:#e6eeff}
+.indira-voz[aria-pressed="true"]{background:#4A6FB5;border-color:#4A6FB5;color:#fff}
+.indira-voz:focus-visible{outline:3px solid #4A6FB5;outline-offset:2px}
+/*
+ * Poses con vida: la imagen de la pose lleva data-mov (lo pone IndiraTitere.animarPose).
+ * Entra subiendo y luego hace su gesto en bucle, siempre desde los pies.
+ */
+img[data-mov]{transform-origin:50% 100%;will-change:transform}
+img[data-mov="respira"]{animation:indira-entra .4s ease-out both,indira-respira 4s ease-in-out .4s infinite}
+img[data-mov="saluda"]{animation:indira-entra .4s ease-out both,indira-saluda 1.7s ease-in-out .4s infinite}
+img[data-mov="salta"]{animation:indira-entra .4s ease-out both,indira-salta 1.9s ease-in-out .4s infinite}
+img[data-mov="rebota"]{animation:indira-entra .4s ease-out both,indira-rebota 2.4s ease-in-out .4s infinite}
+img[data-mov="piensa"]{animation:indira-entra .4s ease-out both,indira-piensa 4.6s ease-in-out .4s infinite}
+img[data-mov="decae"]{animation:indira-entra .4s ease-out both,indira-decae 5s ease-in-out .4s infinite}
+@keyframes indira-entra{0%{transform:translateY(22px) scale(.96);opacity:0}70%{transform:translateY(-4px) scale(1.01);opacity:1}100%{transform:none;opacity:1}}
+@keyframes indira-respira{0%,100%{transform:none}50%{transform:translateY(-1%) scale(1.008,1.016)}}
+@keyframes indira-saluda{0%,100%{transform:rotate(-1.5deg)}50%{transform:translateY(-1.2%) rotate(2.2deg)}}
+@keyframes indira-salta{0%,55%,100%{transform:none}15%{transform:scale(1.03,.97)}30%{transform:translateY(-6%) scale(.98,1.03)}45%{transform:translateY(0) scale(1.03,.97)}}
+@keyframes indira-rebota{0%,100%{transform:none}30%{transform:translateY(-2.5%) scale(.99,1.015)}50%{transform:scale(1.015,.99)}65%{transform:none}}
+@keyframes indira-piensa{0%,100%{transform:rotate(0)}35%{transform:rotate(1.6deg) translateY(-.6%)}70%{transform:rotate(-.8deg)}}
+@keyframes indira-decae{0%,100%{transform:none}50%{transform:translateY(1.2%) rotate(-1.2deg) scale(1,.99)}}
+@media (prefers-reduced-motion:reduce){img[data-mov]{animation:none!important;transform:none}}

@@ -1,0 +1,128 @@
+/* Estilos de <indira-asistente>. Viven dentro de su Shadow DOM: las reglas globales del portal no entran aqui. */
+:host { all: initial; }
+[hidden] { display: none !important; }
+.indira {
+  --azul: #1b4589; --azul-claro: #2a5cab; --azul-10: #e8ecf3; --rojo: #ed1c24;
+  --tinta: #231f20; --suave: #5a6274; --borde: #dde4ef; --fondo: #fff; --curva: cubic-bezier(.2, .7, .2, 1);
+  position: fixed; right: 24px; bottom: 24px; z-index: 80;
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--tinta);
+}
+.indira *, .indira *::before, .indira *::after { box-sizing: border-box; }
+.indira button { font: inherit; color: inherit; cursor: pointer; }
+.indira :focus-visible { outline: 3px solid var(--rojo); outline-offset: 2px; }
+.indira-marco { position: relative; overflow: hidden; display: block; background: linear-gradient(170deg, #eaf1ff, #cfe0ff); }
+.indira-marco svg { position: absolute; inset: 0; }
+
+/* Reposo: burbuja redonda de 72 px; entra a los 4 s */
+.indira-boton {
+  display: block; width: 72px; height: 72px; padding: 0; margin-left: auto; border: 3px solid #fff; border-radius: 50%;
+  background: none; overflow: hidden; box-shadow: 0 10px 28px rgba(18, 48, 95, .28);
+  opacity: 0; transform: translateY(24px) scale(.6); pointer-events: none;
+  transition: transform 420ms var(--curva), opacity 420ms var(--curva);
+}
+.indira-visible .indira-boton { opacity: 1; transform: none; pointer-events: auto; }
+.indira-visible .indira-boton:hover { transform: translateY(-3px) scale(1.04); }
+.indira-boton .indira-marco { width: 100%; height: 100%; }
+
+/* Pregunta proactiva */
+.indira-globo {
+  position: absolute; right: 0; bottom: 88px; width: min(320px, calc(100vw - 48px));
+  background: var(--fondo); border: 1px solid var(--borde); border-radius: 18px 18px 4px 18px;
+  padding: 14px 16px 10px; box-shadow: 0 14px 34px rgba(18, 48, 95, .18); animation: indira-sube .35s var(--curva) both;
+}
+.indira-globo p { margin: 0 32px 10px 0; overflow-wrap: anywhere; }
+.indira-cerrar { position: absolute; top: 4px; right: 4px; width: 44px; height: 44px; border: 0; border-radius: 50%; background: none; font-size: 20px; line-height: 1; }
+.indira-cerrar:hover { background: var(--azul-10); }
+.indira-enlace { display: block; min-height: 44px; margin-top: 4px; padding: 0 2px; border: 0; background: none; color: var(--suave) !important; font-size: 13px !important; text-decoration: underline; }
+.indira-sugerencias { display: flex; flex-wrap: wrap; gap: 6px; }
+.indira-sugerencias button { min-height: 44px; border: 1px solid var(--borde); background: #f5f8ff; border-radius: 22px; padding: 6px 14px; text-align: left; overflow-wrap: anywhere; }
+.indira-sugerencias button:hover { background: #e6eeff; border-color: var(--azul-claro); }
+@keyframes indira-sube { from { transform: translateY(14px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* Panel: Indira a la izquierda desde 900 px; en pantallas menores, en la cabecera */
+.indira-panel {
+  position: absolute; right: 0; bottom: 0; display: flex; align-items: flex-end;
+  width: min(420px, calc(100vw - 24px)); height: min(640px, calc(100dvh - 32px));
+  animation: indira-sube .28s var(--curva) both;
+}
+.indira-lado { display: none; }
+.indira-cuerpo {
+  position: relative; flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column;
+  background: var(--fondo); border: 1px solid var(--borde); border-radius: 20px; overflow: hidden;
+  box-shadow: 0 22px 60px rgba(18, 48, 95, .3);
+}
+.indira-cabeza {
+  position: relative; display: flex; align-items: center; gap: 10px; min-height: 72px; padding: 10px 52px 10px 16px;
+  background: linear-gradient(170deg, #f3f7ff, #dfe9fd); border-bottom: 1px solid var(--borde);
+}
+.indira-titulo { flex: 1; min-width: 0; }
+.indira-cabeza h2 { margin: 0; font-size: 19px; line-height: 1.2; color: var(--azul); }
+.indira-cabeza p { margin: 2px 0 0; color: var(--suave); font-size: 13px; }
+.indira-cabeza .indira-voz { min-height: 44px; }
+.indira-pose { flex: none; height: 96px; width: auto; max-width: 40%; object-fit: contain; object-position: 50% 100%; margin: -6px 0 -10px; animation: indira-sube .28s var(--curva) both; }
+.indira-oculto { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.indira-mensajes { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.indira-msj { max-width: 88%; padding: 9px 13px; border-radius: 14px; overflow-wrap: anywhere; white-space: pre-wrap; }
+.indira-msj.ella { align-self: flex-start; background: #f0f4fc; border-bottom-left-radius: 4px; }
+.indira-msj.yo { align-self: flex-end; background: var(--azul); color: #fff; border-bottom-right-radius: 4px; }
+.indira-msj.aviso { background: #fff7e6; border: 1px solid #f3d9a4; }
+.indira-ir { display: inline-flex; align-items: center; min-height: 44px; margin: 8px 8px 0 0; padding: 0 16px; border: 0; border-radius: 22px; background: var(--azul); color: #fff !important; font-weight: 600; text-decoration: none; white-space: normal; }
+.indira-ir:hover { background: var(--azul-claro); }
+.indira-detalle { display: block; margin-top: 6px; color: var(--suave); font-size: 13px; }
+.indira-votos { display: flex; gap: 4px; margin-top: 6px; color: var(--suave); font-size: 13px; }
+.indira-votos button { min-width: 44px; min-height: 44px; border: 1px solid var(--borde); border-radius: 22px; background: #fff; }
+.indira-escribe { align-self: flex-start; color: var(--suave); font-size: 13.5px; }
+.indira-escribe::after { content: ""; display: inline-block; width: 1.4em; text-align: left; animation: indira-puntos 1.2s steps(4) infinite; }
+@keyframes indira-puntos { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; } }
+.indira-pie { padding: 10px 12px 12px; border-top: 1px solid var(--borde); }
+.indira-pie .indira-sugerencias { margin-bottom: 8px; }
+.indira-form { display: flex; gap: 8px; }
+.indira-form textarea { flex: 1; min-width: 0; min-height: 44px; max-height: 120px; resize: vertical; border: 1px solid var(--borde); border-radius: 12px; padding: 10px 12px; font: inherit; color: inherit; }
+.indira .indira-form button { flex: none; min-height: 44px; border: 0; border-radius: 12px; background: var(--azul); color: #fff; padding: 0 18px; font-weight: 600; }
+.indira .indira-form button:disabled { opacity: .55; cursor: progress; }
+.indira-nota { margin: 8px 2px 0; color: var(--suave); font-size: 12.5px; overflow-wrap: anywhere; }
+
+@media (min-width: 900px) {
+  .indira-panel.con-lado { width: min(600px, calc(100vw - 48px)); }
+  .indira-panel.con-lado .indira-lado { display: block; flex: none; width: 180px; height: 300px; margin-right: -14px; }
+  .indira-lado .indira-figura { width: 100%; height: 100%; border-radius: 90px 90px 0 0; background: none; }
+  /* Cuerpo completo: de pie junto al panel, casi de su alto */
+  .indira-panel.con-lado .indira-lado:has(.indira-completa) { width: 210px; height: min(600px, 100%); margin-right: -6px; }
+  .indira-lado .indira-completa { border-radius: 0; overflow: visible; }
+  .indira-completa svg { overflow: visible; }
+}
+@media (max-width: 899px) {
+  /* Sin columna lateral: el titere animado se ve en la burbuja y las poses en la cabecera */
+  .indira-panel { align-items: stretch; }
+}
+@media (max-width: 480px) {
+  .indira { right: 12px; bottom: 12px; }
+  .indira-panel { position: fixed; inset: 0; width: 100%; height: 100%; }
+  .indira-cuerpo { border-radius: 0; border: 0; }
+}
+/* La regla global de movimiento reducido del portal no entra al Shadow DOM */
+@media (prefers-reduced-motion: reduce) {
+  .indira *, .indira *::before, .indira *::after { animation: none !important; transition: none !important; }
+}
+.indira-mini { flex: none; width: 56px; height: 56px; border-radius: 50%; border: 2px solid #fff; }
+.indira-titulo { min-width: 96px; }
+@media (max-width: 520px) {
+  .indira-pose { display: none; }
+  .indira-cabeza { padding-right: 48px; }
+  .indira-cabeza .indira-voz { padding: 4px 10px; font-size: 12.5px; }
+}
+
+/* Modo producto (PLAFT y demas): solo el chat, con la carita quieta y mas pequena */
+.indira-producto .indira-boton { width: 58px; height: 58px; border-width: 2px; }
+.indira-producto .indira-globo { bottom: 74px; }
+.indira-producto .indira-mini { width: 46px; height: 46px; }
+.indira-esqueleto { display: block; width: 100%; height: 100%; }
+
+/* Indira dentro de la cabecera (vista por defecto en sulotec.com): de la cintura para arriba, con sus gestos */
+.indira-cabeza:has(.indira-encabezado) { align-items: flex-end; padding-top: 8px; padding-bottom: 0; }
+.indira-cabeza .indira-encabezado { flex: none; width: 120px; height: 133px; background: none; }
+.indira-cabeza:has(.indira-encabezado) .indira-titulo { align-self: center; padding-bottom: 6px; }
+.indira-vista { align-self: center; min-height: 36px; padding: 4px 12px; border: 1px solid var(--borde); border-radius: 18px; background: #fff; font-size: 13px !important; white-space: nowrap; }
+.indira-vista:hover { background: #e6eeff; border-color: var(--azul-claro); }
+@media (max-width: 520px) { .indira-cabeza .indira-encabezado { width: 92px; height: 102px; } }
+.indira-vozpropia { align-self: center; min-height: 36px; white-space: nowrap; }

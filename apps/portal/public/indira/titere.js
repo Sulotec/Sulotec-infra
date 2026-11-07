@@ -13,15 +13,23 @@
   var SVG_NS = 'http://www.w3.org/2000/svg';
   var PIEL = '#F2D2BD', ROSA = '#DEA3A7', LABIO = '#B57880', AZUL = '#A4C6FF', CEJA = '#251608';
 
-  /* Mapa unico de estados: cambiar una pose es cambiar solo el nombre de archivo aqui. */
+  /* Mapa unico de estados: cambiar una pose es cambiar solo el nombre de archivo aqui.
+   * Las de poses/ son las fotos vectorizadas (se ven nitidas a cualquier tamano). */
   var POSES = {
-    saludo: 'saludo.webp', pensando: 'pensando.webp', pulgar: 'pulgar.webp', victoria: 'victoria.webp',
-    libreta: 'libreta.webp', feliz: 'feliz.webp', picara: 'picara.webp', preocupada: 'preocupada.webp',
-    llorando: 'llorando.webp', sentada: 'sentada.webp',
-    /* Foto nueva de cuerpo completo (poses-nuevas). */
-    brazosCruzados: 'brazos-cruzados.webp', manoPecho: 'mano-pecho.webp', manosJuntas: 'manos-juntas.webp', triste: 'triste.webp',
+    saludo: 'poses/saludo.svg', pensando: 'poses/pensando.svg', pulgar: 'poses/pulgar.svg', victoria: 'poses/victoria.svg',
+    libreta: 'poses/libreta.svg', feliz: 'poses/feliz.svg', picara: 'poses/picara.svg', preocupada: 'poses/preocupada.svg',
+    llorando: 'poses/llorando.svg', sentada: 'poses/sentada.svg',
+    brazosCruzados: 'poses/brazos-cruzados.svg', manoPecho: 'poses/mano-pecho.svg', manosJuntas: 'poses/manos-juntas.svg', triste: 'poses/triste.svg',
     /* Vectores de Figma INdira (bG0jtkDXsV8zYIrzkE6g6T): 9:240, 9:182 y 1:48. */
     saludoFeliz: 'saludo-feliz.svg', contenta: 'ojos-abiertos.svg', cuerpo: 'cuerpo-completo.svg'
+  };
+  /* Movimiento de cada pose mientras esta a la vista (reglas en indira-titere.css). */
+  var MOVIMIENTO = {
+    saludo: 'saluda', saludoFeliz: 'saluda',
+    victoria: 'salta', pulgar: 'rebota', feliz: 'rebota', picara: 'rebota', contenta: 'rebota', manosJuntas: 'rebota',
+    pensando: 'piensa', libreta: 'piensa', brazosCruzados: 'piensa', sentada: 'piensa',
+    triste: 'decae', llorando: 'decae', preocupada: 'decae',
+    manoPecho: 'respira', cuerpo: 'respira'
   };
   var ESTADOS = {
     reposo: { expresion: 'reposo' },
@@ -691,13 +699,24 @@
   }
 
   /* Archivo de una pose puntual, o null si ese estado no lleva pose. */
-  function rutaPose(ruta, estado) {
+  function nombrePose(estado) {
     var e = ESTADOS[estado], nombre = e ? e.pose : estado;
-    return nombre && POSES[nombre] ? (ruta || '') + POSES[nombre] : null;
+    return nombre && POSES[nombre] ? nombre : null;
+  }
+  function rutaPose(ruta, estado) {
+    var nombre = nombrePose(estado);
+    return nombre ? (ruta || '') + POSES[nombre] : null;
+  }
+  /* Le da a la imagen de la pose su movimiento: <img data-mov="saluda">. */
+  function animarPose(img, estado) {
+    var e = ESTADOS[estado], nombre = (e && e.pose) || (POSES[estado] ? estado : null);
+    if (!img) return;
+    if (nombre) img.setAttribute('data-mov', MOVIMIENTO[nombre] || 'respira');
+    else img.removeAttribute('data-mov');
   }
 
   global.IndiraTitere = {
-    crear: crear, botonVoz: botonVoz, rutaPose: rutaPose,
+    crear: crear, botonVoz: botonVoz, rutaPose: rutaPose, animarPose: animarPose,
     EXPRESIONES: Object.keys(EXPRESIONES), ESTADOS: ESTADOS, POSES: POSES
   };
 })(window);

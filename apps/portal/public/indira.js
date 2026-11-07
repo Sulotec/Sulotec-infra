@@ -353,6 +353,7 @@
       if (!ruta || !this.cabeza) return;
       var img = this.pose = el('img', 'indira-pose');
       img.alt = ''; img.src = ruta; img.decoding = 'async';
+      this.T.animarPose(img, e);
       this.cabeza.insertBefore(img, this.cabeza.querySelector('.indira-titulo'));
       this._tPose = setTimeout(function () { yo.quitaPose(); }, POSE_MS);
     }

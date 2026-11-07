@@ -39,7 +39,7 @@ public/indira/titere.js       dibujo, expresiones y el UNICO mapa estado -> pose
 public/indira/widget.css      estilos del panel (dentro del Shadow DOM)
 public/indira/invitado.json   respuestas fijas: sin sesion y en los botones (no llaman al modelo ni cuestan)
 public/indira/preguntas.json  una pregunta proactiva por pagina, como maximo una cada 24 h
-public/indira/*.svg, *.webp   poses. Cambiar una pose es reemplazar el archivo o su nombre en POSES (titere.js)
+public/indira/*.svg, poses/*.svg   poses (las de poses/ son las fotos vectorizadas). Cambiar una pose es reemplazar el archivo o su nombre en POSES (titere.js); su movimiento va en MOVIMIENTO
 herramientas/limpiar-indira.mjs  quita el fondo de un SVG exportado de Figma
 ```
 
